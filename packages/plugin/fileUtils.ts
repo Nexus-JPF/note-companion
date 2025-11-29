@@ -52,20 +52,20 @@ Extract the following while prioritizing the notes written by the participant to
 
 Output Format:
 
-**Discussion Points:**  
-1. [Point 1]  
-2. [Point 2]  
-...  
+**Discussion Points:**
+1. [Point 1]
+2. [Point 2]
+...
 
-**Action Items:**  
-1. [Task description] - [Responsible person(s)] - [Deadline]  
-2. [Task description] - [Responsible person(s)] - [Deadline]  
-...  
+**Action Items:**
+1. [Task description] - [Responsible person(s)] - [Deadline]
+2. [Task description] - [Responsible person(s)] - [Deadline]
+...
 
-**Supporting Context:**  
-- Key excerpts from Transcript 1: [Relevant excerpts related to discussion points and action items].  
-- Key excerpts from Transcript 2: [Relevant excerpts related to discussion points and action items].  
-- Key highlights from Written Notes: [Direct quotes or summaries from notes].  
+**Supporting Context:**
+- Key excerpts from Transcript 1: [Relevant excerpts related to discussion points and action items].
+- Key excerpts from Transcript 2: [Relevant excerpts related to discussion points and action items].
+- Key highlights from Written Notes: [Direct quotes or summaries from notes].
 `
     );
   }
@@ -75,31 +75,31 @@ Output Format:
       researchPaperTemplatePath,
       `---
 
-title: "[Full paper title]" 
+title: "[Full paper title]"
 
-authors: ["Author 1", "Author 2", "etc"] 
+authors: ["Author 1", "Author 2", "etc"]
 
-year: [Publication year] 
+year: [Publication year]
 
-journal: "[Journal name]" 
+journal: "[Journal name]"
 
-volume: "[Vol. number]" 
+volume: "[Vol. number]"
 
-issue: "[Issue number]" 
+issue: "[Issue number]"
 
-pages: "[Page range]" 
+pages: "[Page range]"
 
-doi: "[DOI number]" 
+doi: "[DOI number]"
 
-url: "[Direct URL to access paper]" 
+url: "[Direct URL to access paper]"
 
-tags: ["academic", "paper", "[field]", "[specific subtopic]"] 
+tags: ["academic", "paper", "[field]", "[specific subtopic]"]
 
-research_question: "[Exact question/objective as stated by authors]" 
+research_question: "[Exact question/objective as stated by authors]"
 
-significance: "[Why this research matters in 1-2 specific sentences]" 
+significance: "[Why this research matters in 1-2 specific sentences]"
 
-keywords: ["Keyword 1", "Keyword 2", "etc"] 
+keywords: ["Keyword 1", "Keyword 2", "etc"]
 
 citation: "[Complete citation in APA/MLA format]"
 
@@ -183,11 +183,17 @@ citation: "[Complete citation in APA/MLA format]"
 
 ---
 
-topics: {{any relevant topics}}
+title: "{{video title - extract from YouTube Video Information section or transcript}}"
 
-tags: [#youtube, {{#any other relevant tags}}]
+channel: "{{channel name if available, otherwise leave empty}}"
 
-summary: {{short summary of the video}}
+date_published: "{{video publication date if available in transcript or metadata, otherwise leave empty}}"
+
+topics: ["{{relevant topic 1}}", "{{relevant topic 2}}"]
+
+tags: ["#youtube", "{{#any other relevant tags based on content}}"]
+
+summary: "{{short summary of the video's main theme and key takeaways}}"
 
 ---
 
@@ -199,37 +205,57 @@ summary: {{short summary of the video}}
 
 **Instructions:**
 
-- First, determine or generate the values needed for the frontmatter (title, channel, date published, summary, etc.).
+- Extract the video title from the "YouTube Video Information" section if provided, or infer from the transcript content.
+
+- Extract topics by analyzing the main themes discussed in the transcript. Use 2-5 specific, relevant topics.
+
+- Generate tags based on the video content. Always include "#youtube" and add 2-4 additional relevant tags.
+
+- Create a concise summary (1-2 sentences) that captures the video's main theme and key takeaways.
+
+- If a full transcript is provided in the "Full Transcript" section, use it to create an accurate, detailed summary below the embed link.
+
+- Extract the publication date if mentioned in the transcript or metadata. If not available, leave date_published empty.
 
 - Maintain the exact markdown syntax for the frontmatter block (\`---\` at the top and bottom).
 
-- Use the YouTube link format exactly as provided. Do not remove the brackets, parentheses, or exclamation point.
+- Use the YouTube link format exactly as provided. Extract the video ID from the URL in the content.
 
-- In the main body of the note, provide a longer-form summary describing all major points from the video.
-- do not use \`\`\` \`\`\` or markdown formatting. Very important
-- make sure published date is the date the video was published. Not the date
+- In the main body, provide a comprehensive summary with bullet points covering all major points from the video transcript.
 
-**Example Output Format** (template):
+- Do not use \`\`\` code blocks or markdown code formatting in the summary.
+
+- Focus on accuracy and completeness based on the actual transcript content provided.
+
+**Example Output Format:**
 
 ---
 
-topics: "relevant topics"
+title: "How to Build a React App in 2024"
 
-tags: ["YouTube", "football"]
+channel: "Tech Tutorials"
 
-summary: "A short overview of the video's main theme."
+date_published: "2024-01-15"
+
+topics: ["React", "Web Development", "JavaScript", "Tutorial"]
+
+tags: ["#youtube", "#react", "#webdev", "#tutorial"]
+
+summary: "A comprehensive guide to building modern React applications with hooks, context API, and best practices for 2024."
 
 ---
 
 [![YouTube Video](https://www.youtube.com/watch?v=XXXXXXX)](https://www.youtube.com/watch?v=XXXXXXX)
 
-**Detailed Summary:**
+## Detailed Summary
 
-- Key point 1…
-
-- Key point 2…
-
-- Etc.`
+- Introduction to React fundamentals and modern development practices
+- Setting up a new React project with Vite
+- Using React Hooks for state management
+- Implementing Context API for global state
+- Best practices for component structure and organization
+- Performance optimization techniques
+- Deployment strategies and recommendations`
     );
   }
 
@@ -359,7 +385,7 @@ export async function safeRename(
   file: TFile,
   newName: string
 ): Promise<void> {
-  const parentPath = file.parent?.path ?? '';
+  const parentPath = file.parent?.path ?? "";
   const extension = file.extension;
   const desiredPath = `${parentPath}/${newName}.${extension}`;
 
@@ -464,19 +490,19 @@ export async function safeModifyContent(
     // Check if content has frontmatter
     if (sanitizedContent.trim().startsWith("---")) {
       const parts = sanitizedContent.split(/^---\s*$/m);
-      
+
       // Valid frontmatter should create 3 parts: ["", yaml content, remaining content]
       if (parts.length >= 3) {
         try {
           // Try to parse the YAML part (index 1) to validate it
           const frontmatter = parseYaml(parts[1]);
-          
+
           // If parsing succeeds, use processFrontMatter to ensure proper handling of arrays
-          await app.fileManager.processFrontMatter(file, (fm) => {
+          await app.fileManager.processFrontMatter(file, fm => {
             // Merge the parsed frontmatter with existing
             Object.assign(fm, frontmatter);
           });
-          
+
           // Update the content after frontmatter is processed
           await app.vault.modify(file, sanitizedContent);
           return;

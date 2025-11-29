@@ -1,19 +1,19 @@
-import { NextResponse } from "next/server";
-import { db, vercelTokens } from "@/drizzle/schema";
-import { Vercel } from "@vercel/sdk";
-import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
+import { NextResponse } from 'next/server';
+import { db, vercelTokens } from '@/drizzle/schema';
+import { Vercel } from '@vercel/sdk';
+import { headers } from 'next/headers';
+import { eq } from 'drizzle-orm';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: Request) {
-  console.log("Redeploy cron job started");
+  console.log('Redeploy cron job started');
   // Verify the request is from Vercel Cron
   const headersList = await headers();
-  const authHeader = headersList.get("authorization");
+  const authHeader = headersList.get('authorization');
 
   if (authHeader !== `Bearer ${CRON_SECRET}`) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    return new NextResponse('Unauthorized', { status: 401 });
   }
 
   try {
@@ -22,9 +22,9 @@ export async function GET(request: Request) {
 
     console.log(`Found ${tokens.length} tokens to process`);
 
-    const repo = "note-companion";
-    const org = "Nexus-JPF";
-    const ref = "master";
+    const repo = 'note-companion';
+    const org = 'Nexus-JPF';
+    const ref = 'master';
 
     const results = await Promise.allSettled(
       tokens.map(async (tokenRecord) => {
@@ -42,20 +42,20 @@ export async function GET(request: Request) {
           const deployment = await vercel.deployments.createDeployment({
             requestBody: {
               name: `note-companion-redeploy-${Date.now()}`,
-              target: "production",
+              target: 'production',
               project: tokenRecord.projectId,
               gitSource: {
-                type: "github",
+                type: 'github',
                 repo,
                 ref,
                 org,
               },
               projectSettings: {
-                framework: "nextjs",
-                buildCommand: "pnpm build:self-host",
-                installCommand: "pnpm install",
-                outputDirectory: ".next",
-                rootDirectory: "packages/web",
+                framework: 'nextjs',
+                buildCommand: 'pnpm build:self-host',
+                installCommand: 'pnpm install',
+                outputDirectory: '.next',
+                rootDirectory: 'packages/web',
               },
             },
           });
@@ -83,8 +83,8 @@ export async function GET(request: Request) {
       })
     );
 
-    const successful = results.filter((r) => r.status === "fulfilled").length;
-    const failed = results.filter((r) => r.status === "rejected").length;
+    const successful = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
 
     return NextResponse.json({
       message: `Processed ${tokens.length} tokens`,
@@ -95,9 +95,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error in redeploy cron:", error);
+    console.error('Error in redeploy cron:', error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }

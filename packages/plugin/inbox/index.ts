@@ -25,7 +25,12 @@ import {
   safeModifyContent as safeModify,
 } from "../fileUtils";
 import { sanitizeContent } from "../fileUtils";
-import { extractYouTubeVideoId, getYouTubeContent, getOriginalContent, YouTubeError } from "./services/youtube-service";
+import {
+  extractYouTubeVideoId,
+  getYouTubeContent,
+  getOriginalContent,
+  YouTubeError,
+} from "./services/youtube-service";
 
 // Move constants to the top level and ensure they're used consistently
 const MAX_CONCURRENT_TASKS = 5;
@@ -226,7 +231,7 @@ export class Inbox {
           }
         }
       },
-      onComplete: () => { },
+      onComplete: () => {},
       onError: (error: Error) => {
         logger.error("Queue processing error:", error);
       },
@@ -352,7 +357,7 @@ export class Inbox {
         Action.CLEANUP,
         Action.ERROR_CLEANUP
       );
-      
+
       // Only process YouTube if content contains a YouTube URL
       if (await shouldProcessYouTube(context)) {
         await executeStep(
@@ -362,7 +367,7 @@ export class Inbox {
           Action.ERROR_FETCH_YOUTUBE
         );
       }
-      
+
       await executeStep(
         context,
         recommendClassificationStep,
@@ -461,7 +466,9 @@ async function recommendNameStep(
   context: ProcessingContext
 ): Promise<ProcessingContext> {
   if (!context.content || !context.containerFile) {
-    logger.info("Skipping name recommendation: missing content or container file");
+    logger.info(
+      "Skipping name recommendation: missing content or container file"
+    );
     return context;
   }
 
@@ -470,16 +477,16 @@ async function recommendNameStep(
     context.containerFile.basename
   );
   context.newName = newName[0]?.title;
-  
+
   // if new name is the same as the old name then don't rename
   if (!context.newName || context.newName === context.containerFile.basename) {
     return context;
   }
-  
+
   // Sanitize the new name to replace invalid characters with dashes
   const sanitizedName = sanitizeFileName(context.newName);
   context.newName = sanitizedName;
-  
+
   context.recordManager.setNewName(context.hash, context.newName);
   await safeRename(context.plugin.app, context.containerFile, context.newName);
   return context;
@@ -498,13 +505,15 @@ async function recommendFolderStep(
   );
 
   if (!context.content || !context.containerFile) {
-    logger.info("Skipping folder recommendation: missing content or container file");
+    logger.info(
+      "Skipping folder recommendation: missing content or container file"
+    );
     return context;
   }
 
   // Get original content without transcript for folder recommendation
   const originalContent = getOriginalContent(context.content);
-  
+
   const newPath = await context.plugin.recommendFolders(
     originalContent,
     context.inboxFile.basename
@@ -550,13 +559,13 @@ async function recommendClassificationStep(
     confidence: 100,
     reasoning: "N/A",
   };
-  
+
   // Set the classification in the record manager
   context.recordManager.setClassification(context.hash, result);
-  
+
   // Explicitly log the completion of classification
   context.recordManager.completeAction(context.hash, Action.CLASSIFY_DONE);
-  
+
   return context;
 }
 
@@ -577,11 +586,11 @@ async function getContentStep(
   if (context.containerFile) {
     await context.plugin.app.vault.modify(context.containerFile, content);
   }
-  
+
   // Explicitly log the completion of content extraction
   // This will be used to track audio transcription and image processing
   context.recordManager.completeAction(context.hash, Action.EXTRACT_DONE);
-  
+
   return context;
 }
 
@@ -590,7 +599,9 @@ async function fetchYouTubeTranscriptStep(
 ): Promise<ProcessingContext> {
   try {
     if (!context.content || !context.containerFile) {
-      logger.info("Skipping YouTube transcript: missing content or container file");
+      logger.info(
+        "Skipping YouTube transcript: missing content or container file"
+      );
       return context;
     }
 
@@ -603,18 +614,21 @@ async function fetchYouTubeTranscriptStep(
     const youtubeContent = await getYouTubeContent(videoId);
     const { title, transcript } = youtubeContent;
     const appendContent = `\n\n## YouTube Video: ${title}\n\n### Transcript\n\n${transcript}`;
-    
+
     await context.plugin.app.vault.modify(
       context.containerFile,
       context.content + appendContent
     );
-    
+
     // Update the context content to include the transcript
     context.content += appendContent;
-    
+
     // Explicitly log the completion of YouTube transcript fetching
-    context.recordManager.completeAction(context.hash, Action.FETCH_YOUTUBE_DONE);
-    
+    context.recordManager.completeAction(
+      context.hash,
+      Action.FETCH_YOUTUBE_DONE
+    );
+
     return context;
   } catch (error) {
     if (error instanceof YouTubeError) {
@@ -623,16 +637,18 @@ async function fetchYouTubeTranscriptStep(
         message: error.message,
         stack: error.stack,
       });
-      
+
       // For any YouTube error, log it but continue processing
-      logger.warn("YouTube transcript error, continuing with processing:", error.message);
+      logger.warn(
+        "YouTube transcript error, continuing with processing:",
+        error.message
+      );
       return context;
     }
     // For other errors, use default error handling
     throw error;
   }
 }
-
 
 async function cleanupStep(
   context: ProcessingContext
@@ -651,7 +667,9 @@ async function cleanupStep(
     const sanitizedContent = await sanitizeContent(context.content);
 
     // Bypass if content is too short (excluding frontmatter)
-    const contentWithoutFrontmatter = sanitizedContent.replace(/^---\n[\s\S]*?\n---\n/, "").trim();
+    const contentWithoutFrontmatter = sanitizedContent
+      .replace(/^---\n[\s\S]*?\n---\n/, "")
+      .trim();
     if (contentWithoutFrontmatter.length < 5) {
       await handleBypass(context, "Content too short (less than 5 characters)");
     }
@@ -750,7 +768,7 @@ async function formatContentStep(
       content: context.content,
       formattingInstruction: instructions,
     });
-    
+
     // Explicitly log the completion of formatting
     context.recordManager.completeAction(context.hash, Action.FORMATTING_DONE);
     context.recordManager.setFormatted(context.hash, true);
@@ -766,7 +784,9 @@ async function recommendTagsStep(
 ): Promise<ProcessingContext> {
   const existingTags = await context.plugin.getAllVaultTags();
   if (!context.content || !context.containerFile) {
-    logger.info("Skipping tag recommendation: missing content or container file");
+    logger.info(
+      "Skipping tag recommendation: missing content or container file"
+    );
     return context;
   }
 
@@ -795,10 +815,7 @@ async function appendAttachmentStep(
       context.containerFile.parent?.path ?? ""
     );
     // Add '!' prefix to embed the audio file instead of just linking
-    await context.plugin.app.vault.append(
-      context.containerFile,
-      `\n\n${link}`
-    );
+    await context.plugin.app.vault.append(context.containerFile, `\n\n${link}`);
   }
   return context;
 }
@@ -899,12 +916,12 @@ function shouldSkipAction(context: ProcessingContext, action: Action): boolean {
 
 function getActionDisplayName(action: Action): string {
   const actionMap: Record<string, string> = {
-    [Action.EXTRACT]: 'Extracting content',
-    [Action.CLASSIFY]: 'Classifying document',
-    [Action.MOVING]: 'Finding destination folder',
-    [Action.RENAME]: 'Generating title',
-    [Action.TAGGING]: 'Adding tags',
-    [Action.FORMATTING]: 'Formatting content',
+    [Action.EXTRACT]: "Extracting content",
+    [Action.CLASSIFY]: "Classifying document",
+    [Action.MOVING]: "Finding destination folder",
+    [Action.RENAME]: "Generating title",
+    [Action.TAGGING]: "Adding tags",
+    [Action.FORMATTING]: "Formatting content",
   };
   return actionMap[action] || action.toString();
 }
@@ -923,30 +940,43 @@ async function executeStep(
 
     // Log the start of the action
     context.recordManager.addAction(context.hash, action);
-    
+
     // Show toast notification for processing steps (only for key actions)
     const shouldNotify = context.plugin.settings.enableProcessingNotifications;
-    if (shouldNotify && [Action.EXTRACT, Action.CLASSIFY, Action.MOVING, Action.RENAME, Action.TAGGING, Action.FORMATTING].includes(action)) {
-      const fileName = context.containerFile?.basename || context.inboxFile.basename;
+    if (
+      shouldNotify &&
+      [
+        Action.EXTRACT,
+        Action.CLASSIFY,
+        Action.MOVING,
+        Action.RENAME,
+        Action.TAGGING,
+        Action.FORMATTING,
+      ].includes(action)
+    ) {
+      const fileName =
+        context.containerFile?.basename || context.inboxFile.basename;
       const actionName = getActionDisplayName(action);
-      context.plugin.app.workspace.trigger('file-organizer:processing-step', {
+      context.plugin.app.workspace.trigger("file-organizer:processing-step", {
         fileName,
         action: actionName,
-        hash: context.hash
+        hash: context.hash,
       });
     }
-    
+
     // Execute the step
     const result = await step(context);
-    
+
     // Log the completion of the action
     // Check if this is a "DONE" action or needs the corresponding "DONE" action
     const isDoneAction = action.toString().includes("_DONE");
     if (!isDoneAction) {
       // Find the corresponding "DONE" action if it exists
       const doneActionKey = `${action.toString()}_DONE`;
-      const doneAction = Object.values(Action).find(a => a.toString() === doneActionKey);
-      
+      const doneAction = Object.values(Action).find(
+        a => a.toString() === doneActionKey
+      );
+
       if (doneAction) {
         // Log the completion with the corresponding "DONE" action
         context.recordManager.addAction(context.hash, doneAction, true);
@@ -958,7 +988,7 @@ async function executeStep(
       // If this is already a "DONE" action, mark it as completed
       context.recordManager.completeAction(context.hash, action);
     }
-    
+
     return result;
   } catch (error) {
     context.recordManager.addAction(context.hash, errorAction);
@@ -972,9 +1002,11 @@ async function executeStep(
 }
 
 // Add this function to check if content contains a YouTube URL
-async function shouldProcessYouTube(context: ProcessingContext): Promise<boolean> {
+async function shouldProcessYouTube(
+  context: ProcessingContext
+): Promise<boolean> {
   if (!context.content) return false;
-  
+
   const videoId = await extractYouTubeVideoId(context.content);
   return !!videoId;
 }

@@ -1,6 +1,6 @@
 // app/(landing)/page.tsx
-import { Metadata } from "next";
-import { Button } from "@/components/ui/button";
+import { Metadata } from 'next';
+import { Button } from '@/components/ui/button';
 import {
   PenIcon,
   FileIcon,
@@ -9,20 +9,20 @@ import {
   Inbox,
   MessageSquare,
   Video,
-} from "lucide-react";
-import { Demo } from "./demo/demo";
-import { PricingCards } from "./components/pricing-cards";
-import { FaqSection } from "./components/faq-section";
-import Image from "next/image";
+} from 'lucide-react';
+import { Demo } from './demo/demo';
+import { PricingCards } from './components/pricing-cards';
+import { FaqSection } from './components/faq-section';
+import Image from 'next/image';
 
 export const metadata: Metadata = {
-  title: "note companion — your ai-powered knowledge partner",
+  title: 'note companion — your ai-powered knowledge partner',
   description:
-    "achieve seamless meeting notes, instant handwriting digitization, and the smartest ai chat for your obsidian workflow. one tool, endless possibilities.",
+    'achieve seamless meeting notes, instant handwriting digitization, and the smartest ai chat for your obsidian workflow. one tool, endless possibilities.',
   openGraph: {
-    title: "note companion — your ai-powered knowledge partner",
+    title: 'note companion — your ai-powered knowledge partner',
     description:
-      "achieve seamless meeting notes, instant handwriting digitization, and the smartest ai chat for your obsidian workflow. one tool, endless possibilities.",
+      'achieve seamless meeting notes, instant handwriting digitization, and the smartest ai chat for your obsidian workflow. one tool, endless possibilities.',
   },
 };
 
@@ -430,21 +430,21 @@ export default function Page() {
 
 const features = [
   {
-    title: "Smart File Placement",
+    title: 'Smart File Placement',
     description:
-      "Clever AI recommendations ensure each note and file lands in the perfect spot.",
+      'Clever AI recommendations ensure each note and file lands in the perfect spot.',
     icon: <FileIcon className="h-6 w-6 text-white" />,
   },
   {
-    title: "Note Refinement",
+    title: 'Note Refinement',
     description:
-      "Auto-polish your text for structure and style—goodbye, messy formatting.",
+      'Auto-polish your text for structure and style—goodbye, messy formatting.',
     icon: <PenIcon className="h-6 w-6 text-white" />,
   },
   {
-    title: "Bulk Operations",
+    title: 'Bulk Operations',
     description:
-      "Move, rename, or tag entire groups of files in seconds, saving massive chunks of time.",
+      'Move, rename, or tag entire groups of files in seconds, saving massive chunks of time.',
     icon: <LayersIcon className="h-6 w-6 text-white" />,
   },
 ];
@@ -452,50 +452,50 @@ const features = [
 /* example testimonials data */
 const testimonials = [
   {
-    name: "Lautaro Losio",
-    handle: "@LautaroLosio",
+    name: 'Lautaro Losio',
+    handle: '@LautaroLosio',
     quote:
-      "This is really awesome! I had a similar idea of managing files and titles using AI, but you took it to the next level. This is the best path that all of this AI nonsense can take and truly be useful. Great work!",
+      'This is really awesome! I had a similar idea of managing files and titles using AI, but you took it to the next level. This is the best path that all of this AI nonsense can take and truly be useful. Great work!',
     avatar:
-      "https://framerusercontent.com/images/T6fAo2ENQwZHhGKg0EW1Phoic.jpg",
+      'https://framerusercontent.com/images/T6fAo2ENQwZHhGKg0EW1Phoic.jpg',
   },
   {
-    name: "farmhappens",
-    handle: "u/farmhappens",
+    name: 'farmhappens',
+    handle: 'u/farmhappens',
     quote:
-      "This is an incredible plugin and i am finding so many uses for it. Thanks for making this - and making it open source and self hosted!",
-    avatar: "https://framerusercontent.com/images/B5lCffAuQdlID00eQF9Jna0.png",
+      'This is an incredible plugin and i am finding so many uses for it. Thanks for making this - and making it open source and self hosted!',
+    avatar: 'https://framerusercontent.com/images/B5lCffAuQdlID00eQF9Jna0.png',
   },
   {
-    name: "Mali Rasko",
-    handle: "@MaliRasko",
+    name: 'Mali Rasko',
+    handle: '@MaliRasko',
     quote:
-      "I tried a lot of Voice Memos-to-Obsidian workflows and this one is the best so far. Keep up :)",
+      'I tried a lot of Voice Memos-to-Obsidian workflows and this one is the best so far. Keep up :)',
     avatar:
-      "https://framerusercontent.com/images/QZfOvbSc2pcwnwLmQULhUQ9h0UA.jpg",
+      'https://framerusercontent.com/images/QZfOvbSc2pcwnwLmQULhUQ9h0UA.jpg',
   },
   {
-    name: "izzy",
-    handle: "@izzy",
+    name: 'izzy',
+    handle: '@izzy',
     quote:
-      "Note Companion AI has now automatically organized 3,642 notes for me. I love it. It saves me so much time, and it does a great job with classifying tags, and folder selection.",
+      'Note Companion AI has now automatically organized 3,642 notes for me. I love it. It saves me so much time, and it does a great job with classifying tags, and folder selection.',
     avatar:
-      "https://framerusercontent.com/images/aZNudzX3wJdKLGtCDHuJSM4jDc.png",
+      'https://framerusercontent.com/images/aZNudzX3wJdKLGtCDHuJSM4jDc.png',
   },
   {
-    name: "VitaVee",
-    handle: "@VitaVee",
+    name: 'VitaVee',
+    handle: '@VitaVee',
     quote:
       "The plugin has now become an integral part of my flow! It's amazing, you did a really great job guys, thanks so much for releasing this. Super happy to have taken the lifetime plan!",
     avatar:
-      "https://framerusercontent.com/images/2PkdaHvwpLSEVM6EPAMUDDxRGD4.png",
+      'https://framerusercontent.com/images/2PkdaHvwpLSEVM6EPAMUDDxRGD4.png',
   },
   {
-    name: "ammarzahid",
-    handle: "@ammarzahid",
+    name: 'ammarzahid',
+    handle: '@ammarzahid',
     quote:
-      "I was trying to incorporate my handwritten notes into obsidian from long time and it is the only setup that worked for me. I am extremely happy to find this plugin.",
+      'I was trying to incorporate my handwritten notes into obsidian from long time and it is the only setup that worked for me. I am extremely happy to find this plugin.',
     avatar:
-      "https://framerusercontent.com/images/Xt9XL2CTd9uYeSqqZgqb75kQLQg.png",
+      'https://framerusercontent.com/images/Xt9XL2CTd9uYeSqqZgqb75kQLQg.png',
   },
 ];

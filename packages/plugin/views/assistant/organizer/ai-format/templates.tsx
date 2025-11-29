@@ -4,6 +4,10 @@ import FileOrganizer from "../../../../index";
 import { UserTemplates } from "./user-templates";
 import { DEFAULT_SETTINGS } from "../../../../settings";
 import { logger } from "../../../../services/logger";
+import {
+  extractYouTubeVideoId,
+  getYouTubeContent,
+} from "../../../inbox/services/youtube-service";
 
 interface ClassificationBoxProps {
   plugin: FileOrganizer;
@@ -29,10 +33,47 @@ export const ClassificationContainer: React.FC<ClassificationBoxProps> = ({
       return;
     }
     try {
-      const fileContent = await plugin.app.vault.read(file);
+      let fileContent = await plugin.app.vault.read(file);
       if (typeof fileContent !== "string") {
         throw new Error("File content is not a string");
       }
+
+      // If formatting as youtube_video, fetch transcript first
+      if (
+        templateName === "youtube_video" ||
+        templateName === "youtube_video.md"
+      ) {
+        const videoId = await extractYouTubeVideoId(fileContent);
+        if (videoId) {
+          try {
+            logger.info("Fetching YouTube transcript for formatting...");
+            new Notice("Fetching YouTube transcript...", 2000);
+            const { title, transcript } = await getYouTubeContent(videoId);
+
+            // Append transcript and title information so AI can use it
+            const videoInfo = `\n\n## YouTube Video Information\n\nTitle: ${title}\nVideo ID: ${videoId}\n\n## Full Transcript\n\n${transcript}`;
+            fileContent = fileContent + videoInfo;
+
+            logger.info("YouTube transcript fetched successfully");
+            new Notice("Transcript fetched, formatting...", 2000);
+          } catch (error) {
+            logger.warn(
+              "Failed to fetch YouTube transcript, formatting without it:",
+              error
+            );
+            new Notice(
+              "Could not fetch transcript, formatting with available content",
+              3000
+            );
+            // Continue formatting even if transcript fetch fails
+          }
+        } else {
+          logger.info(
+            "No YouTube URL found in content for youtube_video formatting"
+          );
+        }
+      }
+
       const formattingInstruction = await plugin.getTemplateInstructions(
         templateName
       );
@@ -59,7 +100,6 @@ export const ClassificationContainer: React.FC<ClassificationBoxProps> = ({
           formattingInstruction: formattingInstruction,
         });
       }
-
     } catch (error) {
       logger.error("Error in handleFormat:", error);
     }
