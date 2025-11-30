@@ -1,7 +1,8 @@
 import React, { useRef, useState } from "react";
-import { getYouTubeTranscript, getYouTubeVideoTitle } from "../youtube-transcript";
 import { logger } from "../../../../services/logger";
 import { addYouTubeContext } from "../use-context-items";
+import { getYouTubeContent } from "../../../../inbox/services/youtube-service";
+import { usePlugin } from "../../provider";
 
 interface YouTubeHandlerProps {
   toolInvocation: any;
@@ -12,6 +13,7 @@ export function YouTubeHandler({
   toolInvocation,
   handleAddResult,
 }: YouTubeHandlerProps) {
+  const plugin = usePlugin();
   const hasFetchedRef = useRef(false);
   const [fetchSuccess, setFetchSuccess] = useState<boolean | null>(null);
 
@@ -21,23 +23,23 @@ export function YouTubeHandler({
         hasFetchedRef.current = true;
         const { videoId } = toolInvocation.args;
         try {
-          const transcript = await getYouTubeTranscript(videoId);
-          const title = await getYouTubeVideoTitle(videoId);
-          
+          // Use the new backend API via youtube-service
+          const { title, transcript } = await getYouTubeContent(videoId, plugin);
+
           // Add full transcript to context for AI to access
           addYouTubeContext({
             videoId,
             title,
             transcript
           });
-          
+
           const wordCount = transcript.split(/\s+/).length;
-          
+
           // Return success message without full transcript
           // AI can access full transcript from context if needed
-          handleAddResult(JSON.stringify({ 
+          handleAddResult(JSON.stringify({
             success: true,
-            title, 
+            title,
             videoId,
             wordCount,
             message: `Successfully retrieved YouTube transcript for "${title}" (${wordCount} words)`
@@ -45,14 +47,15 @@ export function YouTubeHandler({
           setFetchSuccess(true);
         } catch (error) {
           logger.error("Error fetching YouTube transcript:", error);
-          handleAddResult(JSON.stringify({ error: error.message }));
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          handleAddResult(JSON.stringify({ error: errorMessage }));
           setFetchSuccess(false);
         }
       }
     };
 
     handleYouTubeTranscript();
-  }, [toolInvocation, handleAddResult]);
+  }, [toolInvocation, handleAddResult, plugin]);
 
   if (fetchSuccess === null) {
     return <div className="text-sm text-[--text-muted]">Fetching the video transcript...</div>;
@@ -63,4 +66,4 @@ export function YouTubeHandler({
   }
 
   return <div className="text-sm text-[--text-error]">Failed to fetch YouTube transcript</div>;
-} 
+}

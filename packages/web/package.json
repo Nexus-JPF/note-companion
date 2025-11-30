@@ -77,7 +77,8 @@
     "wink-bm25-text-search": "^3.1.2",
     "wink-eng-lite-web-model": "^1.8.1",
     "wink-nlp": "^2.3.2",
-    "youtube-transcript": "^1.2.1",
+    "youtube-transcript-plus": "^1.1.1",
+    "youtubei.js": "^16.0.1",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 export class FileOrganizerSettings {
-  
+
   API_KEY = "";
   isLicenseValid = false;
   useLogs = true;
@@ -39,7 +39,7 @@ export class FileOrganizerSettings {
   selectedModel: "gpt-4o-mini" | "llama3.2" = "gpt-4o-mini";
   customModelName = "llama3.2";
   tagScoreThreshold = 70;
-  formatBehavior: "override" | "newFile" = "override";
+  formatBehavior: "override" | "newFile" | "append" = "override";
   useInbox = false;
   imageInstructions =
     "Analyze the image and provide a clear, detailed description focusing on the main elements, context, and any text visible in the image. Include relevant details that would be useful for searching and organizing the image later.";

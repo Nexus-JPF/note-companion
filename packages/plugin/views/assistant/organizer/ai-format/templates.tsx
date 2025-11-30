@@ -7,7 +7,7 @@ import { logger } from "../../../../services/logger";
 import {
   extractYouTubeVideoId,
   getYouTubeContent,
-} from "../../../inbox/services/youtube-service";
+} from "../../../../inbox/services/youtube-service";
 
 interface ClassificationBoxProps {
   plugin: FileOrganizer;
@@ -39,16 +39,29 @@ export const ClassificationContainer: React.FC<ClassificationBoxProps> = ({
       }
 
       // If formatting as youtube_video, fetch transcript first
+      let videoTitle: string | null = null;
+      let videoId: string | null = null;
+
       if (
         templateName === "youtube_video" ||
         templateName === "youtube_video.md"
       ) {
-        const videoId = await extractYouTubeVideoId(fileContent);
+        videoId = await extractYouTubeVideoId(fileContent);
+        console.log("[YouTube Format] Extracted video ID:", videoId);
         if (videoId) {
           try {
+            console.log("[YouTube Format] Starting transcript fetch...");
             logger.info("Fetching YouTube transcript for formatting...");
             new Notice("Fetching YouTube transcript...", 2000);
-            const { title, transcript } = await getYouTubeContent(videoId);
+            const { title, transcript } = await getYouTubeContent(
+              videoId,
+              plugin
+            );
+            videoTitle = title; // Store for potential file renaming
+            console.log("[YouTube Format] Successfully fetched transcript:", {
+              title,
+              transcriptLength: transcript?.length,
+            });
 
             // Append transcript and title information so AI can use it
             const videoInfo = `\n\n## YouTube Video Information\n\nTitle: ${title}\nVideo ID: ${videoId}\n\n## Full Transcript\n\n${transcript}`;
@@ -57,13 +70,22 @@ export const ClassificationContainer: React.FC<ClassificationBoxProps> = ({
             logger.info("YouTube transcript fetched successfully");
             new Notice("Transcript fetched, formatting...", 2000);
           } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            console.error(
+              "[YouTube Format] Error fetching transcript:",
+              errorMessage,
+              error
+            );
+            console.error("[YouTube Format] Full error object:", error);
             logger.warn(
               "Failed to fetch YouTube transcript, formatting without it:",
+              errorMessage,
               error
             );
             new Notice(
-              "Could not fetch transcript, formatting with available content",
-              3000
+              `Could not fetch transcript: ${errorMessage}. Formatting with available content.`,
+              5000
             );
             // Continue formatting even if transcript fetch fails
           }
@@ -79,8 +101,51 @@ export const ClassificationContainer: React.FC<ClassificationBoxProps> = ({
       );
 
       if (formatBehavior === "override") {
+        // For YouTube videos, optionally rename the file to match the video title
+        let targetFile = file;
+        if (
+          (templateName === "youtube_video" ||
+            templateName === "youtube_video.md") &&
+          videoId &&
+          videoTitle
+        ) {
+          try {
+            // Sanitize the title for use as a filename
+            const sanitizedTitle = videoTitle
+              .replace(/[<>:"/\\|?*]/g, "") // Remove invalid filename characters
+              .replace(/\s+/g, " ") // Normalize whitespace
+              .trim()
+              .substring(0, 100); // Limit length
+
+            const newFileName = `${sanitizedTitle}.md`;
+            const newPath = `${file.parent?.path || ""}/${newFileName}`.replace(
+              /^\/+/,
+              ""
+            );
+
+            // Only rename if the title is different and valid
+            if (
+              sanitizedTitle &&
+              newFileName !== file.name &&
+              !(await plugin.app.vault.adapter.exists(newPath))
+            ) {
+              await plugin.app.fileManager.renameFile(file, newPath);
+              targetFile = plugin.app.vault.getAbstractFileByPath(
+                newPath
+              ) as TFile;
+              if (!targetFile) {
+                targetFile = file; // Fallback to original if rename failed
+              }
+              logger.info(`Renamed file to match video title: ${newFileName}`);
+            }
+          } catch (error) {
+            logger.warn("Failed to rename file with video title:", error);
+            // Continue with original filename
+          }
+        }
+
         await plugin.streamFormatInCurrentNote({
-          file: file,
+          file: targetFile,
           content: fileContent,
           formattingInstruction: formattingInstruction,
         });

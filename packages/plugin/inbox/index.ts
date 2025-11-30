@@ -611,7 +611,7 @@ async function fetchYouTubeTranscriptStep(
       return context;
     }
 
-    const youtubeContent = await getYouTubeContent(videoId);
+    const youtubeContent = await getYouTubeContent(videoId, context.plugin);
     const { title, transcript } = youtubeContent;
     const appendContent = `\n\n## YouTube Video: ${title}\n\n### Transcript\n\n${transcript}`;
 
