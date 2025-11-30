@@ -1,46 +1,44 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Check, Star } from "lucide-react";
-import Link from "next/link";
-import { Switch } from "@/components/ui/switch";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ArrowRight, Check, Star } from 'lucide-react';
+import Link from 'next/link';
+import { Switch } from '@/components/ui/switch';
 
 export function PricingCards() {
   const [isYearly, setIsYearly] = useState(false);
 
   const plans = {
     selfHosted: {
-      name: "Self-hosted",
-      price: "Free",
+      name: 'Self-hosted',
+      price: 'Free',
       features: [
-        "Ultimate privacy",
-        "Use your own AI models",
-        "Community support",
-        "Source code access",
+        'Ultimate privacy',
+        'Use your own AI models',
+        'Community support',
+        'Source code access',
       ],
-      buttonText: "See Github",
-      buttonVariant: "outline" as const,
+      buttonText: 'See Github',
+      buttonVariant: 'outline' as const,
     },
     subscription: {
-      name: "Subscription",
-      price: isYearly ? "$119" : "$15",
-      period: isYearly ? "/year" : "/month",
+      name: 'Subscription',
+      price: isYearly ? '$119' : '$15',
+      period: isYearly ? '/year' : '/month',
       features: [
-        "Seamless no-sweat setup",
-        "~1000 notes per month (5 million tokens)",
-        "300 min audio transcription p/m",
-        "Support",
-        "30 days money-back guarantee",
+        'Seamless no-sweat setup',
+        '~1000 notes per month (5 million tokens)',
+        '300 min audio transcription p/m',
+        'Support',
+        '30 days money-back guarantee',
       ],
-      buttonText: "Start Free Trial",
-      buttonVariant: "default" as const,
+      buttonText: 'Start Free Trial',
+      buttonVariant: 'default' as const,
       highlight: true,
-      trial: "7-day free trial",
-      discount: isYearly
-        ? "Save 33% with yearly billing"
-        : "First month $9 with code ANIMUS",
+      trial: '7-day free trial',
+      discount: isYearly ? 'Save 33% with yearly billing' : undefined,
     },
   };
 
@@ -103,8 +101,8 @@ export function PricingCards() {
                 <span
                   className={`text-sm ${
                     !isYearly
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground"
+                      ? 'text-primary font-medium'
+                      : 'text-muted-foreground'
                   }`}
                 >
                   Monthly
@@ -117,8 +115,8 @@ export function PricingCards() {
                 <span
                   className={`text-sm ${
                     isYearly
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground"
+                      ? 'text-primary font-medium'
+                      : 'text-muted-foreground'
                   }`}
                 >
                   Yearly
@@ -129,19 +127,15 @@ export function PricingCards() {
               <div className="h-[88px] flex flex-col justify-end mb-8">
                 <div>
                   <span className="text-4xl font-bold">
-                    {isYearly ? "$119" : "$15"}
+                    {isYearly ? '$119' : '$15'}
                   </span>
                   <span className="text-muted-foreground ml-1">
-                    {isYearly ? "/year" : "/month"}
+                    {isYearly ? '/year' : '/month'}
                   </span>
                 </div>
-                {isYearly ? (
+                {isYearly && (
                   <p className="text-sm text-primary mt-1">
                     Save 33% with yearly billing
-                  </p>
-                ) : (
-                  <p className="text-sm text-primary mt-1">
-                    First month $9 with code ANIMUS
                   </p>
                 )}
               </div>
