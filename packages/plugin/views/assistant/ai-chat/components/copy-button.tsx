@@ -1,5 +1,6 @@
 import React from "react";
 import { Copy } from "lucide-react";
+import { Notice } from "obsidian";
 
 interface CopyButtonProps {
   content: string;
@@ -7,7 +8,12 @@ interface CopyButtonProps {
 
 export const CopyButton: React.FC<CopyButtonProps> = ({ content }) => {
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(content);
+    try {
+      await navigator.clipboard.writeText(content);
+      new Notice("Copied to clipboard", 2000);
+    } catch (error) {
+      new Notice(`Failed to copy: ${error instanceof Error ? error.message : "Unknown error"}`, 5000);
+    }
   };
 
   return (

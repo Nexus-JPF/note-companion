@@ -9,9 +9,9 @@ const YOUTUBE_URL_PATTERNS = [
   /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/,
 ];
 
-export async function extractYouTubeVideoId(
+export function extractYouTubeVideoId(
   content: string
-): Promise<string | null> {
+): string | null {
   for (const pattern of YOUTUBE_URL_PATTERNS) {
     const match = content.match(pattern);
     if (match && match[1]) {
@@ -171,9 +171,33 @@ export async function getYouTubeContent(
   videoId: string,
   _plugin?: FileOrganizer
 ): Promise<{ title: string; transcript: string }> {
+  // Validate and normalize videoId to ensure it's a string
+  if (!videoId) {
+    throw new YouTubeError("videoId is required");
+  }
+
+  // Convert to string if it's not already
+  const normalizedVideoId = String(videoId).trim();
+
+  if (!normalizedVideoId) {
+    throw new YouTubeError("videoId cannot be empty");
+  }
+
+  // Extract videoId if a full URL was passed
+  const extractedId = extractYouTubeVideoId(normalizedVideoId);
+  const finalVideoId = extractedId || normalizedVideoId;
+
+  // Final validation: ensure it's a valid videoId format
+  if (!/^[a-zA-Z0-9_-]+$/.test(finalVideoId)) {
+    throw new YouTubeError(
+      `Invalid videoId format: "${finalVideoId}". Expected YouTube video ID (alphanumeric, dashes, underscores only)`
+    );
+  }
+
   console.log(
     "[YouTube Service] Fetching YouTube content directly (client-side):",
-    videoId
+    finalVideoId,
+    `(original: ${typeof videoId === 'string' ? videoId : JSON.stringify(videoId)})`
   );
 
   try {
@@ -186,7 +210,7 @@ export async function getYouTubeContent(
     );
 
     const [transcriptItems, title] = await Promise.all([
-      fetchTranscript(videoId, {
+      fetchTranscript(finalVideoId, {
         // Provide custom fetch functions that use Obsidian's requestUrl
         videoFetch: async ({ url, lang, userAgent }) => {
           return obsidianFetch(url, {
@@ -226,13 +250,22 @@ export async function getYouTubeContent(
         },
       }).catch(error => {
         console.error("[YouTube Service] Transcript fetch error:", error);
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
+
+        // Check if the error is about videoId.match not being a function
+        if (errorMessage.includes("match is not a function")) {
+          throw new YouTubeError(
+            `Invalid videoId type. Received: ${typeof finalVideoId}, value: ${JSON.stringify(finalVideoId)}. ${errorMessage}`
+          );
+        }
+
         throw new YouTubeError(
-          `Failed to fetch transcript: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          `Failed to fetch transcript: ${errorMessage}`
         );
       }),
-      fetchYouTubeTitle(videoId).catch(error => {
+      fetchYouTubeTitle(finalVideoId).catch(error => {
         console.warn(
           "[YouTube Service] Title fetch failed, using fallback:",
           error

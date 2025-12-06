@@ -1,8 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useChat, UseChatOptions } from "@ai-sdk/react";
 import { moment } from "obsidian";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, AlertCircle } from "lucide-react";
+import { RefreshCw, AlertCircle, Send, Square } from "lucide-react";
 import { StyledContainer } from "@/components/ui/utils";
 
 import FileOrganizer from "../../..";
@@ -22,7 +28,11 @@ import { ModelType } from "./types";
 import { AudioRecorder } from "./audio-recorder";
 import { logger } from "../../../services/logger";
 import { SubmitButton } from "./submit-button";
-import { getUniqueReferences, useContextItems, clearEphemeralContext } from "./use-context-items";
+import {
+  getUniqueReferences,
+  useContextItems,
+  clearEphemeralContext,
+} from "./use-context-items";
 import { ContextItems } from "./components/context-items";
 import { ClearAllButton } from "./components/clear-all-button";
 import { NewChatButton } from "./components/new-chat-button";
@@ -33,9 +43,12 @@ import {
   SearchResultsAnnotation,
 } from "./types/annotations";
 import { ExamplePrompts } from "./components/example-prompts";
-import { AttachmentHandler } from './components/attachment-handler';
-import { LocalAttachment } from './types/attachments';
-import { useEditorSelection, formatEditorContextForAI } from "./use-editor-selection";
+import { AttachmentHandler } from "./components/attachment-handler";
+import { LocalAttachment } from "./types/attachments";
+import {
+  useEditorSelection,
+  formatEditorContextForAI,
+} from "./use-editor-selection";
 import { EditorContextBadge } from "./components/editor-context-badge";
 
 interface ChatComponentProps {
@@ -59,7 +72,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     tags,
     searchResults,
     currentFile,
-
+    youtubeVideos,
     textSelections,
     isLightweightMode,
   } = useContextItems();
@@ -69,8 +82,8 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
   // Track editor selection for contextual understanding
   // Uses frozen context to preserve selection even when chat input gets focus
-  const { current: currentEditorContext, frozen: frozenEditorContext } = useEditorSelection(app);
-  
+  const { current: currentEditorContext, frozen: frozenEditorContext } =
+    useEditorSelection(app);
 
   const editorContext = frozenEditorContext;
 
@@ -79,7 +92,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     folders,
     tags,
     currentFile,
-
+    youtubeVideos,
     searchResults,
     textSelections,
   };
@@ -124,9 +137,15 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
             },
           ])
         ),
+        youtubeVideos: Object.fromEntries(
+          Object.entries(youtubeVideos).map(([id, video]) => [
+            id,
+            { ...video, transcript: "" }, // Remove transcript in lightweight mode
+          ])
+        ),
         // Keep these as is
         currentFile: currentFile ? { ...currentFile, content: "" } : null,
-    
+
         textSelections,
       };
       return JSON.stringify(lightweightContext);
@@ -144,12 +163,13 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     () => formatEditorContextForAI(editorContext),
     [editorContext.selectedText, editorContext.filePath] // Only recalc when selection or file changes
   );
-  
+
   // Combine vault context with editor context - MEMOIZED
   const fullContext = React.useMemo(
-    () => editorContextString 
-      ? `${contextString}\n\n${editorContextString}`
-      : contextString,
+    () =>
+      editorContextString
+        ? `${contextString}\n\n${editorContextString}`
+        : contextString,
     [contextString, editorContextString]
   );
 
@@ -160,22 +180,26 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
   );
 
   // MEMOIZE chatBody to prevent infinite loop from RAF updates
-  const chatBody = React.useMemo(() => ({
-    currentDatetime,
-    newUnifiedContext: fullContext,
-    model: plugin.settings.selectedModel,
-    enableSearchGrounding: plugin.settings.enableSearchGrounding || 
-                          selectedModel === 'gpt-4o-search-preview' || 
-                          selectedModel === 'gpt-4o-mini-search-preview',
-    deepSearch: plugin.settings.enableDeepSearch,
-  }), [
-    currentDatetime,
-    fullContext, 
-    plugin.settings.selectedModel,
-    plugin.settings.enableSearchGrounding,
-    plugin.settings.enableDeepSearch,
-    selectedModel
-  ]);
+  const chatBody = React.useMemo(
+    () => ({
+      currentDatetime,
+      newUnifiedContext: fullContext,
+      model: plugin.settings.selectedModel,
+      enableSearchGrounding:
+        plugin.settings.enableSearchGrounding ||
+        selectedModel === "gpt-4o-search-preview" ||
+        selectedModel === "gpt-4o-mini-search-preview",
+      deepSearch: plugin.settings.enableDeepSearch,
+    }),
+    [
+      currentDatetime,
+      fullContext,
+      plugin.settings.selectedModel,
+      plugin.settings.enableSearchGrounding,
+      plugin.settings.enableDeepSearch,
+      selectedModel,
+    ]
+  );
 
   const [groundingMetadata, setGroundingMetadata] =
     useState<GroundingMetadata | null>(null);
@@ -192,13 +216,174 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     reload,
     setMessages,
   } = useChat({
-    // NO body or prepareRequestBody - causes infinite loops!
+    // Use prepareRequestBody to ensure context is always included, even after tool results
+    // Read context fresh from Zustand store each time to ensure it's up-to-date after tool results
+    prepareRequestBody: ({ messages }) => {
+      // Read directly from Zustand store to get latest values (not from closure)
+      const store = useContextItems.getState();
+      const freshContextItems = {
+        files: store.files || {},
+        folders: store.folders || {},
+        tags: store.tags || {},
+        currentFile: store.currentFile || null,
+        youtubeVideos: store.youtubeVideos || {}, // CRITICAL: Ensure youtubeVideos is always an object
+        searchResults: store.searchResults || {},
+        textSelections: store.textSelections || {},
+      };
+
+      // Debug: Log store state
+      console.log("[Chat] prepareRequestBody - Store state:", {
+        hasYoutubeVideos: !!store.youtubeVideos,
+        youtubeVideosType: typeof store.youtubeVideos,
+        youtubeVideosKeys: store.youtubeVideos
+          ? Object.keys(store.youtubeVideos)
+          : [],
+        allStoreKeys: Object.keys(store),
+      });
+
+      // Ensure youtubeVideos is always an object (defensive)
+      if (
+        !freshContextItems.youtubeVideos ||
+        typeof freshContextItems.youtubeVideos !== "object"
+      ) {
+        console.warn(
+          "[Chat] prepareRequestBody: youtubeVideos is not an object, fixing it:",
+          {
+            type: typeof freshContextItems.youtubeVideos,
+            value: freshContextItems.youtubeVideos,
+          }
+        );
+        freshContextItems.youtubeVideos = {};
+      }
+
+      const freshContextString = store.isLightweightMode
+        ? JSON.stringify({
+            files: Object.fromEntries(
+              Object.entries(freshContextItems.files).map(([id, file]) => [
+                id,
+                { ...file, content: "" },
+              ])
+            ),
+            folders: Object.fromEntries(
+              Object.entries(freshContextItems.folders).map(([id, folder]) => [
+                id,
+                {
+                  ...folder,
+                  files: folder.files.map(f => ({ ...f, content: "" })),
+                },
+              ])
+            ),
+            tags: Object.fromEntries(
+              Object.entries(freshContextItems.tags).map(([id, tag]) => [
+                id,
+                { ...tag, files: tag.files.map(f => ({ ...f, content: "" })) },
+              ])
+            ),
+            searchResults: Object.fromEntries(
+              Object.entries(freshContextItems.searchResults).map(
+                ([id, search]) => [
+                  id,
+                  {
+                    ...search,
+                    results: search.results.map(r => ({ ...r, content: "" })),
+                  },
+                ]
+              )
+            ),
+            youtubeVideos: Object.fromEntries(
+              Object.entries(freshContextItems.youtubeVideos).map(
+                ([id, video]) => [id, { ...video, transcript: "" }]
+              )
+            ),
+            currentFile: freshContextItems.currentFile
+              ? { ...freshContextItems.currentFile, content: "" }
+              : null,
+            textSelections: freshContextItems.textSelections,
+          })
+        : JSON.stringify(freshContextItems);
+
+      // Get fresh editor context
+      const freshEditorContext = formatEditorContextForAI(editorContext);
+      const freshFullContext = freshEditorContext
+        ? `${freshContextString}\n\n${freshEditorContext}`
+        : freshContextString;
+
+      // Log for debugging
+      const hasYouTube =
+        Object.keys(freshContextItems.youtubeVideos).length > 0;
+      const contextStringLength = freshContextString.length;
+      console.log("[Chat] prepareRequestBody:", {
+        hasYouTube,
+        youtubeVideoCount: Object.keys(freshContextItems.youtubeVideos).length,
+        youtubeVideoIds: Object.keys(freshContextItems.youtubeVideos),
+        contextStringLength,
+        isLightweightMode: store.isLightweightMode,
+        hasEditorContext: !!freshEditorContext,
+      });
+
+      if (hasYouTube) {
+        // Log first video details
+        const firstVideo = Object.values(
+          freshContextItems.youtubeVideos
+        )[0] as any;
+        console.log("[Chat] First YouTube video:", {
+          id: firstVideo?.id,
+          title: firstVideo?.title,
+          transcriptLength: firstVideo?.transcript?.length || 0,
+          videoId: firstVideo?.videoId,
+        });
+      } else {
+        // Log when YouTube videos are missing
+        console.warn(
+          "[Chat] prepareRequestBody: No YouTube videos in context!",
+          {
+            storeYoutubeVideos: Object.keys(store.youtubeVideos),
+            freshContextItemsYoutubeVideos: Object.keys(
+              freshContextItems.youtubeVideos
+            ),
+            allStoreKeys: Object.keys(store),
+          }
+        );
+      }
+
+      // Log the actual JSON being sent (first 500 chars of context)
+      const requestBody = {
+        messages,
+        currentDatetime,
+        newUnifiedContext: freshFullContext,
+        model: plugin.settings.selectedModel,
+        enableSearchGrounding:
+          plugin.settings.enableSearchGrounding ||
+          selectedModel === "gpt-4o-search-preview" ||
+          selectedModel === "gpt-4o-mini-search-preview",
+        deepSearch: plugin.settings.enableDeepSearch,
+      };
+
+      // Parse the newUnifiedContext to verify YouTube videos are included
+      try {
+        const contextJson = JSON.parse(freshContextString);
+        console.log("[Chat] Context JSON being sent:", {
+          hasYoutubeVideos: !!(
+            contextJson.youtubeVideos &&
+            Object.keys(contextJson.youtubeVideos).length > 0
+          ),
+          youtubeVideoCount: contextJson.youtubeVideos
+            ? Object.keys(contextJson.youtubeVideos).length
+            : 0,
+          allKeys: Object.keys(contextJson),
+        });
+      } catch (e) {
+        console.error("[Chat] Failed to parse context JSON:", e);
+      }
+
+      return JSON.stringify(requestBody);
+    },
     onDataChunk: (chunk: DataChunk) => {
       if (chunk.type === "metadata" && chunk.data?.groundingMetadata) {
         setGroundingMetadata(chunk.data.groundingMetadata);
       }
     },
-    maxSteps: 2,
+    maxSteps: 5,
     api: `${plugin.getServerUrl()}/api/chat`,
     experimental_throttle: 100,
     headers: {
@@ -209,10 +394,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       logMessage(plugin.settings.showLocalLLMInChat, "showLocalLLMInChat");
       logMessage(selectedModel, "selectedModel");
       // Handle different model types
-      if (
-        !plugin.settings.showLocalLLMInChat ||
-        selectedModel === "gpt-4o"
-      ) {
+      if (!plugin.settings.showLocalLLMInChat || selectedModel === "gpt-4o") {
         // Use server fetch for non-local models
         return fetch(url, options);
       }
@@ -244,32 +426,40 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     keepLastMessageOnError: true,
     onError: error => {
       logger.error(error.message);
-      
+
       // Check if this is a tool invocation error (non-fatal)
-      const isToolError = error.message?.includes('ToolInvocation must have a result');
-      
+      const isToolError = error.message?.includes(
+        "ToolInvocation must have a result"
+      );
+
       if (isToolError) {
         // Don't suppress tool errors - let them appear as messages
         // Just log it and continue without blocking the UI
         logger.warn("Tool invocation error detected, displaying as message...");
         return;
       }
-      
+
       let userFriendlyMessage = "Something went wrong. Please try again.";
-      
-      if (error.message?.toLowerCase().includes('api key')) {
-        userFriendlyMessage = "API key issue detected. Please check your settings.";
-      } else if (error.message?.toLowerCase().includes('network') || error.message?.toLowerCase().includes('fetch')) {
-        userFriendlyMessage = "Connection failed. Please check your internet connection.";
-      } else if (error.message?.toLowerCase().includes('rate limit')) {
-        userFriendlyMessage = "Rate limit reached. Please wait a moment and try again.";
-      } else if (error.message?.toLowerCase().includes('timeout')) {
+
+      if (error.message?.toLowerCase().includes("api key")) {
+        userFriendlyMessage =
+          "API key issue detected. Please check your settings.";
+      } else if (
+        error.message?.toLowerCase().includes("network") ||
+        error.message?.toLowerCase().includes("fetch")
+      ) {
+        userFriendlyMessage =
+          "Connection failed. Please check your internet connection.";
+      } else if (error.message?.toLowerCase().includes("rate limit")) {
+        userFriendlyMessage =
+          "Rate limit reached. Please wait a moment and try again.";
+      } else if (error.message?.toLowerCase().includes("timeout")) {
         userFriendlyMessage = "Request timed out. Please try again.";
       } else if (error.message) {
         // If we have a specific error message, show it fully (don't truncate)
         userFriendlyMessage = error.message;
       }
-      
+
       setErrorMessage(userFriendlyMessage);
     },
     onFinish: () => {
@@ -281,12 +471,20 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
   const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
 
-  const handleAttachmentsChange = useCallback((newAttachments: LocalAttachment[]) => {
-    setAttachments(newAttachments);
-  }, []);
+  const handleAttachmentsChange = useCallback(
+    (newAttachments: LocalAttachment[]) => {
+      setAttachments(newAttachments);
+    },
+    []
+  );
 
   const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
-    logger.debug("handleSendMessage", e, input);
+    // Only log safe properties to avoid circular reference errors
+    logger.debug("handleSendMessage", {
+      input,
+      type: e.type,
+      timeStamp: e.timeStamp,
+    });
     e.preventDefault();
     if (isGenerating) {
       handleCancelGeneration();
@@ -295,11 +493,13 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
     const messageBody = {
       ...chatBody,
-      experimental_attachments: attachments.map(({ id, size, ...attachment }) => ({
-        name: attachment.name,
-        contentType: attachment.contentType,
-        url: attachment.url,
-      })),
+      experimental_attachments: attachments.map(
+        ({ id, size, ...attachment }) => ({
+          name: attachment.name,
+          contentType: attachment.contentType,
+          url: attachment.url,
+        })
+      ),
     };
 
     handleSubmit(e, { body: messageBody });
@@ -381,11 +581,11 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
               </div>
             )}
           </div>
-          
+
           <div className="flex items-center gap-2">
             {/* New Chat */}
             <NewChatButton onClick={handleNewChat} />
-            
+
             {/* Clear All - icon only */}
             <ClearAllButton />
           </div>
@@ -396,23 +596,11 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       <div className="flex-1 overflow-y-auto px-3 py-2 bg-[--background-primary]">
         <div className="flex flex-col space-y-1">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-            </div>
+            <div className="flex flex-col items-center justify-center py-12"></div>
           ) : (
             messages.map(message => (
               <React.Fragment key={message.id}>
-                <MessageRenderer message={message} />
-                {message.annotations?.map((annotation, index) => {
-                  if (isSearchResultsAnnotation(annotation)) {
-                    return (
-                      <SearchAnnotationHandler
-                        key={`${message.id}-annotation-${index}`}
-                        annotation={annotation}
-                      />
-                    );
-                  }
-                  return null;
-                })}
+                {/* Render tool invocations FIRST so they appear above the message content */}
                 {message.toolInvocations?.map(
                   (toolInvocation: ToolInvocation) => {
                     return (
@@ -425,6 +613,20 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                     );
                   }
                 )}
+                {/* Then render annotations */}
+                {message.annotations?.map((annotation, index) => {
+                  if (isSearchResultsAnnotation(annotation)) {
+                    return (
+                      <SearchAnnotationHandler
+                        key={`${message.id}-annotation-${index}`}
+                        annotation={annotation}
+                      />
+                    );
+                  }
+                  return null;
+                })}
+                {/* Finally render the message content (summary) so it appears below tool invocations */}
+                <MessageRenderer message={message} />
               </React.Fragment>
             ))
           )}
@@ -447,7 +649,9 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
               <div className="w-4 text-xs text-[--text-error]">⚠</div>
               <div className="flex-1 space-y-1">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-[--text-error] font-medium">Error</div>
+                  <div className="text-sm text-[--text-error] font-medium">
+                    Error
+                  </div>
                   <button
                     onClick={handleDismissError}
                     className="text-[--text-muted] hover:text-[--text-normal] text-xs"
@@ -456,7 +660,9 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                     ✕
                   </button>
                 </div>
-                <div className="text-sm text-[--text-normal] whitespace-pre-wrap select-text">{errorMessage}</div>
+                <div className="text-sm text-[--text-normal] whitespace-pre-wrap select-text">
+                  {errorMessage}
+                </div>
                 <Button
                   onClick={handleRetry}
                   variant="ghost"
@@ -496,25 +702,23 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
             />
             {/* Embedded controls - bottom right corner of input */}
             <div className="absolute bottom-2 right-2 flex items-center gap-1">
-              <AudioRecorder onTranscriptionComplete={handleTranscriptionComplete} />
+              <AudioRecorder
+                onTranscriptionComplete={handleTranscriptionComplete}
+              />
               <button
                 type="submit"
-                disabled={isGenerating}
-                className={`w-7 h-7 flex items-center justify-center transition-colors ${
-                  isGenerating
-                    ? "text-[--text-muted] cursor-not-allowed"
-                    : "text-[--interactive-accent] hover:text-[--interactive-accent-hover]"
+                disabled={isGenerating || !input.trim()}
+                className={`flex items-center justify-center transition-all rounded-md w-8 h-8 ${
+                  isGenerating || !input.trim()
+                    ? "text-[--text-muted] cursor-not-allowed opacity-50"
+                    : "text-[--text-on-accent] bg-[--interactive-accent] hover:bg-[--interactive-accent-hover] shadow-sm hover:shadow"
                 }`}
                 title={isGenerating ? "Stop generating" : "Send message"}
               >
                 {isGenerating ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <Square className="w-4 h-4" fill="currentColor" />
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
+                  <Send className="w-4 h-4" />
                 )}
               </button>
             </div>

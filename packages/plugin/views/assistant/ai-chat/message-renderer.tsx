@@ -20,8 +20,17 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
 }) => {
   const plugin = usePlugin();
 
+  // Only hide message if it has tool invocations that are NOT complete (no results yet)
+  // If all tool invocations have results, we should still render the message content
   if (message.toolInvocations) {
-    return null;
+    const allToolsComplete = message.toolInvocations.every(
+      (tool: any) => "result" in tool
+    );
+    // If tools are still executing, don't render the message yet
+    // But if all tools are complete, render the message content
+    if (!allToolsComplete) {
+      return null;
+    }
   }
   if (message.content.length === 0) {
     return null;
@@ -38,7 +47,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
       <div className="flex-shrink-0 w-4 text-xs text-[--text-faint] pt-0.5">
         {message.role === "user" ? "You" : "AI"}
       </div>
-      
+
       <div className="flex-1 min-w-0">
         <div className="text-sm text-[--text-normal]">
           {message.role === "user" ? (

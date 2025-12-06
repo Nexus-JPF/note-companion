@@ -605,7 +605,7 @@ async function fetchYouTubeTranscriptStep(
       return context;
     }
 
-    const videoId = await extractYouTubeVideoId(context.content);
+    const videoId = extractYouTubeVideoId(context.content);
     if (!videoId) {
       // This should never happen now, but just in case
       return context;

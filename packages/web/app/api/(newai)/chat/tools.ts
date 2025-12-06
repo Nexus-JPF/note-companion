@@ -26,9 +26,9 @@ export const chatTools = {
     }),
   },
   getYoutubeVideoId: {
-    description: "Extract YouTube video ID to import and organize video content into notes",
+    description: "Retrieve YouTube video transcript and add it to context. After retrieving, automatically provide a summary of the video content based on the transcript. Use this when the user asks to summarize, analyze, or get information from a YouTube video.",
     parameters: z.object({
-      videoId: z.string().describe("The YouTube video ID"),
+      videoId: z.string().describe("The YouTube video ID or full URL (e.g., 'ooNeVSVlCX4' or 'https://www.youtube.com/watch?v=ooNeVSVlCX4')"),
     }),
   },
   getLastModifiedFiles: {

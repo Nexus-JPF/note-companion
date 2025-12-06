@@ -46,7 +46,7 @@ export const ClassificationContainer: React.FC<ClassificationBoxProps> = ({
         templateName === "youtube_video" ||
         templateName === "youtube_video.md"
       ) {
-        videoId = await extractYouTubeVideoId(fileContent);
+        videoId = extractYouTubeVideoId(fileContent);
         console.log("[YouTube Format] Extracted video ID:", videoId);
         if (videoId) {
           try {

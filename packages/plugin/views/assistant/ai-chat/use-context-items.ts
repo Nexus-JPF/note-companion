@@ -215,11 +215,11 @@ export const useContextItems = create<ContextItemsState>((set, get) => ({
     set(state => {
       const reference = selection.reference;
       get().removeByReference(reference);
-      
+
       return {
-        textSelections: { 
-          ...state.textSelections, 
-          [selection.id]: selection 
+        textSelections: {
+          ...state.textSelections,
+          [selection.id]: selection
         },
       };
     }),
@@ -408,7 +408,20 @@ export const addYouTubeContext = (video: {
   title: string;
   transcript: string;
 }) => {
-  useContextItems.getState().addYouTubeVideo({
+  console.log("[addYouTubeContext] Adding video to store:", {
+    videoId: video.videoId,
+    title: video.title,
+    transcriptLength: video.transcript.length,
+  });
+
+  const store = useContextItems.getState();
+  console.log("[addYouTubeContext] Store state before add:", {
+    hasYoutubeVideos: !!store.youtubeVideos,
+    youtubeVideosType: typeof store.youtubeVideos,
+    youtubeVideosKeys: store.youtubeVideos ? Object.keys(store.youtubeVideos) : [],
+  });
+
+  store.addYouTubeVideo({
     id: `youtube-${video.videoId}`,
     type: "youtube",
     videoId: video.videoId,
@@ -416,6 +429,17 @@ export const addYouTubeContext = (video: {
     transcript: video.transcript,
     reference: `YouTube Video: ${video.title}`,
     createdAt: Date.now(),
+    ephemeral: false, // CRITICAL: Explicitly set to false so it's NOT cleared by clearEphemeral
+  });
+
+  // Verify it was added
+  const storeAfter = useContextItems.getState();
+  const addedVideo = storeAfter.youtubeVideos?.[`youtube-${video.videoId}`];
+  console.log("[addYouTubeContext] Store state after add:", {
+    hasYoutubeVideos: !!storeAfter.youtubeVideos,
+    youtubeVideosKeys: storeAfter.youtubeVideos ? Object.keys(storeAfter.youtubeVideos) : [],
+    videoAdded: !!addedVideo,
+    videoId: addedVideo?.videoId,
   });
 };
 
@@ -462,9 +486,9 @@ export const addTagContext = async (
 
 export const addSearchContext = (
   query: string,
-  results: Array<{ 
-    path: string; 
-    title: string; 
+  results: Array<{
+    path: string;
+    title: string;
     contentPreview: string;
     contentLength: number;
     wordCount: number;
