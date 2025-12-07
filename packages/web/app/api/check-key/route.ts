@@ -315,10 +315,13 @@ export async function POST(request: NextRequest) {
     // Key is valid - return success
     // Note: We don't check subscription status here because this endpoint
     // is only for validating that the key format/structure is correct
+    // Extract userId from v2 format (identity.externalId) or v1 format (ownerId)
+    const userId =
+      result?.identity?.externalId || result?.identity?.id || result?.ownerId;
     return NextResponse.json(
       {
         message: 'Valid key',
-        userId: result.ownerId,
+        userId: userId || 'unknown',
       },
       { status: 200 }
     );

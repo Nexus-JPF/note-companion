@@ -61,7 +61,7 @@ export async function createLicenseKeyFromUserId(userId: string) {
   // Handle v2 response format (wrapped in data) or v1 format (direct result)
   // Unkey can return: { data: { key: "...", keyId: "..." } } (v2) or { key: "...", keyId: "..." } (v1)
   const keyResult =
-    'data' in response ? response.data : response.result || response;
+    response && ('data' in response ? response.data : response.result || response);
 
   if (response.error || !keyResult) {
     console.error('Failed to create license key', {

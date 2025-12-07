@@ -58,7 +58,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userId = result.ownerId;
+    // Extract userId from v2 format (identity.externalId) or v1 format (ownerId)
+    const userId =
+      result?.identity?.externalId || result?.identity?.id || result?.ownerId;
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: 'Invalid key',
+          message: 'No user ID found in verification result',
+        },
+        { status: 401 }
+      );
+    }
 
     // Get basic usage information without checking subscription status
     const userUsage = await db
