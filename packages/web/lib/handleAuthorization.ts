@@ -40,19 +40,29 @@ async function handleLogging(
 }
 
 async function handleLoggingV2(req: NextRequest, userId: string) {
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
-  console.log('user', user.emailAddresses[0]?.emailAddress);
-  const posthogClient = PostHogClient();
-  if (posthogClient) {
-    posthogClient.capture({
-      distinctId: userId,
-      event: 'call-api',
-      properties: {
-        endpoint: req.nextUrl.pathname.replace('/api/', ''),
-        email: user?.emailAddresses[0]?.emailAddress,
-      },
-    });
+  // Skip logging if Clerk is not configured
+  if (!process.env.CLERK_SECRET_KEY) {
+    return;
+  }
+
+  try {
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    console.log('user', user.emailAddresses[0]?.emailAddress);
+    const posthogClient = PostHogClient();
+    if (posthogClient) {
+      posthogClient.capture({
+        distinctId: userId,
+        event: 'call-api',
+        properties: {
+          endpoint: req.nextUrl.pathname.replace('/api/', ''),
+          email: user?.emailAddresses[0]?.emailAddress,
+        },
+      });
+    }
+  } catch (error) {
+    // Log error but don't fail authorization if logging fails
+    console.error('Error in handleLoggingV2:', error);
   }
 }
 
@@ -67,8 +77,15 @@ class AuthorizationError extends Error {
 }
 
 export const getToken = (req: NextRequest) => {
-  const header = req.headers.get('authorization');
-  const token = header?.replace('Bearer ', '');
+  // Check both lowercase and original case
+  const header =
+    req.headers.get('authorization') || req.headers.get('Authorization');
+  const token = header?.replace(/^Bearer\s+/i, '');
+  console.log('[getToken] Header check:', {
+    hasAuthHeader: !!header,
+    headerPrefix: header ? header.substring(0, 20) : 'none',
+    extractedToken: token ? token.substring(0, 10) + '...' : 'none',
+  });
   return token;
 };
 
@@ -133,51 +150,139 @@ async function handleApiKeyAuth(
   token: string,
   logger: ReturnType<typeof createLogger>
 ) {
-  logger.info('Attempting API key authentication');
-
-  // Unkey v2: verifyKey is a method on the Unkey instance
-  // It takes an object with 'key' property
-  const unkey = new Unkey({
-    rootKey: process.env.UNKEY_ROOT_KEY || '',
+  // Log at the VERY start of the function
+  console.log('[handleApiKeyAuth] FUNCTION CALLED', {
+    tokenLength: token?.length || 0,
+    tokenPrefix: token ? token.substring(0, 10) + '...' : 'NO TOKEN',
   });
 
-  // Try verifyKey method (v2 API) - takes object with 'key' property
-  // Include apiId if available (keys are scoped to an API)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let response: any = null;
-  const apiId = process.env.UNKEY_API_ID;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const verifyParams: any = { key: token };
-  if (apiId) {
-    verifyParams.apiId = apiId;
-  }
+  try {
+    console.log('[handleApiKeyAuth] Starting verification', {
+      tokenPrefix: token.substring(0, 10) + '...',
+      hasRootKey: !!process.env.UNKEY_ROOT_KEY,
+      hasApiId: !!process.env.UNKEY_API_ID,
+    });
+    logger.info('Attempting API key authentication');
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if ((unkey as any).keys?.verifyKey) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    response = await (unkey as any).keys.verifyKey(verifyParams);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } else if ((unkey as any).verifyKey) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    response = await (unkey as any).verifyKey(verifyParams);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } else if ((unkey as any).keys?.verify) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    response = await (unkey as any).keys.verify(verifyParams);
-  }
+    // Unkey v2: verifyKey is a method on the Unkey instance
+    // It takes an object with 'key' property
+    let unkey;
+    try {
+      unkey = new Unkey({
+        rootKey: process.env.UNKEY_ROOT_KEY || '',
+      });
+      console.log('[handleApiKeyAuth] Unkey instance created successfully');
+    } catch (unkeyError) {
+      console.error('[handleApiKeyAuth] Failed to create Unkey instance', {
+        error:
+          unkeyError instanceof Error ? unkeyError.message : String(unkeyError),
+        stack: unkeyError instanceof Error ? unkeyError.stack : undefined,
+      });
+      throw unkeyError;
+    }
 
-  // Handle v2 response format (wrapped in data) or v1 format (direct result)
-  const result =
-    response && ('data' in response ? response.data : response.result);
-  const error = response?.error;
+    // Try verifyKey method (v2 API) - takes object with 'key' property
+    // Include apiId if available (keys are scoped to an API)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let response: any = null;
+    const apiId = process.env.UNKEY_API_ID;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const verifyParams: any = { key: token };
+    if (apiId) {
+      verifyParams.apiId = apiId;
+      logger.info('Including apiId in verification', { apiId });
+    }
 
-  if (!result || !result.valid) {
-    logger.error('API key validation failed', error, { code: result?.code });
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((unkey as any).keys?.verifyKey) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        response = await (unkey as any).keys.verifyKey(verifyParams);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } else if ((unkey as any).verifyKey) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        response = await (unkey as any).verifyKey(verifyParams);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } else if ((unkey as any).keys?.verify) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        response = await (unkey as any).keys.verify(verifyParams);
+      }
+    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const error = err as any;
+      logger.error('Unkey verification error', err, {
+        message: error?.message,
+        statusCode: error?.statusCode,
+      });
+      // Try to extract response from error
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (error?.data$) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        response = error.data$;
+      }
+    }
+
+    // Handle v2 response format (wrapped in data) or v1 format (direct result)
+    const result =
+      response && ('data' in response ? response.data : response.result);
+    const error = response?.error;
+
+    logger.info('Unkey verification result', {
+      hasResponse: !!response,
+      hasResult: !!result,
+      valid: result?.valid,
+      code: result?.code,
+      error: error?.message || error?.detail,
+    });
+
+    // Direct console.log for debugging
+    // Unkey v2 uses identity.externalId or identity.id instead of ownerId
+    const userId =
+      result?.identity?.externalId || result?.identity?.id || result?.ownerId;
+    console.log('[handleApiKeyAuth] Unkey verification result', {
+      hasResponse: !!response,
+      hasResult: !!result,
+      valid: result?.valid,
+      code: result?.code,
+      error: error?.message || error?.detail,
+      ownerId: result?.ownerId,
+      identity: result?.identity,
+      extractedUserId: userId,
+    });
+
+    if (!result || !result.valid) {
+      console.error('[handleApiKeyAuth] Validation failed', {
+        code: result?.code,
+        error: error?.message || error?.detail,
+        fullResult: JSON.stringify(result, null, 2),
+      });
+      logger.error('API key validation failed', error, { code: result?.code });
+      return null;
+    }
+
+    if (!userId) {
+      console.error('[handleApiKeyAuth] No user ID found in result', {
+        result: JSON.stringify(result, null, 2),
+      });
+      logger.error('API key validation succeeded but no user ID found', null);
+      return null;
+    }
+
+    logger.info('API key authentication successful', {
+      userId,
+      ownerId: result.ownerId,
+      identity: result.identity,
+    });
+    return userId;
+  } catch (outerError) {
+    console.error('[handleApiKeyAuth] Outer catch - unexpected error', {
+      error:
+        outerError instanceof Error ? outerError.message : String(outerError),
+      stack: outerError instanceof Error ? outerError.stack : undefined,
+    });
+    logger.error('Unexpected error in handleApiKeyAuth', outerError);
     return null;
   }
-
-  logger.info('API key authentication successful', { ownerId: result.ownerId });
-  return result.ownerId;
 }
 
 async function handleClerkAuth(logger: ReturnType<typeof createLogger>) {
@@ -251,6 +356,14 @@ export async function handleAuthorizationV2(req: NextRequest) {
   };
   const logger = createLogger(context);
 
+  // Direct console.log for debugging
+  console.log('[handleAuthorizationV2] Starting', {
+    path: req.nextUrl.pathname,
+    method: req.method,
+    requestId,
+    hasAuthHeader: !!req.headers.get('authorization'),
+  });
+
   logger.info('Starting authorization process');
 
   // Skip auth if user management is disabled
@@ -262,8 +375,29 @@ export async function handleAuthorizationV2(req: NextRequest) {
   try {
     // Try API key auth first
     const token = getToken(req);
+    logger.info('Token extraction', {
+      hasToken: !!token,
+      tokenPrefix: token ? token.substring(0, 10) + '...' : 'none',
+    });
+
     if (token) {
-      const userId = await handleApiKeyAuth(token, logger);
+      console.log('[handleAuthorizationV2] About to call handleApiKeyAuth', {
+        tokenPrefix: token.substring(0, 10) + '...',
+      });
+      let userId: string | null = null;
+      try {
+        userId = await handleApiKeyAuth(token, logger);
+        console.log('[handleAuthorizationV2] handleApiKeyAuth returned', {
+          userId: userId || 'null',
+        });
+      } catch (error) {
+        console.error('[handleAuthorizationV2] handleApiKeyAuth threw error', {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        logger.error('handleApiKeyAuth error', error);
+      }
+      logger.info('API key auth result', { userId: userId || 'null' });
       if (userId) {
         // Validate user access - separated subscription and token checks
         try {
@@ -313,6 +447,14 @@ export async function handleAuthorizationV2(req: NextRequest) {
       }
     }
 
+    // Detailed logging before throwing error
+    console.error('[handleAuthorizationV2] All authentication methods failed', {
+      path: req.nextUrl.pathname,
+      method: req.method,
+      requestId,
+      hadToken: !!getToken(req),
+      enableUserManagement: process.env.ENABLE_USER_MANAGEMENT,
+    });
     logger.error('All authentication methods failed', null);
     throw new AuthorizationError('Unauthorized', 401);
   } catch (error) {

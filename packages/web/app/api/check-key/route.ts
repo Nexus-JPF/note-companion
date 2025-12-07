@@ -106,27 +106,32 @@ export async function POST(request: NextRequest) {
       ) {
         console.log('Trying keys.verifyKey method...');
         try {
-          // v1 verifies keys globally without apiId
-          // v2 might work the same way - try without apiId first
-          console.log(
-            'Calling verifyKey WITHOUT apiId (matching v1 behavior):',
-            {
-              key: token.substring(0, 10) + '...',
-            }
-          );
+          // v2 requires apiId OR root key with api.*.verify_key permissions
+          // Since v1 worked without special permissions, we should include apiId
+          // This matches v1's behavior where apiId was required
+          const apiId = process.env.UNKEY_API_ID;
+          const verifyParams: { key: string; apiId?: string } = { key: token };
+
+          if (apiId) {
+            verifyParams.apiId = apiId;
+            console.log(
+              'Calling verifyKey WITH apiId (v2 requires this or special permissions):',
+              {
+                key: token.substring(0, 10) + '...',
+                apiId,
+              }
+            );
+          } else {
+            console.log(
+              'Calling verifyKey WITHOUT apiId (requires root key with api.*.verify_key permissions):',
+              {
+                key: token.substring(0, 10) + '...',
+              }
+            );
+          }
+
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          response = await keysService.verifyKey({ key: token });
-
-          // Check the result
-          const result = response?.data || response?.result;
-          console.log('First attempt result:', {
-            valid: result?.valid,
-            code: result?.code,
-            hasResponse: !!response,
-          });
-
-          // Only try with apiId if explicitly needed (for now, skip this fallback)
-          // The key should work without apiId if it worked in v1
+          response = await keysService.verifyKey(verifyParams);
           console.log('verifyKey returned:', {
             hasResponse: !!response,
             responseType: typeof response,
