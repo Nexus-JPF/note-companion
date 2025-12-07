@@ -1,5 +1,5 @@
 import { clerkClient, auth } from '@clerk/nextjs/server';
-import { verifyKey } from '@unkey/api';
+import { Unkey } from '@unkey/api';
 import { NextRequest } from 'next/server';
 import {
   checkTokenUsage,
@@ -134,10 +134,45 @@ async function handleApiKeyAuth(
   logger: ReturnType<typeof createLogger>
 ) {
   logger.info('Attempting API key authentication');
-  const { result, error } = await verifyKey(token);
 
-  if (!result.valid) {
-    logger.error('API key validation failed', error, { code: result.code });
+  // Unkey v2: verifyKey is a method on the Unkey instance
+  // It takes an object with 'key' property
+  const unkey = new Unkey({
+    rootKey: process.env.UNKEY_ROOT_KEY || '',
+  });
+
+  // Try verifyKey method (v2 API) - takes object with 'key' property
+  // Include apiId if available (keys are scoped to an API)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let response: any = null;
+  const apiId = process.env.UNKEY_API_ID;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const verifyParams: any = { key: token };
+  if (apiId) {
+    verifyParams.apiId = apiId;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((unkey as any).keys?.verifyKey) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    response = await (unkey as any).keys.verifyKey(verifyParams);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } else if ((unkey as any).verifyKey) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    response = await (unkey as any).verifyKey(verifyParams);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } else if ((unkey as any).keys?.verify) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    response = await (unkey as any).keys.verify(verifyParams);
+  }
+
+  // Handle v2 response format (wrapped in data) or v1 format (direct result)
+  const result =
+    response && ('data' in response ? response.data : response.result);
+  const error = response?.error;
+
+  if (!result || !result.valid) {
+    logger.error('API key validation failed', error, { code: result?.code });
     return null;
   }
 
@@ -313,11 +348,44 @@ export async function handleAuthorization(req: NextRequest) {
   }
 
   const token = header.replace('Bearer ', '');
-  const { result } = await verifyKey(token);
 
-  if (!result.valid) {
+  // Unkey v2: Use Unkey instance for verification
+  const unkey = new Unkey({
+    rootKey: process.env.UNKEY_ROOT_KEY || '',
+  });
+
+  // Try verifyKey method (v2 API) - takes object with 'key' property
+  // Include apiId if available (keys are scoped to an API)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let response: any = null;
+  const apiId = process.env.UNKEY_API_ID;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const verifyParams: any = { key: token };
+  if (apiId) {
+    verifyParams.apiId = apiId;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((unkey as any).keys?.verifyKey) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    response = await (unkey as any).keys.verifyKey(verifyParams);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } else if ((unkey as any).verifyKey) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    response = await (unkey as any).verifyKey(verifyParams);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } else if ((unkey as any).keys?.verify) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    response = await (unkey as any).keys.verify(verifyParams);
+  }
+
+  // Handle v2 response format (wrapped in data) or v1 format (direct result)
+  const result =
+    response && ('data' in response ? response.data : response.result);
+
+  if (!result || !result.valid) {
     console.error(result);
-    throw new AuthorizationError(`Unauthorized: ${result.code}`, 401);
+    throw new AuthorizationError(`Unauthorized: ${result?.code}`, 401);
   }
 
   // Check subscription status
