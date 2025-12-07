@@ -71,8 +71,26 @@ export async function POST(request: NextRequest) {
       });
 
       // Try different possible methods
+      // v1 uses keys.verify, v2 uses keys.verifyKey
+      // Try keys.verify first (v1 method) to match v1 behavior
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (typeof unkeyAny.verifyKey === 'function') {
+      if (keysService && typeof keysService.verify === 'function') {
+        console.log('Trying keys.verify method (v1 style)...');
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          response = await keysService.verify({ key: token });
+          console.log(
+            'keys.verify response:',
+            response ? 'got response' : 'no response'
+          );
+        } catch (err) {
+          console.log('keys.verify failed, trying verifyKey...');
+        }
+      }
+
+      // If verify didn't work, try verifyKey (v2 method)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (!response && typeof unkeyAny.verifyKey === 'function') {
         console.log('Trying verifyKey method...');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         response = await unkeyAny.verifyKey({ key: token });
@@ -81,25 +99,34 @@ export async function POST(request: NextRequest) {
           response ? 'got response' : 'no response'
         );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } else if (keysService && typeof keysService.verifyKey === 'function') {
+      } else if (
+        !response &&
+        keysService &&
+        typeof keysService.verifyKey === 'function'
+      ) {
         console.log('Trying keys.verifyKey method...');
         try {
-          // Try with apiId if available (keys are scoped to an API)
-          // Note: Unkey v2 keys contain API info, so apiId may not be needed
-          // But including it for explicit API scoping
-          const apiId = process.env.UNKEY_API_ID;
-          const verifyParams: { key: string; apiId?: string } = { key: token };
-          if (apiId) {
-            verifyParams.apiId = apiId;
-            console.log('Including apiId in verification:', apiId);
-          }
-
-          console.log('Calling verifyKey with params:', {
-            key: token.substring(0, 10) + '...',
-            apiId: !!apiId,
-          });
+          // v1 verifies keys globally without apiId
+          // v2 might work the same way - try without apiId first
+          console.log(
+            'Calling verifyKey WITHOUT apiId (matching v1 behavior):',
+            {
+              key: token.substring(0, 10) + '...',
+            }
+          );
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          response = await keysService.verifyKey(verifyParams);
+          response = await keysService.verifyKey({ key: token });
+
+          // Check the result
+          const result = response?.data || response?.result;
+          console.log('First attempt result:', {
+            valid: result?.valid,
+            code: result?.code,
+            hasResponse: !!response,
+          });
+
+          // Only try with apiId if explicitly needed (for now, skip this fallback)
+          // The key should work without apiId if it worked in v1
           console.log('verifyKey returned:', {
             hasResponse: !!response,
             responseType: typeof response,
