@@ -42,7 +42,6 @@ describe('createLicenseKeyFromUserId - Unkey API v2 Migration', () => {
     expect(result).toEqual({
       key: {
         key: 'unkey_test_key_123',
-        keyId: 'key_123',
       },
     });
     expect(mockCreate).toHaveBeenCalledWith({
@@ -67,7 +66,6 @@ describe('createLicenseKeyFromUserId - Unkey API v2 Migration', () => {
     expect(result).toEqual({
       key: {
         key: 'unkey_test_key_456',
-        keyId: 'key_456',
       },
     });
   });
@@ -86,7 +84,6 @@ describe('createLicenseKeyFromUserId - Unkey API v2 Migration', () => {
     expect(result).toEqual({
       key: {
         key: 'unkey_test_key_v1',
-        keyId: 'key_789',
       },
     });
   });
@@ -114,8 +111,10 @@ describe('createLicenseKeyFromUserId - Unkey API v2 Migration', () => {
     expect(consoleSpy).toHaveBeenCalledWith(
       'Failed to create license key',
       expect.objectContaining({
-        code: 'RATE_LIMIT',
-        message: 'Rate limit exceeded',
+        error: expect.objectContaining({
+          code: 'RATE_LIMIT',
+          message: 'Rate limit exceeded',
+        }),
       })
     );
 

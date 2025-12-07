@@ -530,14 +530,24 @@ export async function handleAuthorization(req: NextRequest) {
     throw new AuthorizationError(`Unauthorized: ${result?.code}`, 401);
   }
 
+  // Extract userId from v2 format (identity.externalId) or v1 format (ownerId)
+  const userId =
+    result?.identity?.externalId || result?.identity?.id || result?.ownerId;
+  if (!userId) {
+    throw new AuthorizationError(
+      'No user ID found in verification result',
+      401
+    );
+  }
+
   // Check subscription status
-  const isActive = await checkUserSubscriptionStatus(result.ownerId);
+  const isActive = await checkUserSubscriptionStatus(userId);
   if (!isActive) {
     throw new AuthorizationError('Subscription canceled or inactive', 403);
   }
 
   // Check token usage
-  const { remaining, usageError } = await checkTokenUsage(result.ownerId);
+  const { remaining, usageError } = await checkTokenUsage(userId);
   console.log('remaining', remaining);
 
   if (usageError) {
@@ -551,9 +561,9 @@ export async function handleAuthorization(req: NextRequest) {
     );
   }
 
-  await handleLogging(req, result.ownerId, false);
+  await handleLogging(req, userId, false);
 
-  return { userId: result.ownerId };
+  return { userId };
 }
 async function ensureUserExists(userId: string): Promise<void> {
   try {

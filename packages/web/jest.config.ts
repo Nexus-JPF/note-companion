@@ -2,7 +2,7 @@ import type { Config } from '@jest/types';
 
 const config: Config.InitialOptions = {
   // Specify the correct root directories for Jest to look for test files
-  roots: ['<rootDir>/scripts', '<rootDir>/app'],
+  roots: ['<rootDir>/scripts', '<rootDir>/app', '<rootDir>/lib'],
 
   // Use TypeScript for Jest
   transform: {
