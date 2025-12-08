@@ -10,24 +10,32 @@ const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const R2_REGION = process.env.R2_REGION || "auto"; // R2 uses 'auto'
 
-if (
-  !R2_BUCKET ||
-  !R2_ENDPOINT ||
-  !R2_ACCESS_KEY_ID ||
-  !R2_SECRET_ACCESS_KEY
-) {
-  console.error("Missing R2 environment variables!");
-  // In a real app, you might prevent startup or throw a config error
-}
+// Create R2 client only if all required env vars are present
+// This prevents initialization errors when env vars are missing
+let r2Client: S3Client | null = null;
 
-const r2Client = new S3Client({
-  endpoint: R2_ENDPOINT,
-  region: R2_REGION,
-  credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID!,
-    secretAccessKey: R2_SECRET_ACCESS_KEY!,
-  },
-});
+if (
+  R2_BUCKET &&
+  R2_ENDPOINT &&
+  R2_ACCESS_KEY_ID &&
+  R2_SECRET_ACCESS_KEY
+) {
+  try {
+    r2Client = new S3Client({
+      endpoint: R2_ENDPOINT,
+      region: R2_REGION,
+      credentials: {
+        accessKeyId: R2_ACCESS_KEY_ID,
+        secretAccessKey: R2_SECRET_ACCESS_KEY,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to initialize R2 client:", error);
+    r2Client = null;
+  }
+} else {
+  console.error("Missing R2 environment variables! Client not initialized.");
+}
 
 export async function POST(request: NextRequest) {
   console.log("--- Create Upload URL Start ---"); // Add start marker
@@ -38,6 +46,37 @@ export async function POST(request: NextRequest) {
       R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY ? 'Loaded' : 'MISSING',
       R2_PUBLIC_URL: process.env.R2_PUBLIC_URL ? process.env.R2_PUBLIC_URL : 'MISSING or Undefined'
   });
+
+  // Validate R2 configuration before processing
+  if (!R2_BUCKET || !R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+    const missingVars = [];
+    if (!R2_BUCKET) missingVars.push('R2_BUCKET');
+    if (!R2_ENDPOINT) missingVars.push('R2_ENDPOINT');
+    if (!R2_ACCESS_KEY_ID) missingVars.push('R2_ACCESS_KEY_ID');
+    if (!R2_SECRET_ACCESS_KEY) missingVars.push('R2_SECRET_ACCESS_KEY');
+
+    console.error("Missing R2 environment variables:", missingVars);
+    return NextResponse.json(
+      { error: `Missing R2 configuration: ${missingVars.join(', ')}` },
+      { status: 500 }
+    );
+  }
+
+  if (!r2Client) {
+    console.error("R2 client not initialized");
+    return NextResponse.json(
+      { error: "R2 storage is not properly configured" },
+      { status: 500 }
+    );
+  }
+
+  if (!process.env.R2_PUBLIC_URL) {
+    console.error("R2_PUBLIC_URL environment variable is missing");
+    return NextResponse.json(
+      { error: "R2_PUBLIC_URL environment variable is not configured" },
+      { status: 500 }
+    );
+  }
 
   try {
     const authResult = await handleAuthorizationV2(request);
@@ -65,13 +104,17 @@ export async function POST(request: NextRequest) {
     const key = `uploads/${userId}/${uuidv4()}-${safeFilename}`;
 
     const command = new PutObjectCommand({
-      Bucket: R2_BUCKET,
+      Bucket: R2_BUCKET!,
       Key: key,
       ContentType: contentType || "application/octet-stream", // Use provided type or default
       // Add ACL if your bucket requires it, e.g., ACL: 'public-read' if needed
     });
 
     // Generate the presigned URL (expires in 1 hour)
+    if (!r2Client) {
+      throw new Error("R2 client is not initialized");
+    }
+
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 });
 
     // Construct the public URL (adjust based on your R2 public access setup)
@@ -94,10 +137,19 @@ export async function POST(request: NextRequest) {
           );
        }
      }
+
+    // Log full error details for debugging
     console.error("Error creating presigned URL:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error("Error details:", { errorMessage, errorStack });
+
     return NextResponse.json(
-      { error: "Failed to create upload URL" },
+      {
+        error: "Failed to create upload URL",
+        details: errorMessage
+      },
       { status: 500 }
     );
   }
-} 
+}

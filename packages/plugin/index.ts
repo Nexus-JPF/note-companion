@@ -1,9 +1,9 @@
-import './styles.css';
+import "./styles.css";
 
 // Add Node.js type declarations
 declare namespace NodeJS {
   interface ProcessEnv {
-    NODE_ENV: 'production' | 'development' | string;
+    NODE_ENV: "production" | "development" | string;
   }
 }
 declare const process: { env: NodeJS.ProcessEnv };
@@ -14,8 +14,6 @@ declare class Buffer {
   byteLength: number;
   static from(arrayBuffer: ArrayBuffer): Buffer;
 }
-
-
 
 import {
   Plugin,
@@ -35,7 +33,10 @@ import {
   AssistantViewWrapper,
   ORGANIZER_VIEW_TYPE,
 } from "./views/assistant/view";
-import { DashboardView, DASHBOARD_VIEW_TYPE } from "./views/assistant/dashboard/view";
+import {
+  DashboardView,
+  DASHBOARD_VIEW_TYPE,
+} from "./views/assistant/dashboard/view";
 import Jimp from "jimp/es/index";
 
 import { FileOrganizerSettings, DEFAULT_SETTINGS } from "./settings";
@@ -121,7 +122,7 @@ export default class FileOrganizer extends Plugin {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 
     // Migration: Fix old gpt-4.1-mini model name to gpt-4o-mini
-    if (this.settings.selectedModel === "gpt-4.1-mini" as any) {
+    if (this.settings.selectedModel === ("gpt-4.1-mini" as any)) {
       this.settings.selectedModel = "gpt-4o-mini";
       await this.saveSettings();
     }
@@ -240,7 +241,10 @@ export default class FileOrganizer extends Plugin {
     await this.app.vault.append(currentFile, backupLink);
   }
 
-  async appendFormattedLinkToBackupFile(backupFile: TFile, formattedFile: TFile) {
+  async appendFormattedLinkToBackupFile(
+    backupFile: TFile,
+    formattedFile: TFile
+  ) {
     const formattedLink = `\n\n---\n[[${formattedFile.path} | Link to formatted file]]`;
 
     await this.app.vault.append(backupFile, formattedLink);
@@ -335,7 +339,7 @@ export default class FileOrganizer extends Plugin {
 
     if (frontmatterMatch) {
       let frontmatterContent = frontmatterMatch[1];
-      const closingNewline = frontmatterMatch[2] || '\n';
+      const closingNewline = frontmatterMatch[2] || "\n";
 
       // Clean up tags in frontmatter YAML
       // Match tags: ["#tag1", "#tag2"] or tags: ["tag1", "#tag2"] patterns
@@ -347,16 +351,20 @@ export default class FileOrganizer extends Plugin {
           const tagMatches = tagsContent.match(/["']([^"']*)["']/g) || [];
           const cleanedTags = tagMatches.map((tagMatch: string) => {
             // Remove quotes and # symbols
-            const cleaned = tagMatch.replace(/^["']|["']$/g, '').replace(/^#+/, '');
+            const cleaned = tagMatch
+              .replace(/^["']|["']$/g, "")
+              .replace(/^#+/, "");
             return `"${cleaned}"`;
           });
 
           // Preserve original formatting (single-line vs multiline)
-          const isMultiline = tagsContent.includes('\n');
+          const isMultiline = tagsContent.includes("\n");
           if (isMultiline) {
-            return `tags: [\n${cleanedTags.map((tag: string) => `  ${tag}`).join(',\n')}\n]`;
+            return `tags: [\n${cleanedTags
+              .map((tag: string) => `  ${tag}`)
+              .join(",\n")}\n]`;
           } else {
-            return `tags: [${cleanedTags.join(', ')}]`;
+            return `tags: [${cleanedTags.join(", ")}]`;
           }
         }
       );
@@ -369,11 +377,11 @@ export default class FileOrganizer extends Plugin {
     }
 
     // Then, clean up inline tags in the content body
-    const lines = content.split('\n');
+    const lines = content.split("\n");
     let inFrontmatter = false;
     const cleanedLines = lines.map(line => {
       // Track frontmatter boundaries
-      if (line.trim() === '---') {
+      if (line.trim() === "---") {
         inFrontmatter = !inFrontmatter;
         return line;
       }
@@ -389,16 +397,16 @@ export default class FileOrganizer extends Plugin {
       }
 
       // Skip code blocks
-      if (line.trim().startsWith('```')) {
+      if (line.trim().startsWith("```")) {
         return line;
       }
 
       // Replace ##tag with #tag (multiple # before a tag word)
       // This handles cases where AI adds # to tags that already get # from Obsidian
-      return line.replace(/(\s|^)(#{2,})([a-zA-Z0-9_\-]+)/g, '$1#$3');
+      return line.replace(/(\s|^)(#{2,})([a-zA-Z0-9_\-]+)/g, "$1#$3");
     });
 
-    return cleanedLines.join('\n');
+    return cleanedLines.join("\n");
   }
 
   async streamFormatInCurrentNote({
@@ -581,7 +589,6 @@ export default class FileOrganizer extends Plugin {
     const requestBody: any = {
       content,
       formattingInstruction,
-
     };
 
     const response = await fetch(`${serverUrl}/api/format-stream`, {
@@ -655,56 +662,52 @@ export default class FileOrganizer extends Plugin {
     const fileName = `audio-${Date.now()}.${fileExtension}`;
     const mimeType = `audio/${fileExtension}`;
 
-    // Step 1: Get pre-signed URL from backend
-    const presignedResponse = await fetch(`${this.getServerUrl()}/api/create-upload-url`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.settings.API_KEY}`,
-      },
-      body: JSON.stringify({
-        filename: fileName,
-        contentType: mimeType,
-      }),
-    });
-
-    if (!presignedResponse.ok) {
-      const errorData = await presignedResponse.json();
-      throw new Error(`Failed to get upload URL: ${errorData.error}`);
-    }
-
-    const { uploadUrl, key, publicUrl } = await presignedResponse.json();
-
-    if (!uploadUrl || !key || !publicUrl) {
-      throw new Error("Invalid response from create-upload-url endpoint");
-    }
-
-    // Step 2: Upload directly to R2 using the pre-signed URL
-    const uploadResponse = await fetch(uploadUrl, {
-      method: "PUT",
-      body: audioBuffer,
-      headers: {
-        "Content-Type": mimeType,
-      },
-    });
+    // Use proxy endpoint to upload to R2 server-side (avoids CORS issues in Electron)
+    // Step 1: Upload audio file to backend, which uploads to R2
+    // Include extension in URL query parameter to avoid CORS header issues
+    const uploadResponse = await fetch(
+      `${this.getServerUrl()}/api/upload-audio-to-r2?extension=${fileExtension}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": mimeType,
+          Authorization: `Bearer ${this.settings.API_KEY}`,
+        },
+        body: audioBuffer,
+      }
+    );
 
     if (!uploadResponse.ok) {
-      throw new Error(`Failed to upload to R2: ${uploadResponse.status}`);
+      const errorData = await uploadResponse.json();
+      throw new Error(
+        `Failed to upload audio to R2: ${
+          errorData.error || errorData.details || "Unknown error"
+        }`
+      );
     }
 
-    // Step 3: Trigger transcription with the uploaded file URL
-    const transcribeResponse = await fetch(`${this.getServerUrl()}/api/transcribe`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.settings.API_KEY}`,
-      },
-      body: JSON.stringify({
-        fileUrl: publicUrl,
-        key: key,
-        extension: fileExtension,
-      }),
-    });
+    const { key, publicUrl } = await uploadResponse.json();
+
+    if (!key || !publicUrl) {
+      throw new Error("Invalid response from upload-audio-to-r2 endpoint");
+    }
+
+    // Step 2: Trigger transcription with the uploaded file URL
+    const transcribeResponse = await fetch(
+      `${this.getServerUrl()}/api/transcribe`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.settings.API_KEY}`,
+        },
+        body: JSON.stringify({
+          fileUrl: publicUrl,
+          key: key,
+          extension: fileExtension,
+        }),
+      }
+    );
 
     if (!transcribeResponse.ok) {
       const errorData = await transcribeResponse.json();
@@ -718,11 +721,47 @@ export default class FileOrganizer extends Plugin {
     file: TFile
   ): Promise<AsyncIterableIterator<string>> {
     try {
+      // Check file size before reading (faster check using stat)
+      const fileSizeInBytes = file.stat.size;
+      const fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+      const MAX_FILE_SIZE_MB = 25;
+      const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+      if (fileSizeInBytes > MAX_FILE_SIZE_BYTES) {
+        throw new Error(
+          `Audio file is too large (${fileSizeInMB.toFixed(
+            2
+          )}MB). Maximum size is ${MAX_FILE_SIZE_MB}MB. Please compress or split the audio file.`
+        );
+      }
+
       const audioBuffer = await this.app.vault.readBinary(file);
+      console.log(
+        `[Plugin] Transcribing audio file: ${
+          file.name
+        }, size: ${fileSizeInMB.toFixed(2)}MB`
+      );
+
       const response = await this.transcribeAudio(audioBuffer, file.extension);
 
       const data = await response.json();
       const transcript = data.text;
+      const transcriptLength = transcript?.length || 0;
+
+      console.log(
+        `[Plugin] Received transcript: ${transcriptLength} characters`
+      );
+
+      if (data.length) {
+        console.log(
+          `[Plugin] Server reported transcript length: ${data.length} characters`
+        );
+        if (transcriptLength !== data.length) {
+          console.warn(
+            `[Plugin] WARNING: Transcript length mismatch! Received ${transcriptLength} but server reported ${data.length}`
+          );
+        }
+      }
 
       // Convert the single transcript to an async iterator for compatibility
       async function* generateTranscript() {
@@ -1189,7 +1228,7 @@ export default class FileOrganizer extends Plugin {
     // Register the dashboard view
     this.registerView(
       DASHBOARD_VIEW_TYPE,
-      (leaf) => new DashboardView(leaf, this)
+      leaf => new DashboardView(leaf, this)
     );
 
     // Add command to open dashboard
@@ -1220,12 +1259,43 @@ export default class FileOrganizer extends Plugin {
     const transcriptHeader = `\n\n## Transcript for ${audioFileName}\n\n`;
     await this.app.vault.append(parentFile, transcriptHeader);
 
+    let totalAppended = 0;
+    let chunkCount = 0;
+
     for await (const chunk of transcriptIterator) {
+      const chunkLength = chunk.length;
+      console.log(
+        `[Plugin] Appending transcript chunk ${++chunkCount}: ${chunkLength} characters`
+      );
       await this.app.vault.append(parentFile, chunk);
-      // Optionally, update UI or perform actions with each chunk
+      totalAppended += chunkLength;
     }
 
-    new Notice(`Transcription completed for ${audioFileName}`, 5000);
+    console.log(
+      `[Plugin] Total transcript appended: ${totalAppended} characters in ${chunkCount} chunk(s)`
+    );
+
+    // Verify by reading back the file
+    const fileContent = await this.app.vault.read(parentFile);
+    const transcriptStart = fileContent.indexOf(transcriptHeader);
+    if (transcriptStart !== -1) {
+      const appendedTranscript = fileContent.substring(
+        transcriptStart + transcriptHeader.length
+      );
+      console.log(
+        `[Plugin] Verified: File contains ${appendedTranscript.length} characters of transcript`
+      );
+      if (appendedTranscript.length !== totalAppended) {
+        console.warn(
+          `[Plugin] WARNING: Mismatch! Appended ${totalAppended} but file contains ${appendedTranscript.length}`
+        );
+      }
+    }
+
+    new Notice(
+      `Transcription completed for ${audioFileName} (${totalAppended} characters)`,
+      5000
+    );
   }
 
   async generateUniqueBackupFileName(originalFile: TFile): Promise<string> {
@@ -1372,7 +1442,10 @@ export default class FileOrganizer extends Plugin {
       new Notice("All required folders have been created successfully!", 3000);
     } catch (error) {
       console.error("Failed to create required folders:", error);
-      new Notice("There was an error creating the required folders. Please check console for details.", 5000);
+      new Notice(
+        "There was an error creating the required folders. Please check console for details.",
+        5000
+      );
     }
   }
 
@@ -1384,13 +1457,16 @@ export default class FileOrganizer extends Plugin {
 
       // Try the public-usage endpoint first (works even with token limits)
       try {
-        const publicResponse = await fetch(`${this.getServerUrl()}/api/public-usage`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${this.settings.API_KEY}`
-          },
-        });
+        const publicResponse = await fetch(
+          `${this.getServerUrl()}/api/public-usage`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${this.settings.API_KEY}`,
+            },
+          }
+        );
 
         if (publicResponse.ok) {
           const data = await publicResponse.json();
@@ -1399,7 +1475,9 @@ export default class FileOrganizer extends Plugin {
 
         logger.debug("Public usage endpoint failed, trying regular endpoint");
       } catch (error) {
-        logger.debug("Error fetching from public usage endpoint, trying regular endpoint");
+        logger.debug(
+          "Error fetching from public usage endpoint, trying regular endpoint"
+        );
       }
 
       // Fall back to the regular endpoint
@@ -1407,7 +1485,7 @@ export default class FileOrganizer extends Plugin {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${this.settings.API_KEY}`
+          Authorization: `Bearer ${this.settings.API_KEY}`,
         },
       });
 
@@ -1419,22 +1497,31 @@ export default class FileOrganizer extends Plugin {
 
           // If we got a token limit error, create a synthetic response
           // with maxed out usage data
-          if (errorData.error && errorData.error.includes("Token limit exceeded")) {
+          if (
+            errorData.error &&
+            errorData.error.includes("Token limit exceeded")
+          ) {
             // Try to get basic info from public API
             try {
-              const publicResponse = await fetch(`${this.getServerUrl()}/api/public-usage`, {
-                method: "GET",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${this.settings.API_KEY}`
-                },
-              });
+              const publicResponse = await fetch(
+                `${this.getServerUrl()}/api/public-usage`,
+                {
+                  method: "GET",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${this.settings.API_KEY}`,
+                  },
+                }
+              );
 
               if (publicResponse.ok) {
                 return await publicResponse.json();
               }
             } catch (e) {
-              logger.debug("Failed to get public usage after token limit error", e);
+              logger.debug(
+                "Failed to get public usage after token limit error",
+                e
+              );
             }
 
             // Fallback if public API also fails
@@ -1443,7 +1530,7 @@ export default class FileOrganizer extends Plugin {
               maxTokenUsage: 100000,
               subscriptionStatus: "active",
               currentPlan: "Subscription",
-              isActive: true
+              isActive: true,
             };
           }
         }
@@ -1453,7 +1540,6 @@ export default class FileOrganizer extends Plugin {
 
       const data = await response.json();
       return data;
-
     } catch (error) {
       logger.error("Failed to fetch usage statistics", error);
       return null;
@@ -1466,7 +1552,7 @@ export default class FileOrganizer extends Plugin {
 
     // Extract the domain from the full server URL
     // This pattern transforms "https://app.notecompanion.ai/api" into "https://app.notecompanion.ai"
-    const serverDomain = serverUrl.replace(/\/api\/?$/, '');
+    const serverDomain = serverUrl.replace(/\/api\/?$/, "");
 
     // Use the server domain for the upgrade URL
     const upgradeUrl = `${serverDomain}/onboarding`;
@@ -1475,6 +1561,6 @@ export default class FileOrganizer extends Plugin {
     logger.debug(`Opening upgrade plan URL: ${upgradeUrl}`);
 
     // Open the URL in a browser
-    window.open(upgradeUrl, '_blank');
+    window.open(upgradeUrl, "_blank");
   }
 }

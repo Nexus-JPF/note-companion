@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { Unkey } from '@unkey/api';
 
-export const maxDuration = 300; // 5 minutes for larger files
+export const maxDuration = 900; // 15 minutes for longer audio/video files (Vercel Pro plan limit)
 
 export async function POST(request: Request) {
   let tempFilePath: string | null = null;
@@ -140,15 +140,23 @@ export async function POST(request: Request) {
     }
 
     // Process the audio file
+    console.log(`[Transcribe] Starting transcription for file: ${tempFilePath}, size: ${fileSizeInMB.toFixed(2)}MB`);
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(tempFilePath),
       model: 'whisper-1',
     });
 
+    // Log transcript length for debugging
+    const transcriptLength = transcription.text.length;
+    console.log(`[Transcribe] Transcription completed. Transcript length: ${transcriptLength} characters`);
+
     // Clean up temp file
     if (tempFilePath) await fsPromises.unlink(tempFilePath);
 
-    return NextResponse.json({ text: transcription.text });
+    return NextResponse.json({
+      text: transcription.text,
+      length: transcriptLength, // Include length for debugging
+    });
   } catch (error) {
     console.error('Transcription error:', error);
 
@@ -216,15 +224,23 @@ async function handlePresignedUrlTranscription(
       baseURL: process.env.OPENAI_API_BASE || 'https://api.openai.com/v1',
     });
 
+    console.log(`[Transcribe R2] Starting transcription for file from R2: ${tempFilePath}, size: ${fileSizeInMB.toFixed(2)}MB`);
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(tempFilePath),
       model: 'whisper-1',
     });
 
+    // Log transcript length for debugging
+    const transcriptLength = transcription.text.length;
+    console.log(`[Transcribe R2] Transcription completed. Transcript length: ${transcriptLength} characters`);
+
     // Clean up
     await fsPromises.unlink(tempFilePath);
 
-    return NextResponse.json({ text: transcription.text });
+    return NextResponse.json({
+      text: transcription.text,
+      length: transcriptLength, // Include length for debugging
+    });
   } catch (error) {
     console.error('Pre-signed URL transcription error:', error);
 
