@@ -377,7 +377,7 @@ export async function POST(req: NextRequest) {
               ...chatTools,
               web_search_preview: openai.tools.webSearchPreview({
                 searchContextSize: deepSearch ? 'high' : 'medium',
-              }),
+              }) as any, // Type cast for AI SDK v2 compatibility
             },
             onFinish: async ({ usage, sources }) => {
               console.log('Token usage:', usage);
