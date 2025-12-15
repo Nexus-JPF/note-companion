@@ -18,7 +18,8 @@
   all: initial;
   display: flex;
   flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-normal);
@@ -34,7 +35,8 @@
 }
 
 .sync-tab-container {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
   color-scheme: light dark;
   box-sizing: border-box;
   line-height: 1.4;
@@ -364,8 +366,12 @@
 
 /* Spinner Styles */
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning svg {
@@ -463,4 +469,3 @@
   font-size: 12px;
   font-weight: bold;
 }
-

@@ -10,6 +10,7 @@ import { moment } from "obsidian";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, AlertCircle, Send, Square } from "lucide-react";
 import { StyledContainer } from "@/components/ui/utils";
+import { Editor } from "@tiptap/react";
 
 import FileOrganizer from "../../..";
 import { GroundingMetadata, DataChunk } from "./types/grounding";
@@ -567,6 +568,86 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     setErrorMessage(null);
   };
 
+  // Ref to access Tiptap editor
+  const tiptapEditorRef = useRef<Editor | null>(null);
+
+  // Handle slash command actions
+  useEffect(() => {
+    const handleSlashCommand = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { action, item } = customEvent.detail;
+      const editor = tiptapEditorRef.current;
+
+      console.log("Slash command received:", action, item);
+
+      switch (action) {
+        case "clear":
+          handleNewChat();
+          if (editor) {
+            editor.commands.clearContent();
+          }
+          break;
+        case "newChat":
+          handleNewChat();
+          if (editor) {
+            editor.commands.clearContent();
+          }
+          break;
+        case "search":
+          // Insert search prompt into editor
+          if (editor) {
+            editor.chain().focus().insertContent("Search my vault for: ").run();
+          } else {
+            handleInputChange({
+              target: { value: "Search my vault for: " },
+            } as React.ChangeEvent<HTMLInputElement>);
+          }
+          break;
+        case "attach":
+          // Insert mention prompt
+          if (editor) {
+            editor.chain().focus().insertContent(" @").run();
+          } else {
+            handleInputChange({
+              target: { value: (input || "") + " @" },
+            } as React.ChangeEvent<HTMLInputElement>);
+          }
+          break;
+        case "summarize":
+          if (editor) {
+            editor
+              .chain()
+              .focus()
+              .insertContent("Summarize the current context")
+              .run();
+          } else {
+            handleInputChange({
+              target: { value: "Summarize the current context" },
+            } as React.ChangeEvent<HTMLInputElement>);
+          }
+          break;
+        case "explain":
+          if (editor) {
+            editor.chain().focus().insertContent("Explain: ").run();
+          } else {
+            handleInputChange({
+              target: { value: "Explain: " },
+            } as React.ChangeEvent<HTMLInputElement>);
+          }
+          break;
+        default:
+          console.warn("Unknown slash command action:", action);
+          break;
+      }
+    };
+
+    document.addEventListener("slashCommand", handleSlashCommand);
+
+    return () => {
+      document.removeEventListener("slashCommand", handleSlashCommand);
+    };
+  }, [input, handleNewChat, handleInputChange]);
+
   return (
     <StyledContainer className="flex flex-col h-full w-full max-h-full overflow-hidden">
       {/* Chat Header - minimal */}
@@ -699,6 +780,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
               value={input}
               onChange={handleTiptapChange}
               onKeyDown={handleKeyDown}
+              editorRef={tiptapEditorRef}
             />
             {/* Embedded controls - bottom right corner of input */}
             <div className="absolute bottom-2 right-2 flex items-center gap-1">
