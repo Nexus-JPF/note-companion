@@ -19,24 +19,26 @@ const LicenseForm = () => {
   const [licenseKey, setLicenseKey] = useState<string>("");
   const [isPaid, setIsPaid] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   const { user } = useUser();
 
   const handleCreateKey = async () => {
     setLoading(true);
     try {
       const res = await createLicenseKey();
-      // @ts-expect-error - Response type is unknown at compile time
-      if (res?.error) {
-        // @ts-expect-error - Error field structure is unknown at compile time
+      if ('error' in res) {
         alert(res.error);
         return;
       }
-      if (res) {
-        setLicenseKey(res.key?.key ?? "");
+      if ('key' in res && res.key?.key) {
+        setLicenseKey(res.key.key);
+      } else {
+        alert('Failed to create license key. Please try again or contact support.');
+        console.error('Unexpected response format:', res);
       }
     } catch (error) {
-      console.error(error);
+      console.error('Error creating license key:', error);
+      alert(`Error creating license key: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }

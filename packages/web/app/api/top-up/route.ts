@@ -7,7 +7,7 @@ import { createEmptyUserUsage, db, UserUsageTable } from "@/drizzle/schema";
 import { config,  PRICES } from "@/srm.config";
 import { getUrl } from "@/lib/getUrl";
 import { sql } from "drizzle-orm";
-  
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 });
@@ -16,8 +16,13 @@ async function createFallbackUser() {
   try {
     const user = await createAnonymousUser();
     await createEmptyUserUsage(user.id);
-    const { key } = await createLicenseKeyFromUserId(user.id);
-    return { userId: user.id, licenseKey: key.key };
+    const licenseKeyResult = await createLicenseKeyFromUserId(user.id);
+
+    if ('error' in licenseKeyResult) {
+      throw new Error(licenseKeyResult.error);
+    }
+
+    return { userId: user.id, licenseKey: licenseKeyResult.key.key };
   } catch (error) {
     console.error("Failed to create fallback user:", error);
     throw new Error("Unable to create or authorize user");
@@ -41,9 +46,9 @@ async function devTopUpTokens(userId: string, tokens: number) {
   if (process.env.NODE_ENV !== "development") {
     throw new Error("Dev top-up only available in development environment");
   }
-  
+
   console.log(`DEV: Adding ${tokens} tokens for user ${userId}`);
-  
+
   // Update user's token balance
   await db
     .insert(UserUsageTable)
@@ -67,7 +72,7 @@ async function devTopUpTokens(userId: string, tokens: number) {
         paymentStatus: 'succeeded',
       },
     });
-    
+
   return {
     success: true,
     message: `Added ${tokens} tokens to user ${userId}`,
@@ -148,9 +153,9 @@ async function handleDevTopUp(req: NextRequest) {
       { status: 403 }
     );
   }
-  
+
   let userId, licenseKey;
-  
+
   try {
     ({ userId, licenseKey } = await ensureAuthorizedUser(req));
   } catch (error) {
@@ -159,12 +164,12 @@ async function handleDevTopUp(req: NextRequest) {
       { status: 401 }
     );
   }
-  
+
   try {
     // Get params from URL for GET or body for PATCH
     let tokens = 1000000; // Default
     let devSecret = null;
-    
+
     if (req.method === 'PATCH') {
       try {
         const data = await req.json();
@@ -182,7 +187,7 @@ async function handleDevTopUp(req: NextRequest) {
       tokens = parseInt(url.searchParams.get('tokens') || "1000000");
       devSecret = url.searchParams.get('devSecret');
     }
-    
+
     // Optional additional security
     if (process.env.DEV_SECRET && devSecret !== process.env.DEV_SECRET) {
       return NextResponse.json(
@@ -190,9 +195,9 @@ async function handleDevTopUp(req: NextRequest) {
         { status: 403 }
       );
     }
-    
+
     const result = await devTopUpTokens(userId, tokens);
-    
+
     return NextResponse.json({
       ...result,
       userId,
