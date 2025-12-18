@@ -4,33 +4,16 @@ import React, {
   useImperativeHandle,
   useState,
 } from "react";
-import {
-  Bold,
-  Italic,
-  Code,
-  Quote,
-  Heading1,
-  Heading2,
-  List,
-  ListOrdered,
-  Link,
-  Trash2,
-  Sparkles,
-  Search,
-  FileText,
-  Settings,
-  Zap,
-} from "lucide-react";
-
 interface CommandItem {
   id: string;
   label: string;
   description?: string;
   icon: React.ReactNode;
-  category: "formatting" | "action" | "ai";
+  category: "format" | "action" | "ai";
   command?: string;
   args?: any;
   action?: string;
+  templateName?: string;
 }
 
 interface CommandListProps {
@@ -98,8 +81,8 @@ export const CommandList = forwardRef<
 
   const getCategoryLabel = (category: string) => {
     switch (category) {
-      case "formatting":
-        return "Formatting";
+      case "format":
+        return "Format Templates";
       case "action":
         return "Actions";
       case "ai":
@@ -118,7 +101,7 @@ export const CommandList = forwardRef<
     return acc;
   }, {} as Record<string, (CommandItem & { originalIndex: number })[]>);
 
-  const categories = ["formatting", "action", "ai"] as const;
+  const categories = ["format", "action", "ai"] as const;
 
   return props.items.length ? (
     <div className="max-h-[400px] overflow-y-auto bg-[--background-secondary] border border-[--background-modifier-border] rounded-md shadow-lg w-80">

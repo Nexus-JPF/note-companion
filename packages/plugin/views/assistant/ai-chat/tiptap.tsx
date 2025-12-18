@@ -143,6 +143,23 @@ const Tiptap: React.FC<TiptapProps> = ({
     }
   }, [editor, files, folders, tags]);
 
+  // Load template names and store in editor storage
+  useEffect(() => {
+    const loadTemplates = async () => {
+      if (editor && plugin) {
+        try {
+          const templateNames = await plugin.getTemplateNames();
+          editor.storage.templates = templateNames;
+        } catch (error) {
+          console.error("Error loading template names:", error);
+          editor.storage.templates = [];
+        }
+      }
+    };
+
+    loadTemplates();
+  }, [editor, plugin]);
+
   // Sync editor content with value prop
   useEffect(() => {
     if (editor && editor.getText() !== value) {

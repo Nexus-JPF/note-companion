@@ -2,21 +2,15 @@ import { ReactRenderer } from "@tiptap/react";
 import tippy from "tippy.js";
 import CommandList from "./command-list";
 import {
-  Bold,
-  Italic,
-  Code,
-  Quote,
-  Heading1,
-  Heading2,
-  List,
-  ListOrdered,
-  Link,
   Trash2,
   Sparkles,
   Search,
   FileText,
-  Settings,
   Zap,
+  Video,
+  Wand2,
+  BookOpen,
+  FileCode,
 } from "lucide-react";
 
 interface CommandItem {
@@ -24,96 +18,34 @@ interface CommandItem {
   label: string;
   description?: string;
   icon: React.ReactNode;
-  category: "formatting" | "action" | "ai";
+  category: "format" | "action" | "ai";
   command?: string;
   args?: any;
   action?: string;
+  templateName?: string;
 }
 
-const allCommands: CommandItem[] = [
-  // Formatting commands
-  {
-    id: "bold",
-    label: "Bold",
-    description: "Make text bold",
-    icon: <Bold className="w-4 h-4" />,
-    category: "formatting",
-    command: "toggleBold",
-  },
-  {
-    id: "italic",
-    label: "Italic",
-    description: "Make text italic",
-    icon: <Italic className="w-4 h-4" />,
-    category: "formatting",
-    command: "toggleItalic",
-  },
-  {
-    id: "code",
-    label: "Inline Code",
-    description: "Add inline code",
-    icon: <Code className="w-4 h-4" />,
-    category: "formatting",
-    command: "toggleCode",
-  },
-  {
-    id: "codeblock",
-    label: "Code Block",
-    description: "Add a code block",
-    icon: <Code className="w-4 h-4" />,
-    category: "formatting",
-    command: "toggleCodeBlock",
-  },
-  {
-    id: "quote",
-    label: "Quote",
-    description: "Add a blockquote",
-    icon: <Quote className="w-4 h-4" />,
-    category: "formatting",
-    command: "toggleBlockquote",
-  },
-  {
-    id: "heading1",
-    label: "Heading 1",
-    description: "Large heading",
-    icon: <Heading1 className="w-4 h-4" />,
-    category: "formatting",
-    command: "toggleHeading",
-    args: { level: 1 },
-  },
-  {
-    id: "heading2",
-    label: "Heading 2",
-    description: "Medium heading",
-    icon: <Heading2 className="w-4 h-4" />,
-    category: "formatting",
-    command: "toggleHeading",
-    args: { level: 2 },
-  },
-  {
-    id: "list",
-    label: "Bullet List",
-    description: "Create a bullet list",
-    icon: <List className="w-4 h-4" />,
-    category: "formatting",
-    command: "toggleBulletList",
-  },
-  {
-    id: "numbered",
-    label: "Numbered List",
-    description: "Create a numbered list",
-    icon: <ListOrdered className="w-4 h-4" />,
-    category: "formatting",
-    command: "toggleOrderedList",
-  },
-  {
-    id: "link",
-    label: "Link",
-    description: "Add a link",
-    icon: <Link className="w-4 h-4" />,
-    category: "formatting",
-    command: "setLink",
-  },
+// Helper function to get icon for template name
+const getTemplateIcon = (templateName: string): React.ReactNode => {
+  const lowerName = templateName.toLowerCase();
+  if (lowerName.includes("youtube") || lowerName.includes("video")) {
+    return <Video className="w-4 h-4" />;
+  }
+  if (lowerName.includes("enhance")) {
+    return <Wand2 className="w-4 h-4" />;
+  }
+  if (lowerName.includes("meeting")) {
+    return <FileText className="w-4 h-4" />;
+  }
+  if (lowerName.includes("research") || lowerName.includes("paper")) {
+    return <BookOpen className="w-4 h-4" />;
+  }
+  // Default icon for other templates
+  return <FileCode className="w-4 h-4" />;
+};
+
+// Base commands (action and AI commands)
+const baseCommands: CommandItem[] = [
   // Action commands
   {
     id: "clear",
@@ -139,14 +71,6 @@ const allCommands: CommandItem[] = [
     category: "action",
     action: "search",
   },
-  {
-    id: "attach",
-    label: "Attach File",
-    description: "Attach a file to context",
-    icon: <FileText className="w-4 h-4" />,
-    category: "action",
-    action: "attach",
-  },
   // AI commands
   {
     id: "summarize",
@@ -167,13 +91,39 @@ const allCommands: CommandItem[] = [
 ];
 
 const suggestion = {
-  items: ({ query }: { query: string; editor?: any }) => {
-    console.log("Slash command items requested, query:", query);
-    if (!query || query.length === 0) {
+  items: ({ query, editor }: { query?: string; editor?: any } = {}) => {
+    const searchQuery = query || "";
+    console.log("Slash command items requested, query:", searchQuery);
+
+    // Get template names from editor storage, with fallback to empty array
+    let templateNames: string[] = [];
+    try {
+      if (editor && editor.storage && editor.storage.templates) {
+        templateNames = editor.storage.templates;
+      }
+    } catch (error) {
+      console.warn("Error accessing editor storage for templates:", error);
+      templateNames = [];
+    }
+
+    // Create format commands from template names
+    const formatCommands: CommandItem[] = templateNames.map((templateName) => ({
+      id: `format-${templateName}`,
+      label: `Format as ${templateName}`,
+      icon: getTemplateIcon(templateName),
+      category: "format",
+      action: "format",
+      templateName: templateName,
+    }));
+
+    // Combine all commands
+    const allCommands = [...formatCommands, ...baseCommands];
+
+    if (!searchQuery || searchQuery.length === 0) {
       return allCommands;
     }
 
-    const lowerQuery = query.toLowerCase();
+    const lowerQuery = searchQuery.toLowerCase();
     const filtered = allCommands.filter(
       cmd =>
         cmd.label.toLowerCase().includes(lowerQuery) ||
@@ -201,99 +151,27 @@ const suggestion = {
           console.log("Slash command executed:", item, props);
           const { editor, range } = props;
 
-          // Handle formatting commands
-          if (item.command) {
-            try {
-              // Delete the slash command text first, then apply formatting
-              if (item.command === "toggleHeading") {
-                // For headings, delete slash, then set heading
-                if (item.args?.level) {
-                  editor
-                    .chain()
-                    .focus()
-                    .deleteRange(range)
-                    .setHeading({ level: item.args.level })
-                    .insertContent(" ")
-                    .run();
-                }
-              } else if (item.command === "toggleCodeBlock") {
-                // For code blocks, delete slash, then toggle code block
-                editor
-                  .chain()
-                  .focus()
-                  .deleteRange(range)
-                  .toggleCodeBlock()
-                  .run();
-              } else if (item.command === "toggleBlockquote") {
-                // For blockquotes, delete slash, then toggle blockquote
-                editor
-                  .chain()
-                  .focus()
-                  .deleteRange(range)
-                  .toggleBlockquote()
-                  .run();
-              } else if (item.command === "toggleBulletList") {
-                // For lists, delete slash, then toggle list
-                editor
-                  .chain()
-                  .focus()
-                  .deleteRange(range)
-                  .toggleBulletList()
-                  .run();
-              } else if (item.command === "toggleOrderedList") {
-                editor
-                  .chain()
-                  .focus()
-                  .deleteRange(range)
-                  .toggleOrderedList()
-                  .run();
-              } else if (item.command === "setLink") {
-                // For links, delete slash, insert placeholder
-                editor
-                  .chain()
-                  .focus()
-                  .deleteRange(range)
-                  .insertContent("[link text](url)")
-                  .run();
-                // Select "link text" for easy editing
-                const pos = editor.state.selection.from;
-                editor.commands.setTextSelection({
-                  from: pos - 9,
-                  to: pos - 1,
-                });
-              } else {
-                // For inline formatting (bold, italic, code)
-                // Delete the slash command, toggle the format, and insert placeholder text
-                const chain = editor.chain().focus().deleteRange(range);
-
-                // Apply the formatting command
-                if (item.args) {
-                  chain[item.command](item.args);
-                } else {
-                  chain[item.command]();
-                }
-
-                // Insert placeholder text that will be formatted
-                // The user can immediately start typing to replace it
-                const placeholder =
-                  item.command === "toggleBold"
-                    ? "bold text"
-                    : item.command === "toggleItalic"
-                    ? "italic text"
-                    : item.command === "toggleCode"
-                    ? "code"
-                    : "text";
-
-                chain.insertContent(placeholder).run();
-
-                // Select the placeholder so user can immediately type to replace it
-                const pos = editor.state.selection.from;
-                const start = pos - placeholder.length;
-                editor.commands.setTextSelection({ from: start, to: pos });
+          // Handle format commands - trigger actual formatting (not just insert text)
+          if (item.action === "format" && item.templateName) {
+            // Delete the slash command text
+            if (editor && range) {
+              try {
+                editor.chain().focus().deleteRange(range).run();
+              } catch (error) {
+                console.error("Error deleting range:", error);
               }
-            } catch (error) {
-              console.error("Error executing formatting command:", error, item);
             }
+            // Dispatch format event to be handled by chat component
+            setTimeout(() => {
+              const event = new CustomEvent("slashCommand", {
+                detail: { action: "format", templateName: item.templateName, item },
+                bubbles: true,
+                cancelable: true,
+              });
+              document.dispatchEvent(event);
+              console.log("Dispatched format command event:", item.templateName);
+            }, 0);
+            return true;
           }
 
           // Handle action commands (these will be handled by the parent component via events)
@@ -336,9 +214,11 @@ const suggestion = {
       },
 
       onUpdate(props: any) {
-        reactRenderer.updateProps(props);
+        if (reactRenderer) {
+          reactRenderer.updateProps(props);
+        }
 
-        if (!props.clientRect) {
+        if (!props.clientRect || !popup || !popup[0]) {
           return;
         }
 
@@ -349,16 +229,22 @@ const suggestion = {
 
       onKeyDown(props: any) {
         if (props.event.key === "Escape") {
-          popup[0].hide();
+          if (popup && popup[0]) {
+            popup[0].hide();
+          }
           return true;
         }
 
-        return reactRenderer.ref?.onKeyDown(props);
+        return reactRenderer?.ref?.onKeyDown(props);
       },
 
       onExit() {
-        popup[0].destroy();
-        reactRenderer.destroy();
+        if (popup && popup[0]) {
+          popup[0].destroy();
+        }
+        if (reactRenderer) {
+          reactRenderer.destroy();
+        }
       },
 
       command: (props: any) => {

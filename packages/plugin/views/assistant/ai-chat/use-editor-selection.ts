@@ -26,24 +26,25 @@ const EMPTY_CONTEXT: EditorSelectionContext = {
 export interface EditorSelectionResult {
   current: EditorSelectionContext;
   frozen: EditorSelectionContext;
+  clearFrozen: () => void;
 }
 
 /**
  * Hook to track the current editor selection and context
- * 
+ *
  * This hook listens to editor changes and keeps track of:
  * - Selected text
  * - Cursor position
  * - Current line content
  * - File information
- * 
+ *
  * Returns two contexts:
  * - `current`: Real-time context (clears when editor loses focus)
  * - `frozen`: Snapshot of last selection (persists even after blur)
- * 
+ *
  * The frozen context solves the problem where clicking the chat input
  * clears the editor selection before the AI can use it.
- * 
+ *
  * This enables the AI to understand what "this" refers to when users say:
  * - "make this more concise"
  * - "fix grammar in this"
@@ -52,11 +53,17 @@ export interface EditorSelectionResult {
 export function useEditorSelection(app: App): EditorSelectionResult {
   const [currentContext, setCurrentContext] = useState<EditorSelectionContext>(EMPTY_CONTEXT);
   const [frozenContext, setFrozenContext] = useState<EditorSelectionContext>(EMPTY_CONTEXT);
+  const [isManuallyCleared, setIsManuallyCleared] = useState(false);
+
+  const clearFrozen = () => {
+    setFrozenContext(EMPTY_CONTEXT);
+    setIsManuallyCleared(true);
+  };
 
   useEffect(() => {
     const updateContext = () => {
       const view = app.workspace.getActiveViewOfType(MarkdownView);
-      
+
       if (!view || !view.editor) {
         setCurrentContext(EMPTY_CONTEXT);
         return;
@@ -99,10 +106,32 @@ export function useEditorSelection(app: App): EditorSelectionResult {
         // Freeze snapshot when there's a selection
         // This preserves the selection even when editor loses focus
         // Clear frozen context when there's no selection (user moved cursor)
+        // Reset manual clear flag when user makes a NEW selection (different from cleared one)
         if (hasSelection) {
-          setFrozenContext(newContext);
+          // Check if this is a different selection than what was frozen
+          const isDifferentSelection =
+            !frozenContext.hasSelection ||
+            frozenContext.selectedText !== newContext.selectedText ||
+            frozenContext.filePath !== newContext.filePath ||
+            (frozenContext.selection?.anchor.line !== newContext.selection?.anchor.line) ||
+            (frozenContext.selection?.anchor.ch !== newContext.selection?.anchor.ch) ||
+            (frozenContext.selection?.head.line !== newContext.selection?.head.line) ||
+            (frozenContext.selection?.head.ch !== newContext.selection?.head.ch);
+
+          if (isManuallyCleared) {
+            // Only re-freeze if this is a NEW selection (different from what was cleared)
+            if (isDifferentSelection) {
+              setIsManuallyCleared(false);
+              setFrozenContext(newContext);
+            }
+            // If it's the same selection, keep it cleared (don't re-freeze)
+          } else {
+            // Normal case: update frozen context with new selection
+            setFrozenContext(newContext);
+          }
         } else {
           setFrozenContext(EMPTY_CONTEXT);
+          setIsManuallyCleared(false);
         }
       } catch (error) {
         console.error("Error getting editor context:", error);
@@ -120,10 +149,10 @@ export function useEditorSelection(app: App): EditorSelectionResult {
       updateContext();
       rafId = requestAnimationFrame(pollSelection);
     };
-    
+
     // Start polling
     rafId = requestAnimationFrame(pollSelection);
-    
+
     // Listen to editor changes (for document content)
     const editorChangeRef = app.workspace.on("editor-change", () => {
       updateContext();
@@ -143,16 +172,17 @@ export function useEditorSelection(app: App): EditorSelectionResult {
     return () => {
       // Cancel animation frame polling
       cancelAnimationFrame(rafId);
-      
+
       app.workspace.offref(editorChangeRef);
       app.workspace.offref(activeLeafChangeRef);
       app.workspace.offref(fileOpenRef);
     };
-  }, [app]);
+  }, [app, isManuallyCleared]);
 
   return {
     current: currentContext,
     frozen: frozenContext,
+    clearFrozen,
   };
 }
 
