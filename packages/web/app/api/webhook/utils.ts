@@ -12,6 +12,7 @@ export async function updateUserSubscriptionData(
       subscriptionStatus: data.status,
       paymentStatus: data.paymentStatus,
       billingCycle: data.billingCycle,
+      maxAudioTranscriptionMinutes: 300, // 300 minutes per month for paid subscriptions
       lastPayment: new Date(),
       currentProduct: data.product,
       currentPlan: data.plan,
@@ -22,6 +23,7 @@ export async function updateUserSubscriptionData(
         subscriptionStatus: data.status,
         paymentStatus: data.paymentStatus,
         billingCycle: data.billingCycle,
+        maxAudioTranscriptionMinutes: 300, // 300 minutes per month for paid subscriptions
         lastPayment: new Date(),
         currentProduct: data.product,
         currentPlan: data.plan,

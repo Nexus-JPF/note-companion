@@ -151,7 +151,7 @@ export default function OnboardingPage() {
             <Button variant="outline">Join our discord</Button>
           </a>
           <p className="mt-3 text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} Different AI Inc. All rights
+            &copy; {new Date().getFullYear()} Nexus JPF Inc. All rights
             reserved.
           </p>
         </div>

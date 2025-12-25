@@ -109,6 +109,8 @@ interface TitleSuggestion {
 export interface UsageData {
   tokenUsage: number;
   maxTokenUsage: number;
+  audioTranscriptionMinutes: number;
+  maxAudioTranscriptionMinutes: number;
   subscriptionStatus: string;
   currentPlan: string;
   isActive?: boolean;
@@ -1298,14 +1300,23 @@ export default class FileOrganizer extends Plugin {
     );
     const nameWithExt = audioFileName;
 
-    // Check for both patterns: with and without extension
-    const transcriptHeader1 = `## Transcript for ${nameWithExt}`;
-    const transcriptHeader2 = `## Transcript for ${nameWithoutExt}`;
+    // Escape special regex characters in filenames
+    const escapeRegex = (str: string) =>
+      str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-    return (
-      fileContent.includes(transcriptHeader1) ||
-      fileContent.includes(transcriptHeader2)
+    // Check for both patterns: with and without extension
+    // Use regex to match the full header line, not just a substring
+    // The 'm' flag makes ^ and $ match line boundaries
+    const pattern1 = new RegExp(
+      `^## Transcript for ${escapeRegex(nameWithExt)}$`,
+      "m"
     );
+    const pattern2 = new RegExp(
+      `^## Transcript for ${escapeRegex(nameWithoutExt)}$`,
+      "m"
+    );
+
+    return pattern1.test(fileContent) || pattern2.test(fileContent);
   }
 
   async appendTranscriptToActiveFile(

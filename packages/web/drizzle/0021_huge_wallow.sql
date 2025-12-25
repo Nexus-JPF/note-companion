@@ -1,0 +1,2 @@
+ALTER TABLE "user_usage" ADD COLUMN "audioTranscriptionMinutes" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "user_usage" ADD COLUMN "maxAudioTranscriptionMinutes" integer DEFAULT 0 NOT NULL;

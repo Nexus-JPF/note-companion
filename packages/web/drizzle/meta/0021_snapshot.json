@@ -1,6 +1,6 @@
 {
-  "id": "5a764dd4-1f94-46c2-a7ed-e658b0308869",
-  "prevId": "52a0db16-da50-44f6-ad13-3d5a8618cb0c",
+  "id": "407629b1-7116-4ca2-926a-a2533acdd739",
+  "prevId": "5a764dd4-1f94-46c2-a7ed-e658b0308869",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -100,6 +100,20 @@
         },
         "maxTokenUsage": {
           "name": "maxTokenUsage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "audioTranscriptionMinutes": {
+          "name": "audioTranscriptionMinutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "maxAudioTranscriptionMinutes": {
+          "name": "maxAudioTranscriptionMinutes",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -396,14 +410,14 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "default": "'gpt-4o'"
+          "default": "'gpt-4.1-mini'"
         },
         "vision_model_name": {
           "name": "vision_model_name",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "default": "'gpt-4o'"
+          "default": "'gpt-4.1-mini'"
         },
         "last_api_key_update": {
           "name": "last_api_key_update",

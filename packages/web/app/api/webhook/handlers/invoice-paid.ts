@@ -10,13 +10,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 async function resetUserUsageAndSetLastPayment(userId: string) {
   console.log("resetUserUsageAndSetLastPayment", userId);
-  // Reset usage to 0 but set max tokens to monthly allotment
+  // Reset usage to 0 but set max tokens and audio transcription to monthly allotment
   // This replaces the token balance on renewal (not additive)
   await db
     .update(UserUsageTable)
     .set({
       tokenUsage: 0,
       maxTokenUsage: 5000 * 1000, // 5M tokens per month
+      audioTranscriptionMinutes: 0,
+      maxAudioTranscriptionMinutes: 300, // 300 minutes per month for paid users
       lastPayment: new Date(),
     })
     .where(eq(UserUsageTable.userId, userId));
@@ -49,6 +51,7 @@ export const handleInvoicePaid = createWebhookHandler(
           | "yearly"
           | "lifetime",
         maxTokenUsage: 5000 * 1000, // Reset to 5M tokens (not additive)
+        maxAudioTranscriptionMinutes: 300, // 300 minutes per month for paid users
         lastPayment: new Date(),
         currentProduct: metadata?.product,
         currentPlan: metadata?.plan,
@@ -59,6 +62,7 @@ export const handleInvoicePaid = createWebhookHandler(
           subscriptionStatus: invoice.status,
           paymentStatus: invoice.status,
           maxTokenUsage: 5000 * 1000, // Reset to 5M tokens (not additive)
+          maxAudioTranscriptionMinutes: 300, // 300 minutes per month for paid users
           billingCycle: metadata?.type as
             | "monthly"
             | "yearly"

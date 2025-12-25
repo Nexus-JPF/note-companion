@@ -40,6 +40,8 @@ export const UserUsageTable = pgTable(
     billingCycle: text('billingCycle').notNull(),
     tokenUsage: integer('tokenUsage').notNull().default(0),
     maxTokenUsage: integer('maxTokenUsage').notNull().default(0),
+    audioTranscriptionMinutes: integer('audioTranscriptionMinutes').notNull().default(0),
+    maxAudioTranscriptionMinutes: integer('maxAudioTranscriptionMinutes').notNull().default(0),
     subscriptionStatus: text('subscriptionStatus')
       .notNull()
       .default('inactive'),
@@ -118,6 +120,8 @@ export const createEmptyUserUsage = async (userId: string) => {
     billingCycle: 'free',
     tokenUsage: 0,
     maxTokenUsage: DEFAULT_LEGACY_PLAN_TOKENS,
+    audioTranscriptionMinutes: 0,
+    maxAudioTranscriptionMinutes: 0, // Free/legacy tier gets 0 minutes
     subscriptionStatus: 'active', // Legacy plan is considered active
     paymentStatus: 'free', // Legacy plan doesn't require payment
     tier: 'free',
@@ -212,6 +216,8 @@ export async function incrementTokenUsage(
         userId,
         tokenUsage: 0,
         maxTokenUsage: 0, // Set default max tokens to 0 or another appropriate default
+        audioTranscriptionMinutes: 0,
+        maxAudioTranscriptionMinutes: 0, // Default to 0 for free tier
         billingCycle: 'default', // Required field in the schema
         subscriptionStatus: 'inactive',
         paymentStatus: 'unpaid',
@@ -286,6 +292,112 @@ export const checkTokenUsage = async (userId: string) => {
     };
   }
 };
+
+export const checkAudioTranscriptionQuota = async (userId: string) => {
+  try {
+    const userUsage = await db
+      .select()
+      .from(UserUsageTable)
+      .where(eq(UserUsageTable.userId, userId))
+      .limit(1);
+
+    // If user doesn't exist yet, return 0 remaining (no quota for new users)
+    if (!userUsage.length) {
+      return {
+        remaining: 0,
+        usageError: false,
+      };
+    }
+
+    const currentUsage = userUsage[0]?.audioTranscriptionMinutes || 0;
+    const maxUsage = userUsage[0]?.maxAudioTranscriptionMinutes || 0;
+
+    if (currentUsage >= maxUsage) {
+      return {
+        remaining: 0,
+        usageError: false,
+      };
+    }
+
+    return {
+      remaining: maxUsage - currentUsage,
+      usageError: false,
+    };
+  } catch (error) {
+    console.error('Error checking audio transcription quota:', error);
+    return {
+      remaining: 0,
+      usageError: true,
+    };
+  }
+};
+
+export async function incrementAudioTranscriptionUsage(
+  userId: string,
+  minutes: number
+): Promise<{ remaining: number; usageError: boolean }> {
+  try {
+    // Validate minutes is a valid number
+    if (Number.isNaN(minutes) || !Number.isFinite(minutes)) {
+      console.warn(
+        `Invalid minutes value received for user ${userId}: ${minutes}, using 0 instead`
+      );
+      minutes = 0;
+    }
+
+    // Ensure minutes is a non-negative number (can be decimal)
+    minutes = Math.max(0, minutes);
+
+    // First check if the user has a usage row
+    const existingUsage = await db
+      .select()
+      .from(UserUsageTable)
+      .where(eq(UserUsageTable.userId, userId))
+      .limit(1);
+
+    // If no usage row exists, create one with initial values
+    if (existingUsage.length === 0) {
+      await db.insert(UserUsageTable).values({
+        userId,
+        tokenUsage: 0,
+        maxTokenUsage: 0,
+        audioTranscriptionMinutes: 0,
+        maxAudioTranscriptionMinutes: 0,
+        billingCycle: 'default',
+        subscriptionStatus: 'inactive',
+        paymentStatus: 'unpaid',
+      });
+    }
+
+    // Now update the audio transcription usage
+    const userUsage = await db
+      .update(UserUsageTable)
+      .set({
+        audioTranscriptionMinutes: sql`${UserUsageTable.audioTranscriptionMinutes} + ${minutes}`,
+      })
+      .where(eq(UserUsageTable.userId, userId))
+      .returning({
+        remaining: sql<number>`${UserUsageTable.maxAudioTranscriptionMinutes} - COALESCE(${UserUsageTable.audioTranscriptionMinutes}, 0)`,
+      });
+
+    console.log(
+      'Incremented audio transcription usage for user:',
+      userId,
+      `+${minutes} minutes`,
+      `remaining: ${userUsage[0]?.remaining ?? 0}`
+    );
+    return {
+      remaining: userUsage[0]?.remaining ?? 0,
+      usageError: false,
+    };
+  } catch (error) {
+    console.error('Error incrementing audio transcription usage:', error);
+    return {
+      remaining: 0,
+      usageError: true,
+    };
+  }
+}
 
 // Separate subscription check from token check
 export const isSubscriptionActive = async (

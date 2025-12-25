@@ -15,6 +15,8 @@ async function handleTopUp(userId: string, tokens: number,) {
       userId,
       maxTokenUsage: tokens,
       tokenUsage: 0,
+      audioTranscriptionMinutes: 0,
+      maxAudioTranscriptionMinutes: 0, // Top-ups don't include audio transcription
       subscriptionStatus: 'active',
       paymentStatus: 'succeeded',
       currentProduct: 'top_up',
@@ -29,6 +31,7 @@ async function handleTopUp(userId: string, tokens: number,) {
         lastPayment: new Date(),
         subscriptionStatus: 'active',
         paymentStatus: 'succeeded',
+        // Don't reset audio transcription limits for top-ups
       },
     });
 }
@@ -77,4 +80,4 @@ export const handlePaymentIntentSucceeded = createWebhookHandler(
   {
     requiredMetadata: ['userId'],
   }
-); 
+);

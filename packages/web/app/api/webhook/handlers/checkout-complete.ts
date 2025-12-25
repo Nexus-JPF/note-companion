@@ -29,6 +29,7 @@ const handleSubscription = async (
       subscriptionStatus: "active",
       paymentStatus: "paid",
       maxTokenUsage: 5000 * 1000, // 5 million tokens
+      maxAudioTranscriptionMinutes: 300, // 300 minutes per month for paid subscriptions
       billingCycle: metadata.type,
       lastPayment: new Date(),
       currentPlan: metadata.plan,
@@ -40,8 +41,9 @@ const handleSubscription = async (
       target: [UserUsageTable.userId],
       set: {
         subscriptionStatus: "active",
-        paymentStatus: "paid", 
+        paymentStatus: "paid",
         maxTokenUsage: 5000 * 1000, // Ensure token limit is updated on upgrade
+        maxAudioTranscriptionMinutes: 300, // 300 minutes per month for paid subscriptions
         billingCycle: metadata.type,
         lastPayment: new Date(),
         currentPlan: metadata.plan,
@@ -50,7 +52,7 @@ const handleSubscription = async (
         tier: "paid", // Explicitly set tier to paid
       },
     });
-    
+
   console.log(`Updated subscription for user ${metadata.userId}`);
 };
 
@@ -64,6 +66,7 @@ const handlePayOnce = async (
     subscriptionStatus: "active",
     paymentStatus: "paid",
     maxTokenUsage: 0,
+    maxAudioTranscriptionMinutes: 0, // Top-ups don't include audio transcription
     billingCycle: metadata.type,
     lastPayment: new Date(),
     currentPlan: metadata.plan,
@@ -75,6 +78,7 @@ const handlePayOnce = async (
       set: {
         lastPayment: new Date(),
         hasCatalystAccess: true,
+        // Don't reset audio transcription limits for top-ups
       },
     });
 };

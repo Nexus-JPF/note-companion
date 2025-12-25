@@ -15,6 +15,8 @@ interface GeneralTabProps {
 interface UsageData {
   tokenUsage: number;
   maxTokenUsage: number;
+  audioTranscriptionMinutes: number;
+  maxAudioTranscriptionMinutes: number;
   subscriptionStatus: string;
   currentPlan: string;
 }
@@ -239,6 +241,42 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
                 ></div>
               </div>
             </div>
+            {/* Audio Transcription Usage */}
+            {(usageData.maxAudioTranscriptionMinutes || 0) > 0 && (
+              <div className="relative pt-1">
+                <div className="flex mb-2 items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold inline-block text-[--text-normal]">
+                      Audio Transcription
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-semibold inline-block text-[--text-normal]">
+                      {(usageData.audioTranscriptionMinutes || 0).toFixed(1)} /{" "}
+                      {usageData.maxAudioTranscriptionMinutes} min
+                    </span>
+                  </div>
+                </div>
+                <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-[--background-modifier-border]">
+                  <div
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        ((usageData.audioTranscriptionMinutes || 0) /
+                          usageData.maxAudioTranscriptionMinutes) *
+                          100
+                      )}%`,
+                    }}
+                    className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${
+                      (usageData.audioTranscriptionMinutes || 0) >
+                      usageData.maxAudioTranscriptionMinutes * 0.9
+                        ? "bg-[--text-error]"
+                        : "bg-[--text-accent]"
+                    }`}
+                  ></div>
+                </div>
+              </div>
+            )}
             <div className="text-sm text-[--text-muted]">
               <p>
                 Plan:{" "}
@@ -261,6 +299,15 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
                 </span>
               </p>
             </div>
+            {usageData &&
+              usageData.maxAudioTranscriptionMinutes > 0 &&
+              usageData.audioTranscriptionMinutes >=
+                usageData.maxAudioTranscriptionMinutes && (
+                <div className="mt-2 p-3 bg-[--background-] bg-opacity-20 rounded text-[--text-error] text-sm">
+                  Audio transcription quota reached. Please upgrade your plan or
+                  wait for the next billing cycle.
+                </div>
+              )}
             {usageData && usageData.tokenUsage >= usageData.maxTokenUsage && (
               <div className="mt-2 p-3 bg-[--background-] bg-opacity-20 rounded text-[--text-error] text-sm">
                 <strong>Token limit reached!</strong> You've used all your

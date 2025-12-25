@@ -20,6 +20,7 @@ export const handleInvoicePaymentFailed = createWebhookHandler(
       .set({
         paymentStatus: "payment_failed",
         maxTokenUsage: 0,
+        maxAudioTranscriptionMinutes: 0, // Reset to 0 when payment fails
       })
       .where(eq(UserUsageTable.userId, userId));
 

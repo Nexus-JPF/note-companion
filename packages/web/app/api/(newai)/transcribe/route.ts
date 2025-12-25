@@ -5,8 +5,65 @@ import { promises as fsPromises } from 'node:fs';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { Unkey } from '@unkey/api';
+import { checkAudioTranscriptionQuota, incrementAudioTranscriptionUsage } from '@/drizzle/schema';
 
 export const maxDuration = 800; // Maximum allowed for Vercel Pro plan (13.3 minutes) for longer audio/video files
+
+/**
+ * Gets the duration of an audio file in minutes
+ * Estimates duration from file size since get-audio-duration doesn't work in serverless environments
+ * @param filePath Path to the audio file
+ * @returns Duration in minutes (rounded up)
+ */
+async function getAudioDurationInMinutes(filePath: string): Promise<number> {
+  try {
+    const stats = await fsPromises.stat(filePath);
+    const fileSizeInMB = stats.size / (1024 * 1024);
+
+    // Estimate duration based on file size and format
+    // Different audio formats have different compression ratios:
+    // - MP3 (128kbps): ~1MB per minute
+    // - WAV (uncompressed): ~10MB per minute
+    // - M4A/AAC (compressed): ~0.7MB per minute
+    // - OGG (compressed): ~0.8MB per minute
+    // - WebM (compressed): ~0.6MB per minute
+
+    // Get file extension to determine format
+    const extension = filePath.split('.').pop()?.toLowerCase() || 'mp3';
+
+    let minutesPerMB: number;
+    switch (extension) {
+      case 'wav':
+        minutesPerMB = 0.1; // ~10MB per minute
+        break;
+      case 'm4a':
+      case 'aac':
+        minutesPerMB = 1.4; // ~0.7MB per minute
+        break;
+      case 'ogg':
+        minutesPerMB = 1.25; // ~0.8MB per minute
+        break;
+      case 'webm':
+        minutesPerMB = 1.67; // ~0.6MB per minute
+        break;
+      case 'mp3':
+      default:
+        minutesPerMB = 1.0; // ~1MB per minute (128kbps)
+        break;
+    }
+
+    // Calculate estimated duration and round up to be conservative with quota
+    const estimatedMinutes = fileSizeInMB * minutesPerMB;
+    return Math.ceil(estimatedMinutes);
+  } catch (error) {
+    console.error('Error calculating audio duration:', error);
+    // Ultimate fallback: very conservative estimate (assume worst case)
+    const stats = await fsPromises.stat(filePath);
+    const fileSizeInMB = stats.size / (1024 * 1024);
+    // Assume 0.5MB per minute (worst case, most compressed)
+    return Math.ceil(fileSizeInMB * 2);
+  }
+}
 
 /**
  * Formats transcript text by adding paragraph breaks at natural points
@@ -102,6 +159,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Extract userId from Unkey result
+    const userId =
+      result?.identity?.externalId || result?.identity?.id || result?.ownerId;
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unable to identify user from API key' },
+        { status: 401 }
+      );
+    }
+
     const contentType = request.headers.get('content-type') || '';
     let extension: string;
 
@@ -129,7 +197,8 @@ export async function POST(request: Request) {
       if (body.fileUrl && body.key) {
         return handlePresignedUrlTranscription(
           body.fileUrl,
-          body.extension || 'webm'
+          body.extension || 'webm',
+          userId
         );
       }
 
@@ -182,11 +251,50 @@ export async function POST(request: Request) {
       );
     }
 
+    // Calculate audio duration and check quota
+    const durationInMinutes = await getAudioDurationInMinutes(tempFilePath);
+    const { remaining: remainingMinutes, usageError } =
+      await checkAudioTranscriptionQuota(userId);
+
+    if (usageError) {
+      if (tempFilePath) await fsPromises.unlink(tempFilePath);
+      return NextResponse.json(
+        {
+          error: 'Failed to check audio transcription quota',
+          details: 'Please try again later.',
+        },
+        { status: 500 }
+      );
+    }
+
+    if (remainingMinutes < durationInMinutes) {
+      if (tempFilePath) await fsPromises.unlink(tempFilePath);
+      // Get user's current usage for better error message
+      const { db, UserUsageTable } = await import('@/drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const userUsage = await db
+        .select()
+        .from(UserUsageTable)
+        .where(eq(UserUsageTable.userId, userId))
+        .limit(1);
+
+      const currentUsage = userUsage[0]?.audioTranscriptionMinutes || 0;
+      const maxUsage = userUsage[0]?.maxAudioTranscriptionMinutes || 0;
+
+      return NextResponse.json(
+        {
+          error: 'Audio transcription quota exceeded',
+          details: `You have used ${currentUsage}/${maxUsage} minutes this month. This file would add ${durationInMinutes} minutes. Please upgrade your plan or wait for the next billing cycle.`,
+        },
+        { status: 429 }
+      );
+    }
+
     // Process the audio file
     console.log(
       `[Transcribe] Starting transcription for file: ${tempFilePath}, size: ${fileSizeInMB.toFixed(
         2
-      )}MB`
+      )}MB, duration: ${durationInMinutes} minutes`
     );
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(tempFilePath),
@@ -201,6 +309,20 @@ export async function POST(request: Request) {
 
     // Format the transcript for better readability
     const formattedText = formatTranscript(transcription.text);
+
+    // Increment audio transcription usage
+    try {
+      await incrementAudioTranscriptionUsage(userId, durationInMinutes);
+      console.log(
+        `[Transcribe] Incremented audio transcription usage: +${durationInMinutes} minutes for user ${userId}`
+      );
+    } catch (usageError) {
+      console.error(
+        '[Transcribe] Failed to increment audio transcription usage:',
+        usageError
+      );
+      // Log but don't fail the request - transcription was successful
+    }
 
     // Clean up temp file
     if (tempFilePath) await fsPromises.unlink(tempFilePath);
@@ -235,7 +357,8 @@ export async function POST(request: Request) {
 
 async function handlePresignedUrlTranscription(
   fileUrl: string,
-  extension: string
+  extension: string,
+  userId: string
 ): Promise<NextResponse> {
   let tempFilePath: string | null = null;
 
@@ -270,6 +393,45 @@ async function handlePresignedUrlTranscription(
       );
     }
 
+    // Calculate audio duration and check quota
+    const durationInMinutes = await getAudioDurationInMinutes(tempFilePath);
+    const { remaining: remainingMinutes, usageError } =
+      await checkAudioTranscriptionQuota(userId);
+
+    if (usageError) {
+      if (tempFilePath) await fsPromises.unlink(tempFilePath);
+      return NextResponse.json(
+        {
+          error: 'Failed to check audio transcription quota',
+          details: 'Please try again later.',
+        },
+        { status: 500 }
+      );
+    }
+
+    if (remainingMinutes < durationInMinutes) {
+      if (tempFilePath) await fsPromises.unlink(tempFilePath);
+      // Get user's current usage for better error message
+      const { db, UserUsageTable } = await import('@/drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const userUsage = await db
+        .select()
+        .from(UserUsageTable)
+        .where(eq(UserUsageTable.userId, userId))
+        .limit(1);
+
+      const currentUsage = userUsage[0]?.audioTranscriptionMinutes || 0;
+      const maxUsage = userUsage[0]?.maxAudioTranscriptionMinutes || 0;
+
+      return NextResponse.json(
+        {
+          error: 'Audio transcription quota exceeded',
+          details: `You have used ${currentUsage}/${maxUsage} minutes this month. This file would add ${durationInMinutes} minutes. Please upgrade your plan or wait for the next billing cycle.`,
+        },
+        { status: 429 }
+      );
+    }
+
     // Transcribe using OpenAI
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -279,7 +441,7 @@ async function handlePresignedUrlTranscription(
     console.log(
       `[Transcribe R2] Starting transcription for file from R2: ${tempFilePath}, size: ${fileSizeInMB.toFixed(
         2
-      )}MB`
+      )}MB, duration: ${durationInMinutes} minutes`
     );
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(tempFilePath),
@@ -294,6 +456,20 @@ async function handlePresignedUrlTranscription(
 
     // Format the transcript for better readability
     const formattedText = formatTranscript(transcription.text);
+
+    // Increment audio transcription usage
+    try {
+      await incrementAudioTranscriptionUsage(userId, durationInMinutes);
+      console.log(
+        `[Transcribe R2] Incremented audio transcription usage: +${durationInMinutes} minutes for user ${userId}`
+      );
+    } catch (usageError) {
+      console.error(
+        '[Transcribe R2] Failed to increment audio transcription usage:',
+        usageError
+      );
+      // Log but don't fail the request - transcription was successful
+    }
 
     // Clean up
     await fsPromises.unlink(tempFilePath);

@@ -305,8 +305,23 @@ export async function getYouTubeContent(
 }
 
 export function getOriginalContent(content: string): string {
-  // Split on YouTube section and take first part
-  return content.split("\n\n## YouTube Video:")[0];
+  let original = content;
+
+  // Remove YouTube section if present
+  original = original.split("\n\n## YouTube Video:")[0];
+
+  // Remove audio file link and transcript header if present
+  // Format: ![[audioFileName]]\n\n## Transcript for audioFileName\n\n[transcript]
+  const audioLinkPattern = /^!\[\[[^\]]+\]\]\s*\n\n/;
+  const transcriptHeaderPattern = /^## Transcript for [^\n]+\n\n/;
+
+  // Remove audio link at the start
+  original = original.replace(audioLinkPattern, '');
+
+  // Remove transcript header at the start
+  original = original.replace(transcriptHeaderPattern, '');
+
+  return original;
 }
 
 export class YouTubeError extends Error {

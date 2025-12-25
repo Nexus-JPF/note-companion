@@ -16,7 +16,7 @@ import {
   getTokenCount,
   cleanup,
 } from "../utils/token-counter";
-import { isValidExtension, VALID_MEDIA_EXTENSIONS } from "../constants";
+import { isValidExtension, VALID_MEDIA_EXTENSIONS, VALID_AUDIO_EXTENSIONS } from "../constants";
 import {
   safeCreate,
   safeRename,
@@ -582,9 +582,21 @@ async function getContentStep(
 ): Promise<ProcessingContext> {
   const fileToRead = context.inboxFile;
   const content = await context.plugin.getTextFromFile(fileToRead);
-  context.content = content;
+
+  // For audio files, prepend the audio file link and title at the top
+  let finalContent = content;
+  if (VALID_AUDIO_EXTENSIONS.includes(context.inboxFile?.extension) &&
+      context.attachmentFile &&
+      context.containerFile) {
+    const audioFileName = context.attachmentFile.name;
+    const audioLink = `![[${audioFileName}]]\n\n`;
+    const transcriptHeader = `## Transcript for ${audioFileName}\n\n`;
+    finalContent = audioLink + transcriptHeader + content;
+  }
+
+  context.content = finalContent;
   if (context.containerFile) {
-    await context.plugin.app.vault.modify(context.containerFile, content);
+    await context.plugin.app.vault.modify(context.containerFile, finalContent);
   }
 
   // Explicitly log the completion of content extraction
@@ -809,6 +821,12 @@ async function appendAttachmentStep(
   context: ProcessingContext
 ): Promise<ProcessingContext> {
   if (context.attachmentFile && context.containerFile) {
+    // Skip audio files - they're already added at the top in getContentStep
+    if (VALID_AUDIO_EXTENSIONS.includes(context.attachmentFile.extension)) {
+      return context;
+    }
+
+    // For other media types (images), append at the end as before
     // Use Obsidian's link generation for guaranteed recognition:
     const link = context.plugin.app.fileManager.generateMarkdownLink(
       context.attachmentFile,

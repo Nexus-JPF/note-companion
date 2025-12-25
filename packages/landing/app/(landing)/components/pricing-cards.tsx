@@ -30,7 +30,7 @@ export function PricingCards() {
       features: [
         'Seamless no-sweat setup',
         '~1000 notes per month (5 million tokens)',
-        '300 min audio transcription p/m',
+        '300 min audio transcription per month',
         'Support',
         '30 days money-back guarantee',
       ],

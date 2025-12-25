@@ -56,6 +56,8 @@ async function devTopUpTokens(userId: string, tokens: number) {
       userId,
       maxTokenUsage: tokens,
       tokenUsage: 0,
+      audioTranscriptionMinutes: 0,
+      maxAudioTranscriptionMinutes: 0, // Dev top-ups don't include audio transcription
       subscriptionStatus: 'active',
       paymentStatus: 'succeeded',
       currentProduct: 'dev_top_up',
@@ -70,6 +72,7 @@ async function devTopUpTokens(userId: string, tokens: number) {
         lastPayment: new Date(),
         subscriptionStatus: 'active',
         paymentStatus: 'succeeded',
+        // Don't reset audio transcription limits for dev top-ups
       },
     });
 
