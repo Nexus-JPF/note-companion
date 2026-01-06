@@ -1,0 +1,164 @@
+name: Docker Build and Push
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'      # Match: 3.4.2
+      - 'v[0-9]+.[0-9]+.[0-9]+'     # Match: v3.4.2
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Docker image tag (e.g., 3.4.2)'
+        required: true
+        type: string
+
+env:
+  DOCKERHUB_REPO: nexusjpf/note-companion
+  PLATFORMS: linux/amd64,linux/arm64
+
+jobs:
+  validate-and-extract:
+    name: Validate Tag and Extract Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+      should_build: ${{ steps.validate.outputs.should_build }}
+    steps:
+      - name: Extract version from tag
+        id: extract
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          # Remove 'v' prefix if present
+          VERSION=$(echo "$VERSION" | sed 's/^v//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Validate semantic version
+        id: validate
+        run: |
+          VERSION="${{ steps.extract.outputs.version }}"
+          echo "Validating version: $VERSION"
+
+          # Check if version matches semantic versioning pattern
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Expected format: X.Y.Z (e.g., 3.4.2)"
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Exclude test tags
+          if [[ "$VERSION" == test-* ]] || [[ "$VERSION" == *-test ]]; then
+            echo "⚠️  Test tag detected, skipping build: $VERSION"
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "✅ Valid version: $VERSION"
+          echo "should_build=true" >> $GITHUB_OUTPUT
+
+  docker-build-push:
+    name: Build and Push Multi-Arch Docker Image
+    needs: validate-and-extract
+    if: needs.validate-and-extract.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKERHUB_REPO }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.validate-and-extract.outputs.version }}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=Note Companion
+            org.opencontainers.image.description=AI-powered note organization and transcription for Obsidian
+            org.opencontainers.image.version=${{ needs.validate-and-extract.outputs.version }}
+            org.opencontainers.image.vendor=Nexus-JPF
+            org.opencontainers.image.url=https://github.com/Nexus-JPF/note-companion
+            org.opencontainers.image.source=https://github.com/Nexus-JPF/note-companion
+            org.opencontainers.image.documentation=https://github.com/Nexus-JPF/note-companion/blob/master/SELF-HOSTING.md
+
+      - name: Build and push multi-architecture image
+        id: build-push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.optimized
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache
+          cache-to: type=registry,ref=${{ env.DOCKERHUB_REPO }}:buildcache,mode=max
+          build-args: |
+            NODE_ENV=production
+
+      - name: Image digest
+        run: |
+          echo "🎉 Image pushed successfully!"
+          echo "Digest: ${{ steps.build-push.outputs.digest }}"
+
+      - name: Generate summary
+        run: |
+          echo "## 🐳 Docker Image Published Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`${{ needs.validate-and-extract.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository:** \`${{ env.DOCKERHUB_REPO }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms:** \`${{ env.PLATFORMS }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Digest:** \`${{ steps.build-push.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Pull Commands" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull specific version" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.DOCKERHUB_REPO }}:${{ needs.validate-and-extract.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.DOCKERHUB_REPO }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Run Container" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker run -d \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -p 3000:3000 \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -e OPENAI_API_KEY=your-api-key \\" >> $GITHUB_STEP_SUMMARY
+          echo "  --name note-companion \\" >> $GITHUB_STEP_SUMMARY
+          echo "  ${{ env.DOCKERHUB_REPO }}:${{ needs.validate-and-extract.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔍 Verify Multi-Architecture Support" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker manifest inspect ${{ env.DOCKERHUB_REPO }}:${{ needs.validate-and-extract.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

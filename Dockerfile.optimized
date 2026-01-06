@@ -1,0 +1,94 @@
+# Stage 1: Dependencies
+# Install dependencies in a separate stage for better caching
+FROM node:20-alpine AS deps
+
+# Install pnpm globally
+RUN npm install -g pnpm@10.8.1
+
+WORKDIR /app
+
+# Copy workspace configuration files
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+
+# Copy all package.json files for workspace packages
+COPY packages/web/package.json ./packages/web/
+COPY packages/plugin/package.json ./packages/plugin/
+COPY packages/mobile/package.json ./packages/mobile/
+COPY packages/landing/package.json ./packages/landing/
+COPY packages/release-notes/package.json ./packages/release-notes/
+
+# Install all dependencies (including devDependencies for build)
+RUN pnpm install --frozen-lockfile
+
+# Stage 2: Builder
+# Build the application
+FROM node:20-alpine AS builder
+
+# Install pnpm
+RUN npm install -g pnpm@10.8.1
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages ./packages
+
+# Copy workspace configuration
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+
+# Copy all source code
+COPY packages/web ./packages/web
+COPY turbo.json ./
+
+# Set Node options for build memory
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Build the web package
+WORKDIR /app/packages/web
+RUN pnpm run build:self-host
+
+# Prune devDependencies to reduce image size
+WORKDIR /app
+RUN pnpm install --prod --frozen-lockfile
+
+# Stage 3: Runner
+# Create the final production image
+FROM node:20-alpine AS runner
+
+# Install pnpm
+RUN npm install -g pnpm@10.8.1
+
+WORKDIR /app
+
+# Set production environment
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy necessary files from builder
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/packages/web/.next ./packages/web/.next
+COPY --from=builder --chown=nextjs:nodejs /app/packages/web/public ./packages/web/public
+COPY --from=builder --chown=nextjs:nodejs /app/packages/web/package.json ./packages/web/package.json
+COPY --from=builder --chown=nextjs:nodejs /app/packages/web/next.config.js ./packages/web/next.config.js
+COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
+
+# Set working directory to web package
+WORKDIR /app/packages/web
+
+# Switch to non-root user
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
+
+# Start the application
+CMD ["pnpm", "run", "start"]
