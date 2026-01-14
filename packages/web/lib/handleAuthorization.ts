@@ -73,6 +73,14 @@ export const getToken = (req: NextRequest) => {
     tokenStillHasBearer: token?.toLowerCase().includes('bearer'),
   });
 
+  // If token is empty or exactly "Bearer" (case-insensitive), return null
+  if (!token || token.toLowerCase() === 'bearer') {
+    console.warn(
+      '[getToken] Token extraction failed: header contains only "Bearer" without token value'
+    );
+    return null;
+  }
+
   // If token still contains "Bearer", try alternative extraction
   if (token && token.toLowerCase().startsWith('bearer')) {
     console.warn(
@@ -81,8 +89,14 @@ export const getToken = (req: NextRequest) => {
     // Try splitting by space and taking the last part
     const parts = header.split(/\s+/);
     if (parts.length > 1) {
-      return parts[parts.length - 1].trim();
+      const extractedToken = parts[parts.length - 1].trim();
+      // Only return if we actually extracted something meaningful
+      if (extractedToken && extractedToken.toLowerCase() !== 'bearer') {
+        return extractedToken;
+      }
     }
+    // If we couldn't extract a valid token, return null
+    return null;
   }
 
   return token || null;

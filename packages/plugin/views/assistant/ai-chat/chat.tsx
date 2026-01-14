@@ -515,10 +515,21 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     maxSteps: 5,
     api: `${plugin.getServerUrl()}/api/chat`,
     experimental_throttle: 100,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${plugin.getApiKey()}`,
-    },
+    headers: (() => {
+      const apiKey = plugin.getApiKey()?.trim();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      
+      // Only include Authorization header if API key is valid
+      if (apiKey && apiKey.length > 0) {
+        headers.Authorization = `Bearer ${apiKey}`;
+      } else {
+        console.warn("[Chat] API key is missing or empty, requests will fail authentication");
+      }
+      
+      return headers;
+    })(),
     fetch: async (url, options) => {
       logMessage(plugin.settings.showLocalLLMInChat, "showLocalLLMInChat");
       logMessage(selectedModel, "selectedModel");
@@ -561,6 +572,27 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
         name: error.name,
         stack: error.stack,
       });
+
+      // Check for authentication errors
+      if (
+        error.message?.includes("Unauthorized") ||
+        error.message?.includes("401") ||
+        error.message?.includes("Authorization")
+      ) {
+        const apiKey = plugin.getApiKey()?.trim();
+        if (!apiKey || apiKey.length === 0) {
+          new Notice(
+            "Authentication failed: API key is missing. Please set your API key in plugin settings.",
+            5000
+          );
+        } else {
+          new Notice(
+            "Authentication failed: Invalid API key. Please check your API key in plugin settings.",
+            5000
+          );
+        }
+        return;
+      }
 
       // Check if this is a tool invocation error (non-fatal)
       const isToolError = error.message?.includes(
@@ -1231,6 +1263,16 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
     // If there's no content, don't send
     if (!editorContent || editorContent.trim() === "") {
+      return;
+    }
+
+    // Validate API key before sending
+    const apiKey = plugin.getApiKey()?.trim();
+    if (!apiKey || apiKey.length === 0) {
+      new Notice(
+        "API key is missing. Please set your API key in plugin settings.",
+        5000
+      );
       return;
     }
 
