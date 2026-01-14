@@ -1,5 +1,5 @@
-import { Button } from "../button";
 import { Plus } from "lucide-react";
+import { tw } from "../../../../lib/utils";
 
 interface NewChatButtonProps {
   onClick: () => void;
@@ -7,13 +7,18 @@ interface NewChatButtonProps {
 
 export function NewChatButton({ onClick }: NewChatButtonProps) {
   return (
-    <Button
+    <button
       onClick={onClick}
-      className="bg-[--interactive-normal] hover:bg-[--interactive-hover] text-[--text-normal] gap-1.5"
+      className={tw(
+        "flex items-center justify-center w-6 h-6 rounded",
+        "text-[--text-muted] hover:text-[--text-normal]",
+        "hover:border hover:border-[--background-modifier-border]",
+        "transition-colors"
+      )}
       aria-label="Start new chat"
+      title="New chat"
     >
-      <Plus className="w-4 h-4" />
-      <span className="text-xs">New</span>
-    </Button>
+      <Plus className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2} />
+    </button>
   );
 }

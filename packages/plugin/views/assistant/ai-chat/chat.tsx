@@ -35,8 +35,6 @@ import {
   clearEphemeralContext,
 } from "./use-context-items";
 import { ContextItems } from "./components/context-items";
-import { ClearAllButton } from "./components/clear-all-button";
-import { NewChatButton } from "./components/new-chat-button";
 import { useCurrentFile } from "./hooks/use-current-file";
 import { SearchAnnotationHandler } from "./tool-handlers/search-annotation-handler";
 import {
@@ -52,22 +50,40 @@ import {
   EditorSelectionContext,
 } from "./use-editor-selection";
 import { EditorContextBadge } from "./components/editor-context-badge";
+import { ChatHistoryManager, ChatSession } from "./services/chat-history-manager";
+import { ChatHistoryCombobox } from "./components/chat-history-combobox";
 
 interface ChatComponentProps {
   plugin: FileOrganizer;
   apiKey: string;
   inputRef: React.RefObject<HTMLDivElement>;
   onTokenLimitError?: (error: string) => void;
+  activeChatId: string | null;
+  onSessionUpdate?: (session: ChatSession) => void;
+  chatSessions?: ChatSession[];
+  onSelectChat?: (id: string) => void;
+  onDeleteChat?: (id: string) => void;
 }
 
 export const ChatComponent: React.FC<ChatComponentProps> = ({
   apiKey,
   inputRef,
   onTokenLimitError,
+  activeChatId,
+  onSessionUpdate,
+  chatSessions = [],
+  onSelectChat,
+  onDeleteChat,
 }) => {
   const plugin = usePlugin();
   const app = plugin.app;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Chat history manager instance
+  const chatHistoryManager = useMemo(
+    () => ChatHistoryManager.getInstance(plugin.app),
+    [plugin.app]
+  );
 
   // Ref to access Tiptap editor
   const tiptapEditorRef = useRef<Editor | null>(null);
@@ -91,6 +107,19 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
   // Ref to track latest messages for onFinish (to avoid stale closure)
   const messagesRef = useRef<Message[]>([]);
+
+  // Ref to track if we're currently loading a session (to prevent save on load)
+  const isLoadingSessionRef = useRef<boolean>(false);
+
+  // Ref to store onSessionUpdate callback to avoid dependency issues
+  const onSessionUpdateRef = useRef(onSessionUpdate);
+  onSessionUpdateRef.current = onSessionUpdate;
+
+  // Ref to store activeChatId to access it in callbacks
+  const activeChatIdRef = useRef<string | null>(activeChatId);
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+  }, [activeChatId]);
 
   const {
     setCurrentFile,
@@ -755,6 +784,113 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
             fallbackContextLength: contextToStore?.length ?? 0,
           });
         }
+
+        // After storing context, ensure messages are saved
+        // Use a longer delay to ensure messages are fully added to the array
+        setTimeout(() => {
+          const currentActiveChatId = activeChatIdRef.current;
+
+          // Ensure we have an active chat session
+          if (!currentActiveChatId) {
+            console.warn("[Chat] onFinish: No activeChatId, cannot save messages");
+            return;
+          }
+
+          // Get the latest messages from ref (should be updated by now)
+          const currentMessages = messagesRef.current;
+
+          console.log("[Chat] onFinish: Attempting to save", {
+            activeChatId: currentActiveChatId,
+            messagesCount: currentMessages.length,
+            messageIds: currentMessages.map(m => m.id),
+          });
+
+          if (currentMessages.length > 0) {
+            let session = chatHistoryManager.getSession(currentActiveChatId);
+            let sessionId = currentActiveChatId;
+
+            // If session doesn't exist, try to find the most recent session or create a new one
+            if (!session) {
+              console.warn("[Chat] onFinish: Session not found for activeChatId:", currentActiveChatId, "- checking for existing sessions");
+
+              // Try to get the most recent session
+              const allSessions = chatHistoryManager.getAllSessions();
+              if (allSessions.length > 0) {
+                // Use the most recent session
+                session = allSessions[0];
+                sessionId = session.id;
+                activeChatIdRef.current = sessionId;
+                console.log("[Chat] onFinish: Using most recent session:", sessionId);
+              } else {
+                // Create a new session if none exist
+                console.warn("[Chat] onFinish: No sessions found, creating new session");
+                session = chatHistoryManager.createSession();
+                sessionId = session.id;
+                activeChatIdRef.current = sessionId;
+                console.log("[Chat] onFinish: Created new session:", sessionId);
+              }
+            }
+
+            if (session) {
+              // Store context snapshots
+              const messageContextSnapshots: Record<string, string> = {};
+              currentMessages.forEach(msg => {
+                if (msg.role === "assistant" && msg.id && contextByAssistantIdRef.current[msg.id]) {
+                  messageContextSnapshots[msg.id] = contextByAssistantIdRef.current[msg.id];
+                }
+              });
+
+              // Auto-generate title if needed
+              let title = session.title;
+              if (title === "New Chat") {
+                title = ChatHistoryManager.generateTitleFromMessages(currentMessages);
+              }
+
+              // Store context items to restore when switching chats
+              const store = useContextItems.getState();
+              const contextItemsToStore = {
+                files: { ...store.files },
+                folders: { ...store.folders },
+                tags: { ...store.tags },
+                youtubeVideos: { ...store.youtubeVideos },
+                searchResults: { ...store.searchResults },
+                textSelections: { ...store.textSelections },
+                currentFile: store.currentFile ? { ...store.currentFile } : null,
+              };
+
+              chatHistoryManager.updateSession(sessionId, {
+                messages: currentMessages,
+                messageContextSnapshots,
+                title,
+                contextItems: contextItemsToStore,
+              });
+
+              // Reset saved state so the save effect will also trigger
+              lastSavedMessagesRef.current = "";
+
+              console.log("[Chat] ✅ Force saved messages in onFinish:", {
+                sessionId,
+                messagesCount: currentMessages.length,
+                title,
+                contextSnapshotsCount: Object.keys(messageContextSnapshots).length,
+              });
+
+              // Notify parent of update
+              if (onSessionUpdateRef.current) {
+                const updatedSession = chatHistoryManager.getSession(sessionId);
+                if (updatedSession) {
+                  setTimeout(() => {
+                    onSessionUpdateRef.current?.(updatedSession);
+                  }, 0);
+                }
+              }
+            } else {
+              console.error("[Chat] ❌ onFinish: Failed to create or get session");
+            }
+          } else {
+            console.warn("[Chat] ⚠️ onFinish: No messages to save");
+          }
+        }, 500);
       } else {
         console.warn(
           "[Chat] ❌ onFinish: message missing id or not assistant:",
@@ -772,9 +908,14 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     },
   } as UseChatOptions);
 
+  // Update messagesRef when messages change (must be after useChat)
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   // Derive isGenerating from status (replacement for deprecated isLoading)
   const isGenerating = status === "streaming" || status === "submitted";
-  // Show loading indicator only when submitted but not yet streaming
+  // Show loading indicator only when submitted but not yet streaming (when actual content appears)
   const showLoadingIndicator = status === "submitted";
 
   // Helper to normalize message with timestamp
@@ -811,6 +952,253 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       });
     });
   }, [messages]);
+
+  // Load messages when activeChatId changes
+  useEffect(() => {
+    if (activeChatId) {
+      isLoadingSessionRef.current = true;
+      const session = chatHistoryManager.getSession(activeChatId);
+      if (session && session.messages.length > 0) {
+        setMessages(session.messages);
+
+        // Restore context snapshots from saved session
+        if (session.messageContextSnapshots) {
+          Object.entries(session.messageContextSnapshots).forEach(([messageId, context]) => {
+            contextByAssistantIdRef.current[messageId] = context;
+          });
+        }
+
+        // Restore context items from saved session
+        if (session.contextItems) {
+          const store = useContextItems.getState();
+
+          // Clear current context items
+          store.clearAll();
+
+          // Restore saved context items
+          if (session.contextItems.files) {
+            Object.values(session.contextItems.files).forEach(file => {
+              store.addFile(file);
+            });
+          }
+          if (session.contextItems.folders) {
+            Object.values(session.contextItems.folders).forEach(folder => {
+              store.addFolder(folder);
+            });
+          }
+          if (session.contextItems.tags) {
+            Object.values(session.contextItems.tags).forEach(tag => {
+              store.addTag(tag);
+            });
+          }
+          if (session.contextItems.youtubeVideos) {
+            Object.values(session.contextItems.youtubeVideos).forEach(video => {
+              store.addYouTubeVideo(video);
+            });
+          }
+          if (session.contextItems.searchResults) {
+            Object.values(session.contextItems.searchResults).forEach(search => {
+              store.addSearchResults(search);
+            });
+          }
+          if (session.contextItems.textSelections) {
+            Object.values(session.contextItems.textSelections).forEach(selection => {
+              store.addTextSelection(selection);
+            });
+          }
+          if (session.contextItems.currentFile) {
+            // Set current file and enable display (includeCurrentFile must be true to show it)
+            useContextItems.setState({
+              currentFile: session.contextItems.currentFile,
+              includeCurrentFile: true, // Enable display of restored current file
+            });
+            console.log("[Chat] ✅ Restored current file:", session.contextItems.currentFile.title);
+          }
+
+          console.log("[Chat] ✅ Restored context items for session:", activeChatId, {
+            filesCount: Object.keys(session.contextItems.files || {}).length,
+            foldersCount: Object.keys(session.contextItems.folders || {}).length,
+            tagsCount: Object.keys(session.contextItems.tags || {}).length,
+            hasCurrentFile: !!session.contextItems.currentFile,
+            includeCurrentFile: useContextItems.getState().includeCurrentFile,
+          });
+        }
+      } else {
+        // New or empty session
+        const store = useContextItems.getState();
+        store.clearAll();
+        setMessages([]);
+
+        // Add current file to context for new chats (only if session has no saved context items)
+        // This ensures we only add current file for brand new chats, not when loading existing empty sessions
+        if (!session || !session.contextItems) {
+          const activeFile = app.workspace.getActiveFile();
+          if (activeFile && activeFile.extension === 'md') {
+            // Only add markdown files (skip media files)
+            app.vault.cachedRead(activeFile).then(content => {
+              const fileContextItem = {
+                id: activeFile.path,
+                type: 'file' as const,
+                path: activeFile.path,
+                title: activeFile.basename,
+                content,
+                reference: 'Current File',
+                createdAt: activeFile.stat.ctime,
+              };
+
+              // Set as current file and ensure includeCurrentFile is enabled
+              // clearAll() sets includeCurrentFile to false, so we need to enable it
+              // Use setState to update both currentFile and includeCurrentFile at once
+              useContextItems.setState({
+                currentFile: fileContextItem,
+                includeCurrentFile: true, // Enable display of current file
+              });
+
+              console.log("[Chat] ✅ Added current file to new chat context:", {
+                filename: activeFile.basename,
+                includeCurrentFile: useContextItems.getState().includeCurrentFile,
+                currentFile: useContextItems.getState().currentFile?.title,
+              });
+            }).catch(error => {
+              console.warn("[Chat] Failed to read current file for new chat:", error);
+            });
+          }
+        }
+      }
+      // Reset loading flag after a brief delay to allow state to update
+      setTimeout(() => {
+        isLoadingSessionRef.current = false;
+      }, 100);
+    } else {
+      // No active chat - clear context items
+      const store = useContextItems.getState();
+      store.clearAll();
+      setMessages([]);
+      isLoadingSessionRef.current = false;
+    }
+  }, [activeChatId, chatHistoryManager]);
+
+  // Track last saved message state to prevent unnecessary saves
+  const lastSavedMessagesRef = useRef<string>("");
+
+  // Save messages when they change (debounced via manager)
+  useEffect(() => {
+    // Don't save if we're currently loading a session
+    if (isLoadingSessionRef.current) {
+      return;
+    }
+
+    if (activeChatId && messages.length > 0) {
+      // Create a stable key from messages to detect actual changes
+      const messagesKey = `${activeChatId}-${messages.length}-${messages.map(m => m.id).join(',')}`;
+
+      // Skip if we've already saved this exact state
+      if (lastSavedMessagesRef.current === messagesKey) {
+        return;
+      }
+
+      const session = chatHistoryManager.getSession(activeChatId);
+      if (session) {
+        // Auto-generate title from first user message if title is still "New Chat"
+        let title = session.title;
+        if (title === "New Chat") {
+          const generatedTitle = ChatHistoryManager.generateTitleFromMessages(messages);
+          title = generatedTitle;
+        }
+
+        // Store lightweight context snapshot (metadata only, not full content)
+        // Context is always built fresh from current vault state when sending messages,
+        // but we store a snapshot for reference
+        // Note: We read files/folders/tags/currentFile from closure, but don't include them in deps
+        // to avoid infinite loops - context metadata is just for reference
+        const contextMetadata = {
+          filesCount: Object.keys(files).length,
+          foldersCount: Object.keys(folders).length,
+          tagsCount: Object.keys(tags).length,
+          hasCurrentFile: !!currentFile,
+          currentFile: currentFile?.basename || null,
+          timestamp: Date.now(),
+        };
+
+        // Store context snapshots for assistant messages (for refresh functionality)
+        const messageContextSnapshots: Record<string, string> = {};
+        messages.forEach(msg => {
+          if (msg.role === "assistant" && msg.id && contextByAssistantIdRef.current[msg.id]) {
+            messageContextSnapshots[msg.id] = contextByAssistantIdRef.current[msg.id];
+          }
+        });
+
+        // Store context items to restore when switching chats
+        const contextItemsToStore = {
+          files: { ...files },
+          folders: { ...folders },
+          tags: { ...tags },
+          youtubeVideos: { ...youtubeVideos },
+          searchResults: { ...searchResults },
+          textSelections: { ...textSelections },
+          currentFile: currentFile ? { ...currentFile } : null,
+        };
+
+        chatHistoryManager.updateSession(activeChatId, {
+          messages,
+          title,
+          contextSnapshot: JSON.stringify(contextMetadata),
+          messageContextSnapshots,
+          contextItems: contextItemsToStore,
+        });
+
+        // Mark as saved
+        lastSavedMessagesRef.current = messagesKey;
+
+        // Notify parent of update - use ref to avoid dependency issues
+        if (onSessionUpdateRef.current) {
+          const updatedSession = chatHistoryManager.getSession(activeChatId);
+          if (updatedSession) {
+            // Use setTimeout to defer callback to next tick, preventing render loops
+            setTimeout(() => {
+              onSessionUpdateRef.current?.(updatedSession);
+            }, 0);
+          }
+        }
+      }
+    }
+  }, [messages, activeChatId, chatHistoryManager]);
+
+  // Save context items when they change (independent of messages)
+  useEffect(() => {
+    // Don't save if we're currently loading a session
+    if (isLoadingSessionRef.current) {
+      return;
+    }
+
+    if (activeChatId) {
+      const session = chatHistoryManager.getSession(activeChatId);
+      if (session) {
+        // Store context items to restore when switching chats
+        const contextItemsToStore = {
+          files: { ...files },
+          folders: { ...folders },
+          tags: { ...tags },
+          youtubeVideos: { ...youtubeVideos },
+          searchResults: { ...searchResults },
+          textSelections: { ...textSelections },
+          currentFile: currentFile ? { ...currentFile } : null,
+        };
+
+        // Only update if context items actually changed
+        const currentContextKey = JSON.stringify(contextItemsToStore);
+        const savedContextKey = session.contextItems ? JSON.stringify(session.contextItems) : "";
+
+        if (currentContextKey !== savedContextKey) {
+          chatHistoryManager.updateSession(activeChatId, {
+            contextItems: contextItemsToStore,
+          });
+
+          console.log("[Chat] ✅ Saved context items for session:", activeChatId);
+        }
+      }
+    }
+  }, [files, folders, tags, youtubeVideos, searchResults, textSelections, currentFile, activeChatId, chatHistoryManager]);
 
   const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
 
@@ -933,6 +1321,8 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
   };
 
   const handleNewChat = () => {
+    // Note: New chat creation is now handled by container
+    // This is kept for backward compatibility but may not be used
     setMessages([]);
     setMessagesWithTimestamps([]);
     setErrorMessage(null);
@@ -975,6 +1365,10 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     if (body.newUnifiedContext) {
       lastContextSentRef.current = body.newUnifiedContext;
     }
+
+    // Reset saved state after reload is triggered so new messages from reload will be saved
+    // The reload will add new messages, and we want to ensure they get saved when they arrive
+    lastSavedMessagesRef.current = "";
   }, [messages.length, reload]);
 
   const handleMessageRefresh = useCallback(
@@ -988,10 +1382,23 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       if (messageToRefresh.role !== "assistant") return;
 
       // Look up context snapshot by message ID
-      const snapshot = contextByAssistantIdRef.current[messageId];
+      // First try in-memory ref (for newly generated messages)
+      let snapshot = contextByAssistantIdRef.current[messageId];
+
+      // If not in memory, try to load from saved session
+      if (!snapshot && activeChatId) {
+        const session = chatHistoryManager.getSession(activeChatId);
+        if (session?.messageContextSnapshots?.[messageId]) {
+          snapshot = session.messageContextSnapshots[messageId];
+          // Restore to memory for future use
+          contextByAssistantIdRef.current[messageId] = snapshot;
+        }
+      }
+
+      // If still no snapshot, use current context as fallback
       if (!snapshot) {
-        console.warn("[Chat] No snapshot for message:", messageId);
-        return;
+        console.warn("[Chat] No snapshot for message:", messageId, "- using current context as fallback");
+        snapshot = fullContext; // Use current full context as fallback
       }
 
       console.log("[Chat] refresh debug", {
@@ -1008,6 +1415,20 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       const trimmed = messages.slice(0, messageIndex);
       setMessages(trimmed);
       setMessagesWithTimestamps(messagesWithTimestamps.slice(0, messageIndex));
+
+      // Reset saved state so the trimmed messages get saved immediately
+      // This ensures the state before reload is saved
+      lastSavedMessagesRef.current = "";
+
+      // Force save the trimmed messages immediately (before reload)
+      if (activeChatId && trimmed.length > 0) {
+        const session = chatHistoryManager.getSession(activeChatId);
+        if (session) {
+          chatHistoryManager.updateSession(activeChatId, {
+            messages: trimmed,
+          });
+        }
+      }
 
       // Stage the exact body we want reload to use
       const currentDatetime = window.moment().format("YYYY-MM-DDTHH:mm:ssZ");
@@ -1207,23 +1628,18 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     <StyledContainer className="flex flex-col h-full w-full max-h-full overflow-hidden">
       {/* Chat Header - minimal */}
       <div className="flex-none border-b border-[--background-modifier-border] px-3 py-1.5 bg-[--background-primary]">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-end">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium text-[--text-normal]">Chat</h2>
-            {isGenerating && (
-              <div className="flex items-center gap-1.5 text-xs text-[--text-muted]">
-                <span className="inline-block w-1.5 h-1.5 bg-[--text-accent] rounded-full animate-pulse"></span>
-                <span>Thinking</span>
-              </div>
+            {/* Chat History Combobox - Always show if we have callbacks */}
+            {onSelectChat && onDeleteChat && (
+              <ChatHistoryCombobox
+                sessions={chatSessions || []}
+                activeChatId={activeChatId}
+                onSelectChat={onSelectChat}
+                onDeleteChat={onDeleteChat}
+                app={app}
+              />
             )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* New Chat */}
-            <NewChatButton onClick={handleNewChat} />
-
-            {/* Clear All - icon only */}
-            <ClearAllButton />
           </div>
         </div>
       </div>
