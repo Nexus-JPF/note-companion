@@ -7,14 +7,22 @@ import { VALID_MEDIA_EXTENSIONS } from '../../../../constants';
 interface UseCurrentFileProps {
   app: App;
   setCurrentFile: (file: FileContextItem | null) => void;
+  chatHasStarted?: boolean; // If true, don't update currentFile when files are opened
 }
 
-export function useCurrentFile({ 
+export function useCurrentFile({
   app,
-  setCurrentFile 
+  setCurrentFile,
+  chatHasStarted = false
 }: UseCurrentFileProps) {
   const [error, setError] = useState<string | null>(null);
   const currentFile = useRef<FileContextItem | null>(null);
+  const chatHasStartedRef = useRef(chatHasStarted);
+
+  // Update ref when prop changes
+  useEffect(() => {
+    chatHasStartedRef.current = chatHasStarted;
+  }, [chatHasStarted]);
 
   const isMediaFile = (file: TFile): boolean => {
     const extension = file.extension.toLowerCase();
@@ -22,11 +30,17 @@ export function useCurrentFile({
   };
 
   const updateActiveFile = async () => {
+    // Don't update currentFile if chat has already started
+    if (chatHasStartedRef.current) {
+      logger.debug('Chat has started, skipping currentFile update');
+      return;
+    }
+
     logger.debug('Updating active file');
-    
+
     try {
       const file = app.workspace.getActiveFile();
-      
+
       if (!file) {
         logger.debug('No active file');
         setCurrentFile(null);
@@ -43,7 +57,7 @@ export function useCurrentFile({
       }
 
       const content = await app.vault.cachedRead(file);
-      
+
       const fileContextItem: FileContextItem = {
         id: file.path,
         type: 'file',
@@ -68,8 +82,10 @@ export function useCurrentFile({
   };
 
   useEffect(() => {
-    // Initial load
-    updateActiveFile();
+    // Initial load - only if chat hasn't started
+    if (!chatHasStarted) {
+      updateActiveFile();
+    }
 
     // Register event handlers
     const eventRefs = [
@@ -81,11 +97,11 @@ export function useCurrentFile({
     return () => {
       eventRefs.forEach(ref => app.workspace.offref(ref));
     };
-  }, [app]);
+  }, [app, chatHasStarted]);
 
   return {
     currentFile,
     error,
     refresh: updateActiveFile
   };
-} 
+}

@@ -30,10 +30,11 @@ export class ChatHistoryManager {
   private app: App;
   private debounceTimeout: TimeoutID | null = null;
   private readonly CHAT_HISTORY_PATH = normalizePath("_NoteCompanion/.chat-history.json");
+  private loadPromise: Promise<void> | null = null; // Track loading state
 
   private constructor(app: App) {
     this.app = app;
-    this.loadSessions();
+    this.loadPromise = this.loadSessions();
   }
 
   public static getInstance(app?: App): ChatHistoryManager {
@@ -71,7 +72,28 @@ export class ChatHistoryManager {
         return;
       }
 
-      const data = JSON.parse(content);
+      // Try to parse JSON
+      let data;
+      try {
+        data = JSON.parse(content);
+      } catch (parseError) {
+        console.error("[ChatHistory] ❌ JSON parse error:", parseError);
+        console.error("[ChatHistory] File content (first 500 chars):", content.substring(0, 500));
+
+        // Try to create a backup of corrupted file
+        try {
+          const backupPath = this.CHAT_HISTORY_PATH.replace('.chat-history.json', `.chat-history-corrupted-${Date.now()}.json`);
+          await this.app.vault.adapter.write(backupPath, content);
+          console.log("[ChatHistory] Created backup of corrupted file at:", backupPath);
+        } catch (backupError) {
+          console.error("[ChatHistory] Failed to create backup:", backupError);
+        }
+
+        logger?.error("Failed to parse chat history JSON", parseError);
+        this.sessions = new Map();
+        return;
+      }
+
       console.log("[ChatHistory] Parsed data:", {
         hasSessions: !!data.sessions,
         sessionsType: Array.isArray(data.sessions) ? "array" : typeof data.sessions,
@@ -89,10 +111,12 @@ export class ChatHistoryManager {
         console.log("[ChatHistory] ✅ Loaded", this.sessions.size, "sessions (legacy format)");
       } else {
         console.warn("[ChatHistory] ⚠️ Unexpected data format:", typeof data);
+        console.warn("[ChatHistory] Data content:", JSON.stringify(data).substring(0, 200));
         this.sessions = new Map();
       }
     } catch (error) {
       console.error("[ChatHistory] ❌ Failed to load chat history:", error);
+      console.error("[ChatHistory] Error stack:", error instanceof Error ? error.stack : String(error));
       logger?.error("Failed to load chat history", error);
       // Initialize with empty Map if loading fails
       this.sessions = new Map();
@@ -182,6 +206,15 @@ export class ChatHistoryManager {
   }
 
   /**
+   * Wait for initial load to complete (useful when component mounts)
+   */
+  public async waitForLoad(): Promise<void> {
+    if (this.loadPromise) {
+      await this.loadPromise;
+    }
+  }
+
+  /**
    * Diagnostic method to check chat history file status
    */
   public async diagnose(): Promise<{
@@ -227,11 +260,30 @@ export class ChatHistoryManager {
   /**
    * Auto-generate title from first user message
    * Takes first 50 characters of the first user message
+   * Excludes file mentions entirely from the title
    */
   public static generateTitleFromMessages(messages: Message[]): string {
     const firstUserMessage = messages.find(m => m.role === 'user');
     if (firstUserMessage && firstUserMessage.content) {
-      const title = firstUserMessage.content.trim().substring(0, 50);
+      let title = firstUserMessage.content.trim();
+
+      // Remove all @ mentions completely (not just the @ symbol)
+      // This removes patterns like "@file_name", "@my file", etc.
+      // Matches @ followed by word characters, spaces, underscores, hyphens, dots
+      title = title.replace(/@[a-zA-Z0-9_\-.\s]+/g, '').trim();
+
+      // Remove leading file name patterns (common when mention is at start without @)
+      // Matches file names at the start: alphanumeric, underscores, hyphens, dots
+      // followed by whitespace, then keeps the rest
+      title = title.replace(/^[a-zA-Z0-9_\-.]+\s+/, '').trim();
+
+      // Clean up any extra whitespace left after removal
+      title = title.replace(/\s+/g, ' ').trim();
+
+      // Take first 50 characters
+      title = title.substring(0, 50).trim();
+
+      // If after removing mentions we have nothing meaningful, use default
       return title || "New Chat";
     }
     return "New Chat";

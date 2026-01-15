@@ -50,7 +50,10 @@ import {
   EditorSelectionContext,
 } from "./use-editor-selection";
 import { EditorContextBadge } from "./components/editor-context-badge";
-import { ChatHistoryManager, ChatSession } from "./services/chat-history-manager";
+import {
+  ChatHistoryManager,
+  ChatSession,
+} from "./services/chat-history-manager";
 import { ChatHistoryCombobox } from "./components/chat-history-combobox";
 
 interface ChatComponentProps {
@@ -156,11 +159,8 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     textSelections,
   };
 
-  // skip the use context items entirely
-  useCurrentFile({
-    app,
-    setCurrentFile,
-  });
+  // Track if chat has started (will be computed after useChat hook)
+  const [chatHasStarted, setChatHasStarted] = useState(false);
 
   const contextString = React.useMemo(() => {
     if (isLightweightMode) {
@@ -520,14 +520,16 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-      
+
       // Only include Authorization header if API key is valid
       if (apiKey && apiKey.length > 0) {
         headers.Authorization = `Bearer ${apiKey}`;
       } else {
-        console.warn("[Chat] API key is missing or empty, requests will fail authentication");
+        console.warn(
+          "[Chat] API key is missing or empty, requests will fail authentication"
+        );
       }
-      
+
       return headers;
     })(),
     fetch: async (url, options) => {
@@ -824,7 +826,9 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
           // Ensure we have an active chat session
           if (!currentActiveChatId) {
-            console.warn("[Chat] onFinish: No activeChatId, cannot save messages");
+            console.warn(
+              "[Chat] onFinish: No activeChatId, cannot save messages"
+            );
             return;
           }
 
@@ -843,7 +847,11 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
             // If session doesn't exist, try to find the most recent session or create a new one
             if (!session) {
-              console.warn("[Chat] onFinish: Session not found for activeChatId:", currentActiveChatId, "- checking for existing sessions");
+              console.warn(
+                "[Chat] onFinish: Session not found for activeChatId:",
+                currentActiveChatId,
+                "- checking for existing sessions"
+              );
 
               // Try to get the most recent session
               const allSessions = chatHistoryManager.getAllSessions();
@@ -852,10 +860,15 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                 session = allSessions[0];
                 sessionId = session.id;
                 activeChatIdRef.current = sessionId;
-                console.log("[Chat] onFinish: Using most recent session:", sessionId);
+                console.log(
+                  "[Chat] onFinish: Using most recent session:",
+                  sessionId
+                );
               } else {
                 // Create a new session if none exist
-                console.warn("[Chat] onFinish: No sessions found, creating new session");
+                console.warn(
+                  "[Chat] onFinish: No sessions found, creating new session"
+                );
                 session = chatHistoryManager.createSession();
                 sessionId = session.id;
                 activeChatIdRef.current = sessionId;
@@ -867,15 +880,21 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
               // Store context snapshots
               const messageContextSnapshots: Record<string, string> = {};
               currentMessages.forEach(msg => {
-                if (msg.role === "assistant" && msg.id && contextByAssistantIdRef.current[msg.id]) {
-                  messageContextSnapshots[msg.id] = contextByAssistantIdRef.current[msg.id];
+                if (
+                  msg.role === "assistant" &&
+                  msg.id &&
+                  contextByAssistantIdRef.current[msg.id]
+                ) {
+                  messageContextSnapshots[msg.id] =
+                    contextByAssistantIdRef.current[msg.id];
                 }
               });
 
               // Auto-generate title if needed
               let title = session.title;
               if (title === "New Chat") {
-                title = ChatHistoryManager.generateTitleFromMessages(currentMessages);
+                title =
+                  ChatHistoryManager.generateTitleFromMessages(currentMessages);
               }
 
               // Store context items to restore when switching chats
@@ -887,7 +906,9 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                 youtubeVideos: { ...store.youtubeVideos },
                 searchResults: { ...store.searchResults },
                 textSelections: { ...store.textSelections },
-                currentFile: store.currentFile ? { ...store.currentFile } : null,
+                currentFile: store.currentFile
+                  ? { ...store.currentFile }
+                  : null,
               };
 
               chatHistoryManager.updateSession(sessionId, {
@@ -904,7 +925,8 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                 sessionId,
                 messagesCount: currentMessages.length,
                 title,
-                contextSnapshotsCount: Object.keys(messageContextSnapshots).length,
+                contextSnapshotsCount: Object.keys(messageContextSnapshots)
+                  .length,
               });
 
               // Notify parent of update
@@ -917,7 +939,9 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                 }
               }
             } else {
-              console.error("[Chat] ❌ onFinish: Failed to create or get session");
+              console.error(
+                "[Chat] ❌ onFinish: Failed to create or get session"
+              );
             }
           } else {
             console.warn("[Chat] ⚠️ onFinish: No messages to save");
@@ -940,10 +964,18 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     },
   } as UseChatOptions);
 
-  // Update messagesRef when messages change (must be after useChat)
+  // Update messagesRef and chatHasStarted when messages change (must be after useChat)
   useEffect(() => {
     messagesRef.current = messages;
+    setChatHasStarted(messages.length > 0);
   }, [messages]);
+
+  // skip the use context items entirely (chatHasStarted is now available)
+  useCurrentFile({
+    app,
+    setCurrentFile,
+    chatHasStarted,
+  });
 
   // Derive isGenerating from status (replacement for deprecated isLoading)
   const isGenerating = status === "streaming" || status === "submitted";
@@ -995,9 +1027,11 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
         // Restore context snapshots from saved session
         if (session.messageContextSnapshots) {
-          Object.entries(session.messageContextSnapshots).forEach(([messageId, context]) => {
-            contextByAssistantIdRef.current[messageId] = context;
-          });
+          Object.entries(session.messageContextSnapshots).forEach(
+            ([messageId, context]) => {
+              contextByAssistantIdRef.current[messageId] = context;
+            }
+          );
         }
 
         // Restore context items from saved session
@@ -1029,14 +1063,18 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
             });
           }
           if (session.contextItems.searchResults) {
-            Object.values(session.contextItems.searchResults).forEach(search => {
-              store.addSearchResults(search);
-            });
+            Object.values(session.contextItems.searchResults).forEach(
+              search => {
+                store.addSearchResults(search);
+              }
+            );
           }
           if (session.contextItems.textSelections) {
-            Object.values(session.contextItems.textSelections).forEach(selection => {
-              store.addTextSelection(selection);
-            });
+            Object.values(session.contextItems.textSelections).forEach(
+              selection => {
+                store.addTextSelection(selection);
+              }
+            );
           }
           if (session.contextItems.currentFile) {
             // Set current file and enable display (includeCurrentFile must be true to show it)
@@ -1044,16 +1082,24 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
               currentFile: session.contextItems.currentFile,
               includeCurrentFile: true, // Enable display of restored current file
             });
-            console.log("[Chat] ✅ Restored current file:", session.contextItems.currentFile.title);
+            console.log(
+              "[Chat] ✅ Restored current file:",
+              session.contextItems.currentFile.title
+            );
           }
 
-          console.log("[Chat] ✅ Restored context items for session:", activeChatId, {
-            filesCount: Object.keys(session.contextItems.files || {}).length,
-            foldersCount: Object.keys(session.contextItems.folders || {}).length,
-            tagsCount: Object.keys(session.contextItems.tags || {}).length,
-            hasCurrentFile: !!session.contextItems.currentFile,
-            includeCurrentFile: useContextItems.getState().includeCurrentFile,
-          });
+          console.log(
+            "[Chat] ✅ Restored context items for session:",
+            activeChatId,
+            {
+              filesCount: Object.keys(session.contextItems.files || {}).length,
+              foldersCount: Object.keys(session.contextItems.folders || {})
+                .length,
+              tagsCount: Object.keys(session.contextItems.tags || {}).length,
+              hasCurrentFile: !!session.contextItems.currentFile,
+              includeCurrentFile: useContextItems.getState().includeCurrentFile,
+            }
+          );
         }
       } else {
         // New or empty session
@@ -1065,35 +1111,45 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
         // This ensures we only add current file for brand new chats, not when loading existing empty sessions
         if (!session || !session.contextItems) {
           const activeFile = app.workspace.getActiveFile();
-          if (activeFile && activeFile.extension === 'md') {
+          if (activeFile && activeFile.extension === "md") {
             // Only add markdown files (skip media files)
-            app.vault.cachedRead(activeFile).then(content => {
-              const fileContextItem = {
-                id: activeFile.path,
-                type: 'file' as const,
-                path: activeFile.path,
-                title: activeFile.basename,
-                content,
-                reference: 'Current File',
-                createdAt: activeFile.stat.ctime,
-              };
+            app.vault
+              .cachedRead(activeFile)
+              .then(content => {
+                const fileContextItem = {
+                  id: activeFile.path,
+                  type: "file" as const,
+                  path: activeFile.path,
+                  title: activeFile.basename,
+                  content,
+                  reference: "Current File",
+                  createdAt: activeFile.stat.ctime,
+                };
 
-              // Set as current file and ensure includeCurrentFile is enabled
-              // clearAll() sets includeCurrentFile to false, so we need to enable it
-              // Use setState to update both currentFile and includeCurrentFile at once
-              useContextItems.setState({
-                currentFile: fileContextItem,
-                includeCurrentFile: true, // Enable display of current file
-              });
+                // Set as current file and ensure includeCurrentFile is enabled
+                // clearAll() sets includeCurrentFile to false, so we need to enable it
+                // Use setState to update both currentFile and includeCurrentFile at once
+                useContextItems.setState({
+                  currentFile: fileContextItem,
+                  includeCurrentFile: true, // Enable display of current file
+                });
 
-              console.log("[Chat] ✅ Added current file to new chat context:", {
-                filename: activeFile.basename,
-                includeCurrentFile: useContextItems.getState().includeCurrentFile,
-                currentFile: useContextItems.getState().currentFile?.title,
+                console.log(
+                  "[Chat] ✅ Added current file to new chat context:",
+                  {
+                    filename: activeFile.basename,
+                    includeCurrentFile:
+                      useContextItems.getState().includeCurrentFile,
+                    currentFile: useContextItems.getState().currentFile?.title,
+                  }
+                );
+              })
+              .catch(error => {
+                console.warn(
+                  "[Chat] Failed to read current file for new chat:",
+                  error
+                );
               });
-            }).catch(error => {
-              console.warn("[Chat] Failed to read current file for new chat:", error);
-            });
           }
         }
       }
@@ -1122,7 +1178,9 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
     if (activeChatId && messages.length > 0) {
       // Create a stable key from messages to detect actual changes
-      const messagesKey = `${activeChatId}-${messages.length}-${messages.map(m => m.id).join(',')}`;
+      const messagesKey = `${activeChatId}-${messages.length}-${messages
+        .map(m => m.id)
+        .join(",")}`;
 
       // Skip if we've already saved this exact state
       if (lastSavedMessagesRef.current === messagesKey) {
@@ -1134,7 +1192,8 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
         // Auto-generate title from first user message if title is still "New Chat"
         let title = session.title;
         if (title === "New Chat") {
-          const generatedTitle = ChatHistoryManager.generateTitleFromMessages(messages);
+          const generatedTitle =
+            ChatHistoryManager.generateTitleFromMessages(messages);
           title = generatedTitle;
         }
 
@@ -1155,8 +1214,13 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
         // Store context snapshots for assistant messages (for refresh functionality)
         const messageContextSnapshots: Record<string, string> = {};
         messages.forEach(msg => {
-          if (msg.role === "assistant" && msg.id && contextByAssistantIdRef.current[msg.id]) {
-            messageContextSnapshots[msg.id] = contextByAssistantIdRef.current[msg.id];
+          if (
+            msg.role === "assistant" &&
+            msg.id &&
+            contextByAssistantIdRef.current[msg.id]
+          ) {
+            messageContextSnapshots[msg.id] =
+              contextByAssistantIdRef.current[msg.id];
           }
         });
 
@@ -1219,18 +1283,33 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
         // Only update if context items actually changed
         const currentContextKey = JSON.stringify(contextItemsToStore);
-        const savedContextKey = session.contextItems ? JSON.stringify(session.contextItems) : "";
+        const savedContextKey = session.contextItems
+          ? JSON.stringify(session.contextItems)
+          : "";
 
         if (currentContextKey !== savedContextKey) {
           chatHistoryManager.updateSession(activeChatId, {
             contextItems: contextItemsToStore,
           });
 
-          console.log("[Chat] ✅ Saved context items for session:", activeChatId);
+          console.log(
+            "[Chat] ✅ Saved context items for session:",
+            activeChatId
+          );
         }
       }
     }
-  }, [files, folders, tags, youtubeVideos, searchResults, textSelections, currentFile, activeChatId, chatHistoryManager]);
+  }, [
+    files,
+    folders,
+    tags,
+    youtubeVideos,
+    searchResults,
+    textSelections,
+    currentFile,
+    activeChatId,
+    chatHistoryManager,
+  ]);
 
   const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
 
@@ -1439,7 +1518,11 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
       // If still no snapshot, use current context as fallback
       if (!snapshot) {
-        console.warn("[Chat] No snapshot for message:", messageId, "- using current context as fallback");
+        console.warn(
+          "[Chat] No snapshot for message:",
+          messageId,
+          "- using current context as fallback"
+        );
         snapshot = fullContext; // Use current full context as fallback
       }
 
