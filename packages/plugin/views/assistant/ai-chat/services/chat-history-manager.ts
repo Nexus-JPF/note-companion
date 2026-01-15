@@ -268,14 +268,25 @@ export class ChatHistoryManager {
       let title = firstUserMessage.content.trim();
 
       // Remove all @ mentions completely (not just the @ symbol)
-      // This removes patterns like "@file_name", "@my file", etc.
+      // This removes patterns like "@file_name", "@my file", "@file_name what is this", etc.
       // Matches @ followed by word characters, spaces, underscores, hyphens, dots
-      title = title.replace(/@[a-zA-Z0-9_\-.\s]+/g, '').trim();
+      // The pattern matches: @ followed by one or more word chars/underscores/dots/spaces
+      // Stops when it hits punctuation (like ? ! . ,) or end of string
+      title = title.replace(/@[a-zA-Z0-9_\-.]+(?:\s+[a-zA-Z0-9_\-.]+)*/g, '').trim();
 
-      // Remove leading file name patterns (common when mention is at start without @)
-      // Matches file names at the start: alphanumeric, underscores, hyphens, dots
-      // followed by whitespace, then keeps the rest
-      title = title.replace(/^[a-zA-Z0-9_\-.]+\s+/, '').trim();
+      // Also handle cases where mention might be followed immediately by text without space
+      // e.g., "@file_namewhat is this" (though this is less common)
+      // This is already handled by the above pattern, but we clean up any remaining @
+      title = title.replace(/@\S+/g, '').trim();
+
+      // Remove leading file name patterns ONLY if they look like file names
+      // (contain underscores, dots, or multiple words that look like a file path)
+      // This prevents removing normal first words like "What" or "How"
+      // Pattern: word that contains underscore/dot, OR very long word (likely filename)
+      const filePattern = /^([a-zA-Z0-9_\-.]*[_.][a-zA-Z0-9_\-.]*|[a-zA-Z0-9_\-.]{20,})\s+/;
+      if (filePattern.test(title)) {
+        title = title.replace(/^[a-zA-Z0-9_\-.]+\s+/, '').trim();
+      }
 
       // Clean up any extra whitespace left after removal
       title = title.replace(/\s+/g, ' ').trim();

@@ -29,21 +29,27 @@ export function ChatTabs({
     <div
       className={tw(
         "flex-none flex items-center gap-0.5 border-b border-[--background-modifier-border]",
-        "px-1.5 py-1 overflow-x-auto bg-[--background-primary] min-h-[32px]",
+        "px-1.5 py-1 bg-[--background-primary] min-h-[32px]",
         "relative z-10 w-full"
       )}
     >
-      {sessions.map((session) => (
-        <ChatTabItem
-          key={session.id}
-          session={session}
-          isActive={activeChatId === session.id}
-          onSelect={() => onSelectChat(session.id)}
-          onDelete={() => onDeleteChat(session.id)}
-        />
-      ))}
+      {/* Scrollable tabs container */}
+      <div className="flex-1 flex items-center gap-0.5 overflow-x-auto scrollbar-hide">
+        {sessions.map((session) => (
+          <ChatTabItem
+            key={session.id}
+            session={session}
+            isActive={activeChatId === session.id}
+            onSelect={() => onSelectChat(session.id)}
+            onDelete={() => onDeleteChat(session.id)}
+          />
+        ))}
+      </div>
 
-      <NewChatButton onClick={onNewChat} />
+      {/* New Chat button - always visible, not scrollable */}
+      <div className="flex-shrink-0 ml-1">
+        <NewChatButton onClick={onNewChat} />
+      </div>
     </div>
   );
 }
