@@ -1,9 +1,9 @@
 import { openai, createOpenAI } from '@ai-sdk/openai';
-import { google } from '@ai-sdk/google';
-import { anthropic } from '@ai-sdk/anthropic';
-import { groq } from '@ai-sdk/groq';
-import { mistral } from '@ai-sdk/mistral';
-import { deepseek } from '@ai-sdk/deepseek';
+import { google, createGoogleGenerativeAI } from '@ai-sdk/google';
+import { anthropic, createAnthropic } from '@ai-sdk/anthropic';
+import { groq, createGroq } from '@ai-sdk/groq';
+import { mistral, createMistral } from '@ai-sdk/mistral';
+import { deepseek, createDeepSeek } from '@ai-sdk/deepseek';
 import { LanguageModel } from 'ai';
 
 // Get model configuration from environment variables
@@ -18,18 +18,51 @@ const RESPONSES_MODEL_NAME = process.env.RESPONSES_MODEL_NAME || MODEL_NAME;
 function createModel(provider: string, modelName: string): LanguageModel {
   switch (provider) {
     case 'google':
+      if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+        const googleProvider = createGoogleGenerativeAI({
+          apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+          baseURL: process.env.GOOGLE_API_BASE,
+        });
+        return googleProvider(modelName) as LanguageModel;
+      }
       return google(modelName) as LanguageModel;
 
     case 'anthropic':
+      if (process.env.ANTHROPIC_API_KEY) {
+        const anthropicProvider = createAnthropic({
+          apiKey: process.env.ANTHROPIC_API_KEY,
+          baseURL: process.env.ANTHROPIC_API_BASE,
+        });
+        return anthropicProvider(modelName) as LanguageModel;
+      }
       return anthropic(modelName) as LanguageModel;
 
     case 'groq':
+      if (process.env.GROQ_API_KEY) {
+        const groqProvider = createGroq({
+          apiKey: process.env.GROQ_API_KEY,
+          baseURL: process.env.GROQ_API_BASE,
+        });
+        return groqProvider(modelName) as LanguageModel;
+      }
       return groq(modelName) as LanguageModel;
 
     case 'mistral':
+      if (process.env.MISTRAL_API_KEY) {
+        const mistralProvider = createMistral({
+          apiKey: process.env.MISTRAL_API_KEY,
+        });
+        return mistralProvider(modelName) as LanguageModel;
+      }
       return mistral(modelName) as LanguageModel;
 
     case 'deepseek':
+      if (process.env.DEEPSEEK_API_KEY) {
+        const deepseekProvider = createDeepSeek({
+          apiKey: process.env.DEEPSEEK_API_KEY,
+        });
+        return deepseekProvider(modelName) as LanguageModel;
+      }
       return deepseek(modelName) as LanguageModel;
 
     case 'openai':
