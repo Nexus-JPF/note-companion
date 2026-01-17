@@ -93,97 +93,100 @@ async function baseMiddleware(req: NextRequest): Promise<NextResponse> {
   return res;
 }
 
-// Always export clerkMiddleware (required for Clerk's runtime detection)
-// Branch inside the callback instead of conditionally exporting
-// This ensures auth() can be called anywhere without "clerkMiddleware not detected" errors
-export default clerkMiddleware(async (auth, req) => {
-  // Always run base middleware logic first (CORS, OPTIONS, etc.)
-  const baseResponse = await baseMiddleware(req);
+// Conditionally export middleware based on Clerk configuration
+// This prevents Clerk initialization errors when Clerk is not configured (self-hosting mode)
+const middleware = hasClerkConfig
+  ? // Clerk is configured - use clerkMiddleware with full authentication
+    clerkMiddleware(async (auth, req) => {
+      // Always run base middleware logic first (CORS, OPTIONS, etc.)
+      const baseResponse = await baseMiddleware(req);
 
-  // If base middleware returned early (e.g., OPTIONS), use that response
-  if (baseResponse.status === 204 || baseResponse.status !== 200) {
-    return baseResponse;
-  }
+      // If base middleware returned early (e.g., OPTIONS), use that response
+      if (baseResponse.status === 204 || baseResponse.status !== 200) {
+        return baseResponse;
+      }
 
-  // If Clerk isn't configured, don't call auth() - just pass through
-  // This prevents the "clerkMiddleware not detected" error
-  if (
-    !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
-    !process.env.CLERK_SECRET_KEY
-  ) {
-    // If not using Clerk but using solo instance, handle API key auth
-    const isSoloInstance =
-      process.env.SOLO_API_KEY && process.env.SOLO_API_KEY.length > 0;
-    if (isSoloInstance) {
-      return soloApiKeyMiddleware(req);
-    }
-    // For static files when Clerk isn't configured, just return early
-    if (
-      isStaticFile(req.nextUrl.pathname) &&
-      req.nextUrl.pathname !== '/config.js'
-    ) {
+      // Skip static files - don't run Clerk auth on them
+      // BUT: Initialize Clerk's context first so auth() can be called if needed
+      // This prevents "clerkMiddleware not detected" errors for static file routes
+      if (
+        isStaticFile(req.nextUrl.pathname) &&
+        req.nextUrl.pathname !== '/config.js'
+      ) {
+        try {
+          // Initialize Clerk context by calling auth() - we don't enforce auth for static files
+          // This ensures auth() can be called in layouts/components without errors
+          await auth();
+        } catch (error) {
+          // If Clerk initialization fails, just continue - static files don't need auth
+          // This prevents middleware from breaking if Clerk config is missing
+        }
+        return NextResponse.next();
+      }
+
+      // Handle public routes - always allow through without auth
+      // BUT: For API routes, we still need to initialize Clerk's context
+      // so that auth() can be called in route handlers without errors
+      if (isPublicRoute(req)) {
+        console.log('isPublicRoute');
+        // For API routes, initialize Clerk context by calling auth() (even if we don't use it)
+        // This ensures auth() can be called in route handlers without "clerkMiddleware not detected" errors
+        if (isApiRoute(req)) {
+          try {
+            // Initialize Clerk context by calling auth() - we don't enforce auth for public routes
+            await auth();
+          } catch (error) {
+            // If Clerk isn't properly configured, just continue - route handlers will handle it
+            // This prevents middleware from breaking if Clerk config is missing
+          }
+        }
+        return NextResponse.next();
+      }
+
+      const enableUserManagement =
+        process.env.ENABLE_USER_MANAGEMENT === 'true';
+
+      // If user management is enabled, enforce authentication
+      if (enableUserManagement) {
+        console.log('enableUserManagement', req.url);
+        if (isClerkProtectedRoute(req)) {
+          console.log('isClerkProtectedRoute');
+          const { userId } = await auth();
+          console.log('userId', userId);
+          if (!userId) {
+            // (await auth()).redirectToSignIn();
+          }
+        }
+      }
+      // If user management is disabled, just pass through (permissive)
+      // This allows auth() calls to work without enforcing authentication
+
       return NextResponse.next();
-    }
-    return NextResponse.next();
-  }
+    })
+  : // Clerk is NOT configured - use simple middleware without Clerk
+    // This is for self-hosting mode or when using SOLO_API_KEY
+    async function (req: NextRequest) {
+      // Always run base middleware logic (CORS, OPTIONS, etc.)
+      const baseResponse = await baseMiddleware(req);
 
-  // Skip static files - don't run Clerk auth on them
-  // BUT: Initialize Clerk's context first so auth() can be called if needed
-  // This prevents "clerkMiddleware not detected" errors for static file routes
-  if (
-    isStaticFile(req.nextUrl.pathname) &&
-    req.nextUrl.pathname !== '/config.js'
-  ) {
-    try {
-      // Initialize Clerk context by calling auth() - we don't enforce auth for static files
-      // This ensures auth() can be called in layouts/components without errors
-      await auth();
-    } catch (error) {
-      // If Clerk initialization fails, just continue - static files don't need auth
-      // This prevents middleware from breaking if Clerk config is missing
-    }
-    return NextResponse.next();
-  }
-
-  // Handle public routes - always allow through without auth
-  // BUT: For API routes, we still need to initialize Clerk's context
-  // so that auth() can be called in route handlers without errors
-  if (isPublicRoute(req)) {
-    console.log('isPublicRoute');
-    // For API routes, initialize Clerk context by calling auth() (even if we don't use it)
-    // This ensures auth() can be called in route handlers without "clerkMiddleware not detected" errors
-    if (isApiRoute(req)) {
-      try {
-        // Initialize Clerk context by calling auth() - we don't enforce auth for public routes
-        await auth();
-      } catch (error) {
-        // If Clerk isn't properly configured, just continue - route handlers will handle it
-        // This prevents middleware from breaking if Clerk config is missing
+      // If base middleware returned early (e.g., OPTIONS), use that response
+      if (baseResponse.status === 204 || baseResponse.status !== 200) {
+        return baseResponse;
       }
-    }
-    return NextResponse.next();
-  }
 
-  const enableUserManagement = process.env.ENABLE_USER_MANAGEMENT === 'true';
+      // Check if using SOLO_API_KEY mode
+      const isSoloInstance =
+        process.env.SOLO_API_KEY && process.env.SOLO_API_KEY.length > 0;
 
-  // If user management is enabled, enforce authentication
-  if (enableUserManagement) {
-    console.log('enableUserManagement', req.url);
-    if (isClerkProtectedRoute(req)) {
-      console.log('isClerkProtectedRoute');
-      // Only call auth() if Clerk is configured (we already checked above)
-      const { userId } = await auth();
-      console.log('userId', userId);
-      if (!userId) {
-        // (await auth()).redirectToSignIn();
+      if (isSoloInstance) {
+        return soloApiKeyMiddleware(req);
       }
-    }
-  }
-  // If user management is disabled, just pass through (permissive)
-  // This allows auth() calls to work without enforcing authentication
 
-  return NextResponse.next();
-});
+      // No authentication required - pass through
+      return NextResponse.next();
+    };
+
+export default middleware;
 
 export const config = {
   matcher: [
