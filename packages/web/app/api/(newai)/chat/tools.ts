@@ -469,7 +469,7 @@ export const chatTools = {
 
   searchScreenpipe: {
     description:
-      "ALWAYS use this tool when the user asks about their screen activity, what they were working on, recent activity, or meetings. Search Screenpipe's recorded content: screen text (OCR) and audio transcriptions. When the user asks vaguely (e.g., 'search my screen activity'), use sensible defaults: content_type='all', limit=10, and calculate recent time range (last 30-60 minutes). For vague queries, use empty strings for q, app_name, window_name, start_time, end_time. IMPORTANT: Start with broad recent searches first, then narrow down if needed. Use time ranges of 1-2 hours max initially. If no results, expand gradually.",
+      "ALWAYS use this tool when the user asks about their screen activity, what they were working on, recent activity, or meetings. Search Screenpipe's recorded content: screen text (OCR) and audio transcriptions. When the user asks vaguely (e.g., 'search my screen activity'), use sensible defaults: content_type='all', limit=10, and calculate recent time range (last 30-60 minutes). For vague queries, use empty strings for q, app_name, window_name, start_time, end_time. IMPORTANT: Start with broad recent searches first, then narrow down if needed. Use time ranges of 1-2 hours max initially. If no results, expand gradually. CRITICAL: When presenting results, GROUP results by the same window/app (same activity). If multiple results have the same window title and app, summarize them together as one activity instead of listing each separately. For example, if there are 5 results from the same YouTube video, present it as one entry with a note like '5 snapshots from this activity'. CRITICAL APP NAME MAPPING: When user asks about YouTube, Gmail, or any website, the app_name is ALWAYS 'Google Chrome' (not 'YouTube', not 'Gmail', not the website name). For YouTube: use app_name='Google Chrome' and window_name='YouTube'. For Gmail: use app_name='Google Chrome' and window_name='Gmail'. The app_name parameter must be the actual macOS application name: 'Google Chrome', 'Slack', 'zoom.us', 'Code', 'Terminal', 'Obsidian', etc. NEVER use website names as app_name.",
     parameters: z.object({
       // REQUIRED (satisfies OpenAI strict tools) - use "" for vague queries
       q: z
@@ -481,30 +481,29 @@ export const chatTools = {
         .describe(
           "Filter by type. Use 'audio' for meetings/conversations, 'ocr' for screen text. Use 'all' for general searches or when user doesn't specify."
         ),
-      // REQUIRED (satisfies OpenAI strict tools) - use 10 as default
+      // REQUIRED (satisfies OpenAI strict tools) - use 10 as default, can go up to 50
       limit: z
         .number()
         .min(1)
-        .max(20)
-        .describe('Max results (1-20). Default to 10 for most queries.'),
+        .max(50)
+        .describe('Max results (1-50). Default to 10 for most queries. Use 20-50 if user asks for "all results", "more results", or wants comprehensive activity history. For recent activity, 10 is usually sufficient.'),
       // REQUIRED (satisfies OpenAI strict tools) - use "" for recent/recent activity
       start_time: z
         .string()
-        .describe('ISO 8601 UTC start time. Example: 2024-01-15T10:00:00Z. Use "" for recent activity (last 30-60 min) or when not specified.'),
+        .describe('ISO 8601 UTC start time. Example: 2024-01-15T10:00:00Z. Use "" for recent activity (last 30-60 min) or when not specified. NOTE: Results include both UTC timestamps and local time versions (timestampsLocal field). Always use the local time versions when displaying timestamps to users.'),
       // REQUIRED (satisfies OpenAI strict tools) - use "" for recent/recent activity
       end_time: z
         .string()
-        .describe('ISO 8601 UTC end time. Use "" for recent activity (now) or when not specified.'),
+        .describe('ISO 8601 UTC end time. Use "" for recent activity (now) or when not specified. NOTE: Results include local time versions in timestampsLocal field - use those for display.'),
       // REQUIRED (satisfies OpenAI strict tools) - use "" for vague queries
       app_name: z
         .string()
         .describe(
-          "Filter by app name. Examples: 'Google Chrome', 'Slack', 'zoom.us', 'Code', 'Terminal'. Use \"\" when user doesn't specify an app or asks about general activity."
+          "Filter by app name. Examples: 'Google Chrome' (for YouTube, web browsing), 'Slack', 'zoom.us', 'Code', 'Terminal'. IMPORTANT: YouTube runs inside Chrome, so use 'Google Chrome' for YouTube activity, not 'YouTube'. Use \"\" when user doesn't specify an app or asks about general activity."
         ),
-      // REQUIRED (satisfies OpenAI strict tools) - use "" for vague queries
       window_name: z
         .string()
-        .describe('Filter by window title substring. Use "" when user doesn\'t specify a window or asks about general activity.'),
+        .describe('Filter by window title substring. For websites, use the website name here (e.g., "YouTube", "Gmail"). Use "" when user doesn\'t specify a window or asks about general activity.'),
     }),
   },
 } as const;

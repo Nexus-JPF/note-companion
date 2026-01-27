@@ -51,9 +51,11 @@ export class ScreenpipeClient {
       if (params.content_type && params.content_type !== "all") {
         searchParams.append("content_type", params.content_type);
       }
+      // ScreenPipe API accepts limit parameter - examples show 20-50, no documented max
+      // We'll allow up to 50 to match their examples, but default to 10 for performance
       searchParams.append(
         "limit",
-        String(Math.min(params.limit || 10, 20))
+        String(Math.min(params.limit || 10, 50))
       );
       if (params.start_time) {
         searchParams.append("start_time", params.start_time);

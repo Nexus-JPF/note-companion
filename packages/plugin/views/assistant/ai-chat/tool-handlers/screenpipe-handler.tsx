@@ -154,14 +154,40 @@ export function ScreenpipeHandler({
         setStatus("Searching ScreenPipe...");
         // Execute search - normalize empty strings to undefined
         const rawArgs = toolInvocation.args as any;
+        
+        // Smart mapping: translate common website/service names to actual app names
+        // This handles cases where users/AI ask for "YouTube" but need "Google Chrome"
+        const websiteToAppMap: Record<string, string> = {
+          'youtube': 'Google Chrome',
+          'gmail': 'Google Chrome',
+          'google': 'Google Chrome',
+          'chrome': 'Google Chrome',
+        };
+        
+        let appName = rawArgs.app_name && rawArgs.app_name.trim() !== '' ? rawArgs.app_name.trim() : undefined;
+        let windowName = rawArgs.window_name && rawArgs.window_name.trim() !== '' ? rawArgs.window_name.trim() : undefined;
+        
+        // If app_name looks like a website name, map it to the actual app
+        if (appName) {
+          const lowerAppName = appName.toLowerCase();
+          if (websiteToAppMap[lowerAppName]) {
+            // Move the website name to window_name if not already set
+            if (!windowName) {
+              windowName = appName; // Keep original capitalization for window search
+            }
+            appName = websiteToAppMap[lowerAppName];
+            logger.debug("ScreenPipe handler: Mapped website to app", { original: rawArgs.app_name, mapped: appName, window: windowName });
+          }
+        }
+        
         const normalizedArgs: ScreenpipeSearchParams = {
           q: rawArgs.q && rawArgs.q.trim() !== '' ? rawArgs.q : undefined,
           content_type: rawArgs.content_type && rawArgs.content_type !== '' ? rawArgs.content_type : undefined,
           limit: rawArgs.limit || 10,
           start_time: rawArgs.start_time && rawArgs.start_time.trim() !== '' ? rawArgs.start_time : undefined,
           end_time: rawArgs.end_time && rawArgs.end_time.trim() !== '' ? rawArgs.end_time : undefined,
-          app_name: rawArgs.app_name && rawArgs.app_name.trim() !== '' ? rawArgs.app_name : undefined,
-          window_name: rawArgs.window_name && rawArgs.window_name.trim() !== '' ? rawArgs.window_name : undefined,
+          app_name: appName,
+          window_name: windowName,
         };
         logger.debug("ScreenPipe handler: Executing search with normalized args:", normalizedArgs);
         const results = await client.search(normalizedArgs);
@@ -180,22 +206,78 @@ export function ScreenpipeHandler({
         }
 
         setStatus("Formatting results...");
-        // Format results for AI
-        const formattedResults = results.map((r: ScreenpipeResult) => ({
-          type: r.type,
-          timestamp: r.content.timestamp,
-          app: r.content.app_name,
-          window: r.content.window_name,
-          text: r.content.text || r.content.transcription,
-          preview:
-            (r.content.text || r.content.transcription || "").substring(
-              0,
-              200
-            ) + "...",
-        }));
+        // Format results for AI and group by same activity (window + app)
+        const groupedResults = new Map<string, any[]>();
+        
+        results.forEach((r: ScreenpipeResult) => {
+          const app = r.content.app_name || "Unknown";
+          const window = r.content.window_name || "";
+          // Create a key from app + window to group same activities
+          const groupKey = `${app}|||${window}`;
+          
+          if (!groupedResults.has(groupKey)) {
+            groupedResults.set(groupKey, []);
+          }
+          
+          groupedResults.get(groupKey)!.push({
+            type: r.type,
+            timestamp: r.content.timestamp,
+            app: app,
+            window: window,
+            text: r.content.text || r.content.transcription,
+            preview:
+              (r.content.text || r.content.transcription || "").substring(
+                0,
+                200
+              ) + "...",
+          });
+        });
+        
+        // Convert grouped results to array with count
+        const formattedResults = Array.from(groupedResults.entries()).map(([key, items]) => {
+          const [app, window] = key.split("|||");
+          // Sort by timestamp (most recent first)
+          items.sort((a, b) => 
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+          
+          // Convert UTC timestamps to local time for display
+          const formatLocalTime = (utcTimestamp: string) => {
+            try {
+              const date = new Date(utcTimestamp);
+              // Format as local time: HH:MM:SS
+              return date.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                timeZoneName: 'short'
+              });
+            } catch {
+              return utcTimestamp;
+            }
+          };
+          
+          return {
+            app: app,
+            window: window,
+            count: items.length,
+            firstTimestamp: items[0].timestamp, // Keep UTC for API
+            lastTimestamp: items[items.length - 1].timestamp, // Keep UTC for API
+            firstTimestampLocal: formatLocalTime(items[0].timestamp), // Local time for display
+            lastTimestampLocal: formatLocalTime(items[items.length - 1].timestamp), // Local time for display
+            // Combine text from all snapshots
+            combinedText: items.map(i => i.text).filter(Boolean).join(" ").substring(0, 500),
+            // Include all timestamps for reference (UTC)
+            timestamps: items.map(i => i.timestamp),
+            // Include local time versions for display
+            timestampsLocal: items.map(i => formatLocalTime(i.timestamp)),
+            type: items[0].type,
+          };
+        });
 
         setStatus("Complete");
-        logger.debug("ScreenPipe handler: Sending formatted results:", formattedResults.length);
+        logger.debug("ScreenPipe handler: Sending grouped results:", formattedResults.length, "groups from", results.length, "total results");
         handleAddResult(JSON.stringify(formattedResults));
       } catch (error) {
         logger.error("ScreenPipe search error:", error);

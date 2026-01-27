@@ -979,8 +979,36 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
   // Derive isGenerating from status (replacement for deprecated isLoading)
   const isGenerating = status === "streaming" || status === "submitted";
-  // Show loading indicator only when submitted but not yet streaming (when actual content appears)
-  const showLoadingIndicator = status === "submitted";
+  
+  // Check if there are tool invocations (executing or waiting for AI response)
+  const hasToolActivity = React.useMemo(() => {
+    if (messages.length === 0) return false;
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role !== "assistant") return false;
+    
+    // Check if last message has tool invocations
+    const toolInvocations = lastMessage.toolInvocations || [];
+    if (toolInvocations.length === 0) return false;
+    
+    // Check if any tools are still executing (no result yet)
+    const hasExecutingTools = toolInvocations.some(
+      (tool: any) => !("result" in tool) && tool.state !== "result"
+    );
+    
+    // Check if all tools are complete but AI hasn't started streaming yet
+    const allToolsComplete = toolInvocations.every(
+      (tool: any) => "result" in tool || tool.state === "result"
+    );
+    const waitingForAI = allToolsComplete && (!lastMessage.content || lastMessage.content.length === 0);
+    
+    return hasExecutingTools || waitingForAI;
+  }, [messages]);
+  
+  // Show loading indicator when:
+  // 1. Status is "submitted" (initial request)
+  // 2. Tools are executing (before results appear)
+  // 3. Tools are complete but AI hasn't started streaming yet
+  const showLoadingIndicator = status === "submitted" || (hasToolActivity && status !== "streaming");
 
   // Helper to normalize message with timestamp
   const normalizeMessage = (
