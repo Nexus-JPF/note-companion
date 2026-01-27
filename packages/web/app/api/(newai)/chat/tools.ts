@@ -342,19 +342,20 @@ export const chatTools = {
                 .replace(/\\r/g, '\r') // Unescape carriage returns
                 .replace(/\\\\/g, '\\'); // Unescape double backslashes
             }, z.string().describe('The markdown content for the new file')),
+            // REQUIRED (satisfies OpenAI strict tools)
+            // Tell the model to pass "" for root
             folder: z
               .string()
-              .default('')
-              .describe(
-                'Folder path where file should be created (default: root, leave empty for root)'
-              ),
+              .describe('Folder path relative to vault root. Use "" for root folder.'),
           })
         )
         .describe('Array of files to create'),
+      // REQUIRED (satisfies OpenAI strict tools)
+      // Tell the model to pass true as default
       linkInCurrentFile: z
         .boolean()
         .describe(
-          'Whether to add links to these new files in the current active file (default: true)'
+          'Whether to add links to these new files in the current active file. Use true as default.'
         ),
       message: z
         .string()
@@ -463,6 +464,47 @@ export const chatTools = {
         .boolean()
         .describe('Include frontmatter in export (default: false)'),
       message: z.string().describe('Clear explanation of export operation'),
+    }),
+  },
+
+  searchScreenpipe: {
+    description:
+      "ALWAYS use this tool when the user asks about their screen activity, what they were working on, recent activity, or meetings. Search Screenpipe's recorded content: screen text (OCR) and audio transcriptions. When the user asks vaguely (e.g., 'search my screen activity'), use sensible defaults: content_type='all', limit=10, and calculate recent time range (last 30-60 minutes). For vague queries, use empty strings for q, app_name, window_name, start_time, end_time. IMPORTANT: Start with broad recent searches first, then narrow down if needed. Use time ranges of 1-2 hours max initially. If no results, expand gradually.",
+    parameters: z.object({
+      // REQUIRED (satisfies OpenAI strict tools) - use "" for vague queries
+      q: z
+        .string()
+        .describe('Search keywords. For vague queries like "search my screen activity", use "". Only use keywords when user specifies them.'),
+      // REQUIRED (satisfies OpenAI strict tools) - use "all" as default
+      content_type: z
+        .enum(['all', 'ocr', 'audio'])
+        .describe(
+          "Filter by type. Use 'audio' for meetings/conversations, 'ocr' for screen text. Use 'all' for general searches or when user doesn't specify."
+        ),
+      // REQUIRED (satisfies OpenAI strict tools) - use 10 as default
+      limit: z
+        .number()
+        .min(1)
+        .max(20)
+        .describe('Max results (1-20). Default to 10 for most queries.'),
+      // REQUIRED (satisfies OpenAI strict tools) - use "" for recent/recent activity
+      start_time: z
+        .string()
+        .describe('ISO 8601 UTC start time. Example: 2024-01-15T10:00:00Z. Use "" for recent activity (last 30-60 min) or when not specified.'),
+      // REQUIRED (satisfies OpenAI strict tools) - use "" for recent/recent activity
+      end_time: z
+        .string()
+        .describe('ISO 8601 UTC end time. Use "" for recent activity (now) or when not specified.'),
+      // REQUIRED (satisfies OpenAI strict tools) - use "" for vague queries
+      app_name: z
+        .string()
+        .describe(
+          "Filter by app name. Examples: 'Google Chrome', 'Slack', 'zoom.us', 'Code', 'Terminal'. Use \"\" when user doesn't specify an app or asks about general activity."
+        ),
+      // REQUIRED (satisfies OpenAI strict tools) - use "" for vague queries
+      window_name: z
+        .string()
+        .describe('Filter by window title substring. Use "" when user doesn\'t specify a window or asks about general activity.'),
     }),
   },
 } as const;

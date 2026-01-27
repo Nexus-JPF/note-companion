@@ -56,6 +56,116 @@ export async function POST(req: NextRequest) {
           deepSearch = false,
         } = await req.json();
 
+        // CRITICAL: Strip unmatched tool calls - every tool call must have a corresponding tool result
+        // This prevents "ToolInvocation must have a result" errors from convertToCoreMessages
+        const stripUnmatchedToolCalls = (msgs: any[]) => {
+          // Collect all tool result IDs from role:"tool" messages
+          const toolResultIds = new Set(
+            msgs
+              .filter((m) => m.role === 'tool' && m.toolCallId)
+              .map((m) => m.toolCallId)
+          );
+
+          console.log(
+            `[Chat API] Found ${toolResultIds.size} tool results in message history`
+          );
+
+          return msgs.map((message: any) => {
+            // CRITICAL: Handle tool invocations in message.parts array (most common format)
+            if (message.role === 'assistant' && Array.isArray(message.parts)) {
+              const filteredParts = message.parts.filter((part: any) => {
+                if (part?.type === 'tool-invocation' && part?.toolInvocation) {
+                  const toolCallId = part.toolInvocation.toolCallId;
+                  const hasMatchingResult = toolResultIds.has(toolCallId);
+                  const hasEmbeddedResult =
+                    part.toolInvocation.result != null ||
+                    part.toolInvocation.state === 'result' ||
+                    part.toolInvocation.state === 'output-available';
+
+                  if (!hasMatchingResult && !hasEmbeddedResult) {
+                    console.log(
+                      `[Chat API] Filtering out unmatched tool invocation in parts: ${part.toolInvocation.toolName || 'unknown'} (${toolCallId || 'unknown'})`
+                    );
+                    return false;
+                  }
+                }
+                return true;
+              });
+              if (filteredParts.length !== message.parts.length) {
+                return { ...message, parts: filteredParts };
+              }
+            }
+
+            // 1) Handle toolInvocations array (standard path)
+            if (message.role === 'assistant' && Array.isArray(message.toolInvocations)) {
+              const kept = message.toolInvocations.filter((inv: any) => {
+                // Keep only tool calls that have a matching tool result
+                const hasMatchingResult = toolResultIds.has(inv.toolCallId);
+                // Also keep if it already has a result embedded
+                const hasEmbeddedResult =
+                  (inv.result != null && inv.result !== undefined) ||
+                  inv.state === 'result' ||
+                  inv.state === 'output-available';
+
+                if (!hasMatchingResult && !hasEmbeddedResult) {
+                  console.log(
+                    `[Chat API] Filtering out unmatched tool invocation: ${inv.toolName || 'unknown'} (${inv.toolCallId || 'unknown'})`
+                  );
+                }
+                return hasMatchingResult || hasEmbeddedResult;
+              });
+
+              if (kept.length === 0) {
+                const { toolInvocations, ...rest } = message;
+                return rest;
+              }
+              return { ...message, toolInvocations: kept };
+            }
+
+            // 2) Handle tool calls embedded in content parts (AI SDK sometimes stores them here)
+            if (message.role === 'assistant' && Array.isArray(message.content)) {
+              const filteredParts = message.content.filter((part: any) => {
+                // Remove ALL tool-call parts that don't have matching results
+                if (part?.type === 'tool-call' || part?.type?.startsWith('tool-')) {
+                  const toolCallId = part.toolCallId || part.toolCall?.toolCallId;
+                  if (toolCallId) {
+                    const hasMatchingResult = toolResultIds.has(toolCallId);
+                    if (!hasMatchingResult) {
+                      console.log(
+                        `[Chat API] Filtering out unmatched tool call in content parts: ${toolCallId}`
+                      );
+                      return false;
+                    }
+                  } else {
+                    // If no toolCallId, remove it to be safe
+                    console.log(
+                      `[Chat API] Filtering out tool call part without toolCallId`
+                    );
+                    return false;
+                  }
+                }
+                return true;
+              });
+              if (filteredParts.length !== message.content.length) {
+                return { ...message, content: filteredParts };
+              }
+            }
+            
+            // 3) Also handle string content that might contain tool call references
+            // (Some SDK versions embed tool calls differently)
+            if (message.role === 'assistant' && typeof message.content === 'string') {
+              // Content is a string, no tool calls to filter here
+              return message;
+            }
+
+            return message;
+          });
+        };
+
+        // Apply filtering immediately after parsing messages
+        console.log(`[Chat API] Filtering messages: ${messages.length} total`);
+        const filteredMessages = stripUnmatchedToolCalls(messages);
+
         // Handle both formats: array of files (old) or JSON stringified contextItems (new)
         // newUnifiedContext may be a JSON string, or a string containing JSON + editor context
         let contextString = '';
@@ -342,15 +452,19 @@ export async function POST(req: NextRequest) {
         // Use search-enabled models when requested or when deep search is enabled
         const shouldUseSearch = enableSearchGrounding || deepSearch;
 
+        // Use filtered messages for all processing
+        const messagesToProcess = filteredMessages;
+
         // Debug: Log tool invocations in messages
-        const toolInvocations = messages.filter((m) => m.role === 'tool');
-        const assistantMessages = messages.filter(
+        const toolInvocations = messagesToProcess.filter((m) => m.role === 'tool');
+        const assistantMessages = messagesToProcess.filter(
           (m) => m.role === 'assistant'
         );
-        const userMessages = messages.filter((m) => m.role === 'user');
+        const userMessages = messagesToProcess.filter((m) => m.role === 'user');
 
         console.log(`[Chat API] Messages breakdown:`, {
-          total: messages.length,
+          total: messagesToProcess.length,
+          originalTotal: messages.length,
           user: userMessages.length,
           assistant: assistantMessages.length,
           tool: toolInvocations.length,
@@ -433,35 +547,63 @@ export async function POST(req: NextRequest) {
         if (shouldUseSearch) {
           console.log(`Search grounding enabled (deep: ${deepSearch})`);
 
-          // Filter out pending tool invocations before converting
-          // Only include tool invocations that have results (exclude any in "call" state)
-          const messagesWithResults = messages.map((message: any) => {
-            if (message.role === 'assistant' && message.toolInvocations) {
-              return {
-                ...message,
-                toolInvocations: message.toolInvocations.filter(
-                  (invocation: any) => {
-                    // CRITICAL: Exclude ALL tool invocations in "call" state
-                    // Tool invocations in "call" state are pending and don't have results yet
-                    // convertToCoreMessages requires all tool invocations to have results
-                    if (invocation.state === 'call') {
-                      return false;
-                    }
-                    // Include invocations that have a result (not null/undefined) or are in "result" state
-                    // Also include invocations without a state property if they have a result
-                    return (
-                      ('result' in invocation && invocation.result != null) ||
-                      invocation.state === 'result'
-                    );
-                  }
-                ),
-              };
+          // Messages are already filtered above, but double-check before converting
+          // Final safety check - strip any unmatched tool calls
+          const finalFilteredMessages = stripUnmatchedToolCalls(messagesToProcess);
+          
+          // Debug: Log any remaining tool invocations without results
+          finalFilteredMessages.forEach((msg: any, idx: number) => {
+            if (msg.role === 'assistant' && msg.toolInvocations) {
+              msg.toolInvocations.forEach((inv: any) => {
+                if (!inv.result && inv.state !== 'result') {
+                  console.error(
+                    `[Chat API] WARNING: Found tool invocation without result at message ${idx}: ${inv.toolName} (${inv.toolCallId})`
+                  );
+                }
+              });
             }
-            return message;
           });
-
+          
           // Convert messages to core format to ensure tool results are properly included
-          const coreMessages = convertToCoreMessages(messagesWithResults);
+          let coreMessages;
+          try {
+            coreMessages = convertToCoreMessages(finalFilteredMessages);
+          } catch (error: any) {
+            // If conversion fails, log the problematic messages and apply even more aggressive filtering
+            console.error('[Chat API] convertToCoreMessages failed (search mode):', error.message);
+            console.error('[Chat API] Problematic messages:', JSON.stringify(finalFilteredMessages, null, 2));
+            
+            // Apply ultra-aggressive filter: remove ALL tool invocations that don't have explicit results
+            const ultraFiltered = finalFilteredMessages.map((msg: any) => {
+              if (msg.role === 'assistant') {
+                // Remove toolInvocations entirely if any don't have results
+                if (Array.isArray(msg.toolInvocations)) {
+                  const safeInvocations = msg.toolInvocations.filter((inv: any) => {
+                    return inv.result != null || inv.state === 'result';
+                  });
+                  if (safeInvocations.length < msg.toolInvocations.length) {
+                    const { toolInvocations, ...rest } = msg;
+                    return safeInvocations.length > 0 ? { ...rest, toolInvocations: safeInvocations } : rest;
+                  }
+                }
+                // Also filter content parts
+                if (Array.isArray(msg.content)) {
+                  const safeContent = msg.content.filter((part: any) => {
+                    if (part?.type === 'tool-call' || part?.type?.startsWith('tool-')) {
+                      return part.result != null || part.state === 'result';
+                    }
+                    return true;
+                  });
+                  if (safeContent.length < msg.content.length) {
+                    return { ...msg, content: safeContent };
+                  }
+                }
+              }
+              return msg;
+            });
+            
+            coreMessages = convertToCoreMessages(ultraFiltered);
+          }
           console.log(
             `[Chat API] Converted ${messages.length} messages to ${coreMessages.length} core messages (search mode)`
           );
@@ -533,36 +675,64 @@ export async function POST(req: NextRequest) {
             );
           }
 
-          // Filter out pending tool invocations before converting
-          // Only include tool invocations that have results (exclude any in "call" state)
-          const messagesWithResults = messages.map((message: any) => {
-            if (message.role === 'assistant' && message.toolInvocations) {
-              return {
-                ...message,
-                toolInvocations: message.toolInvocations.filter(
-                  (invocation: any) => {
-                    // CRITICAL: Exclude ALL tool invocations in "call" state
-                    // Tool invocations in "call" state are pending and don't have results yet
-                    // convertToCoreMessages requires all tool invocations to have results
-                    if (invocation.state === 'call') {
-                      return false;
-                    }
-                    // Include invocations that have a result (not null/undefined) or are in "result" state
-                    // Also include invocations without a state property if they have a result
-                    return (
-                      ('result' in invocation && invocation.result != null) ||
-                      invocation.state === 'result'
-                    );
-                  }
-                ),
-              };
+          // Messages are already filtered above, but double-check before converting
+          // Final safety check - strip any unmatched tool calls
+          const finalFilteredMessages = stripUnmatchedToolCalls(messagesToProcess);
+          
+          // Debug: Log any remaining tool invocations without results
+          finalFilteredMessages.forEach((msg: any, idx: number) => {
+            if (msg.role === 'assistant' && msg.toolInvocations) {
+              msg.toolInvocations.forEach((inv: any) => {
+                if (!inv.result && inv.state !== 'result') {
+                  console.error(
+                    `[Chat API] WARNING: Found tool invocation without result at message ${idx}: ${inv.toolName} (${inv.toolCallId})`
+                  );
+                }
+              });
             }
-            return message;
           });
-
+          
           // Convert messages to core format - convertToCoreMessages handles tool invocations correctly
           // Tool results should already be in the correct format (plain strings, not JSON-encoded)
-          const coreMessages = convertToCoreMessages(messagesWithResults);
+          let coreMessages;
+          try {
+            coreMessages = convertToCoreMessages(finalFilteredMessages);
+          } catch (error: any) {
+            // If conversion fails, log the problematic messages and apply even more aggressive filtering
+            console.error('[Chat API] convertToCoreMessages failed:', error.message);
+            console.error('[Chat API] Problematic messages:', JSON.stringify(finalFilteredMessages, null, 2));
+            
+            // Apply ultra-aggressive filter: remove ALL tool invocations that don't have explicit results
+            const ultraFiltered = finalFilteredMessages.map((msg: any) => {
+              if (msg.role === 'assistant') {
+                // Remove toolInvocations entirely if any don't have results
+                if (Array.isArray(msg.toolInvocations)) {
+                  const safeInvocations = msg.toolInvocations.filter((inv: any) => {
+                    return inv.result != null || inv.state === 'result';
+                  });
+                  if (safeInvocations.length < msg.toolInvocations.length) {
+                    const { toolInvocations, ...rest } = msg;
+                    return safeInvocations.length > 0 ? { ...rest, toolInvocations: safeInvocations } : rest;
+                  }
+                }
+                // Also filter content parts
+                if (Array.isArray(msg.content)) {
+                  const safeContent = msg.content.filter((part: any) => {
+                    if (part?.type === 'tool-call' || part?.type?.startsWith('tool-')) {
+                      return part.result != null || part.state === 'result';
+                    }
+                    return true;
+                  });
+                  if (safeContent.length < msg.content.length) {
+                    return { ...msg, content: safeContent };
+                  }
+                }
+              }
+              return msg;
+            });
+            
+            coreMessages = convertToCoreMessages(ultraFiltered);
+          }
           console.log(
             `[Chat API] Converted ${messages.length} messages to ${coreMessages.length} core messages`
           );

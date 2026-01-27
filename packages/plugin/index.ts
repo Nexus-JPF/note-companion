@@ -1721,6 +1721,89 @@ export default class FileOrganizer extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: "test-screenpipe",
+      name: "Test ScreenPipe Connection",
+      callback: async () => {
+        const { ScreenpipeClient } = await import("./services/screenpipe-client");
+        const client = new ScreenpipeClient(this.settings.screenpipeApiUrl);
+
+        const isAvailable = await client.isAvailable();
+        if (!isAvailable) {
+          new Notice(
+            "❌ ScreenPipe not available on " + this.settings.screenpipeApiUrl,
+            5000
+          );
+          return;
+        }
+
+        new Notice("✅ ScreenPipe connected!", 2000);
+
+        try {
+          const results = await client.search({ limit: 5 });
+          new Notice(`✅ Found ${results.length} results`, 3000);
+          console.log("ScreenPipe test results:", results);
+        } catch (error) {
+          new Notice(
+            "❌ Search failed: " + (error instanceof Error ? error.message : "Unknown error"),
+            5000
+          );
+        }
+      },
+    });
+
+    // Add command to test ScreenPipe search
+    this.addCommand({
+      id: "test-screenpipe-search",
+      name: "Test ScreenPipe Search (Recent Activity)",
+      callback: async () => {
+        if (!this.settings.enableScreenpipe) {
+          new Notice("❌ ScreenPipe is disabled. Enable it in Settings > Experiments > Integrations", 5000);
+          return;
+        }
+
+        const { ScreenpipeClient } = await import("./services/screenpipe-client");
+        const client = new ScreenpipeClient(this.settings.screenpipeApiUrl);
+
+        const isAvailable = await client.isAvailable();
+        if (!isAvailable) {
+          new Notice(
+            "❌ ScreenPipe not available on " + this.settings.screenpipeApiUrl,
+            5000
+          );
+          return;
+        }
+
+        new Notice("🔍 Searching recent activity...", 2000);
+
+        try {
+          // Search for last 30 minutes of activity
+          const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+          const results = await client.search({
+            limit: 10,
+            start_time: thirtyMinutesAgo,
+            content_type: "all",
+          });
+          
+          if (results.length === 0) {
+            new Notice("ℹ️ No recent activity found in last 30 minutes", 3000);
+          } else {
+            const apps = [...new Set(results.map((r: any) => r.content?.app_name || "Unknown"))];
+            new Notice(
+              `✅ Found ${results.length} result${results.length > 1 ? 's' : ''} from ${apps.length} app${apps.length > 1 ? 's' : ''}: ${apps.join(", ")}`,
+              5000
+            );
+            console.log("ScreenPipe search results:", results);
+          }
+        } catch (error) {
+          new Notice(
+            "❌ Search failed: " + (error instanceof Error ? error.message : "Unknown error"),
+            5000
+          );
+        }
+      },
+    });
+
     // Register the dashboard view
     this.registerView(
       DASHBOARD_VIEW_TYPE,

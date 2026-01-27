@@ -29,6 +29,7 @@ import { MergeFilesHandler } from "./merge-files-handler";
 import { CreateTemplateHandler } from "./create-template-handler";
 import { BulkFindReplaceHandler } from "./bulk-find-replace-handler";
 import { ExportToFormatHandler } from "./export-to-format-handler";
+import { ScreenpipeHandler } from "./screenpipe-handler";
 
 interface ToolInvocationHandlerProps {
   toolInvocation: ToolInvocation;
@@ -79,11 +80,18 @@ function ToolInvocationHandler({
       createTemplate: "Creating Template",
       bulkFindReplace: "Find & Replace",
       exportToFormat: "Exporting Files",
+      searchScreenpipe: "Search ScreenPipe",
     };
     return toolTitles[toolName] ;
   };
 
   const renderContent = () => {
+    // Debug: Log tool name matching
+    console.log("[ToolInvocationHandler] Rendering tool:", {
+      toolName: toolInvocation.toolName,
+      toolCallId: toolInvocation.toolCallId,
+    });
+    
     const handlers = {
       getSearchQuery: () => (
         <SearchHandler
@@ -267,14 +275,32 @@ function ToolInvocationHandler({
           app={app}
         />
       ),
+      searchScreenpipe: () => (
+        <ScreenpipeHandler
+          toolInvocation={toolInvocation}
+          handleAddResult={handleAddResult}
+          app={app}
+        />
+      ),
     };
 
-    return handlers[toolInvocation.toolName]?.() || null;
+    const handler = handlers[toolInvocation.toolName];
+    if (!handler) {
+      console.error("[ToolInvocationHandler] No handler found for tool:", toolInvocation.toolName);
+      return (
+        <div className="text-xs text-[--text-error] p-2">
+          Unknown tool: {toolInvocation.toolName}
+        </div>
+      );
+    }
+    return handler();
   };
 
+  const content = renderContent();
+  
   return (
     <motion.div
-      className="card"
+      className="p-3 border border-[--background-modifier-border] rounded bg-[--background-secondary]"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -282,7 +308,7 @@ function ToolInvocationHandler({
       <h4 className="m-0 mb-2 text-[--text-normal] text-sm font-semibold">
         {getToolTitle(toolInvocation.toolName)}
       </h4>
-      <div className="text-sm text-[--text-muted]">{renderContent()}</div>
+      <div className="text-sm text-[--text-muted]">{content}</div>
     </motion.div>
   );
 }

@@ -59,6 +59,8 @@ export class FileOrganizerSettings {
   pdfPageLimit = 10; // default to 10 pages
   enableProcessingNotifications = true; // Show toast notifications during file processing
   showSyncTab = false; // Show Sync tab in assistant (experimental mobile sync feature)
+  enableScreenpipe = false; // Enable ScreenPipe integration for screen activity search
+  screenpipeApiUrl = "http://localhost:3030"; // ScreenPipe API URL
 }
 
 export const DEFAULT_SETTINGS = new FileOrganizerSettings();

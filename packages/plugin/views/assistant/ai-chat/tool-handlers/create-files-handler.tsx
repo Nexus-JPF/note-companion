@@ -108,11 +108,20 @@ export function CreateFilesHandler({
         hasFetchedRef.current = true;
         const { files, linkInCurrentFile, message } = toolInvocation.args;
 
+        // Normalize folder field - ensure it's always a string (defensive programming)
+        const normalizedFiles = files.map((f: any) => ({
+          ...f,
+          folder: f.folder ?? "",
+        }));
+
+        // Normalize linkInCurrentFile - default to true if not provided
+        const normalizedLinkInCurrentFile = linkInCurrentFile ?? true;
+
         setIsCreating(true);
         try {
           const { results, createdPaths } = await createFiles(
-            files,
-            linkInCurrentFile !== false
+            normalizedFiles,
+            normalizedLinkInCurrentFile
           );
 
           setCreatedFiles(createdPaths);

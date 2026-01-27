@@ -27,6 +27,13 @@ export const ExperimentTab: React.FC<ExperimentTabProps> = ({ plugin }) => {
   const [showSyncTab, setShowSyncTab] = useState(
     plugin.settings.showSyncTab
   );
+  const [enableScreenpipe, setEnableScreenpipe] = useState(
+    plugin.settings.enableScreenpipe
+  );
+
+  useEffect(() => {
+    setEnableScreenpipe(plugin.settings.enableScreenpipe);
+  }, [plugin.settings.enableScreenpipe]);
 
   const handleToggleChange = async (
     value: boolean,
@@ -237,6 +244,29 @@ export const ExperimentTab: React.FC<ExperimentTabProps> = ({ plugin }) => {
                   value={showSyncTab}
                   onChange={value =>
                     handleToggleChange(value, setShowSyncTab, "showSyncTab")
+                  }
+                />
+                <ToggleSetting
+                  name="ScreenPipe Integration"
+                  description={
+                    <div className="space-y-2">
+                      <p>Enable ScreenPipe integration to search your screen activity and audio transcriptions in the AI chat.</p>
+                      <div className="mt-2 p-3 bg-[--background-secondary] rounded text-sm space-y-1">
+                        <p className="text-[--text-accent]">
+                          📺 Requires ScreenPipe running on localhost:3030
+                        </p>
+                        <p className="text-[--text-muted]">
+                          Search your screen recordings and meeting transcriptions directly from chat.
+                        </p>
+                        <p className="text-xs text-[--text-faint]">
+                          Make sure ScreenPipe is running before using this feature
+                        </p>
+                      </div>
+                    </div>
+                  }
+                  value={enableScreenpipe}
+                  onChange={value =>
+                    handleToggleChange(value, setEnableScreenpipe, "enableScreenpipe")
                   }
                 />
               </div>
