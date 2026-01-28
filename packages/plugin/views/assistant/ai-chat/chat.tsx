@@ -986,8 +986,53 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     const lastMessage = messages[messages.length - 1];
     if (lastMessage.role !== "assistant") return false;
     
-    // Check if last message has tool invocations
-    const toolInvocations = lastMessage.toolInvocations || [];
+    // Extract tool invocations from parts (new format) or fallback to deprecated toolInvocations
+    interface ToolPart {
+      type?: string;
+      toolCallId?: string;
+      toolInvocation?: {
+        toolCallId: string;
+        toolName: string;
+        result?: unknown;
+        state?: string;
+      };
+      output?: unknown;
+      state?: string;
+    }
+    
+    const messageWithParts = lastMessage as Message & {
+      parts?: ToolPart[];
+      toolInvocations?: ToolInvocation[];
+    };
+    
+    // Extract tool invocations from parts (preferred) or fallback to deprecated property
+    let toolInvocations: any[] = [];
+    
+    if (messageWithParts.parts) {
+      toolInvocations = messageWithParts.parts
+        .filter((part: ToolPart) => part.type?.startsWith("tool-") || part.toolInvocation)
+        .map((part: ToolPart) => {
+          if (part.toolInvocation) {
+            return {
+              toolCallId: part.toolInvocation.toolCallId,
+              result: part.toolInvocation.result,
+              state: part.toolInvocation.state || part.state,
+            };
+          }
+          return {
+            toolCallId: part.toolCallId,
+            result: part.output,
+            state: part.state,
+          };
+        })
+        .filter((tool: any) => tool.toolCallId); // Filter out invalid entries
+    }
+    
+    // Fallback to deprecated toolInvocations if parts extraction yielded nothing
+    if (toolInvocations.length === 0 && messageWithParts.toolInvocations) {
+      toolInvocations = messageWithParts.toolInvocations as any[];
+    }
+    
     if (toolInvocations.length === 0) return false;
     
     // Check if any tools are still executing (no result yet)
