@@ -166,6 +166,11 @@ export function ScreenpipeHandler({
         
         let appName = rawArgs.app_name && rawArgs.app_name.trim() !== '' ? rawArgs.app_name.trim() : undefined;
         let windowName = rawArgs.window_name && rawArgs.window_name.trim() !== '' ? rawArgs.window_name.trim() : undefined;
+        let windowNameWasAutoSet = false;
+        
+        // Define hasSpecificQuery early so it's available throughout the function
+        // This properly handles whitespace-only queries (e.g., "   ") as non-specific
+        const hasSpecificQuery = rawArgs.q && rawArgs.q.trim() !== '';
         
         // If app_name looks like a website name, map it to the actual app
         if (appName) {
@@ -174,24 +179,121 @@ export function ScreenpipeHandler({
             // Move the website name to window_name if not already set
             if (!windowName) {
               windowName = appName; // Keep original capitalization for window search
+              windowNameWasAutoSet = true;
             }
             appName = websiteToAppMap[lowerAppName];
             logger.debug("ScreenPipe handler: Mapped website to app", { original: rawArgs.app_name, mapped: appName, window: windowName });
           }
         }
         
+        // For Chrome: if searching for general activity (no specific site/query), 
+        // omit window_name to search across all tabs
+        // This ensures "what was I doing in Chrome?" finds all tabs, not just one
+        // Only keep window_name if it was explicitly provided by AI (not auto-set) or if there's a specific query
+        if (appName === "Google Chrome") {
+          const windowNameWasExplicit = rawArgs.window_name && rawArgs.window_name.trim() !== '' && !windowNameWasAutoSet;
+          
+          // For general Chrome searches without explicit window_name, ALWAYS omit it to search all tabs
+          // This is critical - if user asks "what was I doing in Chrome?", we need ALL tabs
+          if (!hasSpecificQuery && !windowNameWasExplicit) {
+            windowName = undefined;
+            logger.debug("ScreenPipe handler: General Chrome search, omitting window_name to search all tabs", {
+              originalWindowName: rawArgs.window_name,
+              windowNameWasAutoSet,
+              hasQuery: hasSpecificQuery
+            });
+          } else {
+            logger.debug("ScreenPipe handler: Chrome search with specific filter", { 
+              hasQuery: hasSpecificQuery, 
+              windowName, 
+              windowNameWasExplicit,
+              originalWindowName: rawArgs.window_name
+            });
+          }
+        }
+        
+        // Use user settings as fallbacks when AI doesn't provide values
+        const userLimit = currentPlugin.settings.queryScreenpipeLimit || 10;
+        const userTimeRange = currentPlugin.settings.screenpipeTimeRange || 2;
+        
+        // Handle time range: AI sends "" for "recent activity" - we interpret this as "use user setting"
+        // If AI provides explicit ISO timestamps, use those; otherwise apply user's time range
+        let startTime = rawArgs.start_time && rawArgs.start_time.trim() !== '' ? rawArgs.start_time : undefined;
+        let endTime = rawArgs.end_time && rawArgs.end_time.trim() !== '' ? rawArgs.end_time : undefined;
+        
+        // If no explicit time range provided (empty strings or undefined), calculate from user setting
+        // This ensures vague queries like "what was I working on?" get a sensible time window
+        if (!startTime && !endTime) {
+          const now = new Date();
+          const hoursAgo = new Date(now.getTime() - (userTimeRange * 60 * 60 * 1000));
+          endTime = now.toISOString();
+          startTime = hoursAgo.toISOString();
+          logger.debug("ScreenPipe handler: Applied user time range setting", { 
+            hours: userTimeRange, 
+            startTime, 
+            endTime 
+          });
+        } else if (startTime || endTime) {
+          logger.debug("ScreenPipe handler: Using AI-provided time range", { startTime, endTime });
+        }
+        
+        // For general Chrome searches (no specific window), increase limit to get more diverse results
+        // This ensures we capture activity from multiple tabs, not just one
+        let searchLimit = rawArgs.limit || userLimit;
+        if (appName === "Google Chrome" && !windowName && !hasSpecificQuery) {
+          // General Chrome search - use higher limit to get results from multiple tabs
+          // Use at least 40-50 to ensure we get diverse results across different tabs/sites
+          searchLimit = Math.max(searchLimit, 40); // At least 40 for general Chrome searches
+          logger.debug("ScreenPipe handler: General Chrome search, increased limit to", searchLimit, {
+            originalLimit: rawArgs.limit,
+            userLimit,
+            finalLimit: searchLimit
+          });
+        }
+        
         const normalizedArgs: ScreenpipeSearchParams = {
           q: rawArgs.q && rawArgs.q.trim() !== '' ? rawArgs.q : undefined,
           content_type: rawArgs.content_type && rawArgs.content_type !== '' ? rawArgs.content_type : undefined,
-          limit: rawArgs.limit || 10,
-          start_time: rawArgs.start_time && rawArgs.start_time.trim() !== '' ? rawArgs.start_time : undefined,
-          end_time: rawArgs.end_time && rawArgs.end_time.trim() !== '' ? rawArgs.end_time : undefined,
+          limit: searchLimit,
+          start_time: startTime,
+          end_time: endTime,
           app_name: appName,
           window_name: windowName,
         };
-        logger.debug("ScreenPipe handler: Executing search with normalized args:", normalizedArgs);
-        const results = await client.search(normalizedArgs);
+        logger.debug("ScreenPipe handler: Executing search with normalized args:", {
+          ...normalizedArgs,
+          limit: normalizedArgs.limit,
+          hasWindowName: !!normalizedArgs.window_name,
+          hasAppName: !!normalizedArgs.app_name,
+          hasQuery: !!normalizedArgs.q
+        });
+        let results = await client.search(normalizedArgs);
         logger.debug("ScreenPipe handler: Search returned", results.length, "results");
+        
+        // Fallback: If Chrome search with window_name returns no results, retry without window_name
+        // This handles cases where AI makes specific searches that don't match any tabs
+        if (results.length === 0 && appName === "Google Chrome" && normalizedArgs.window_name && !normalizedArgs.q) {
+          logger.debug("ScreenPipe handler: No results with window_name filter, retrying without window_name");
+          const fallbackArgs: ScreenpipeSearchParams = {
+            ...normalizedArgs,
+            window_name: undefined, // Remove window_name to search all tabs
+            limit: Math.max(normalizedArgs.limit || 40, 40), // Ensure good limit for broad search
+          };
+          results = await client.search(fallbackArgs);
+          logger.debug("ScreenPipe handler: Fallback search returned", results.length, "results");
+        }
+        
+        // Log unique apps and windows found for debugging
+        if (results.length > 0) {
+          const uniqueApps = [...new Set(results.map((r: ScreenpipeResult) => r.content.app_name))];
+          const uniqueWindows = [...new Set(results.map((r: ScreenpipeResult) => r.content.window_name))];
+          logger.debug("ScreenPipe handler: Found results from", {
+            uniqueApps: uniqueApps.length,
+            uniqueWindows: uniqueWindows.length,
+            apps: uniqueApps,
+            windows: uniqueWindows.slice(0, 10) // First 10 windows
+          });
+        }
 
         if (results.length === 0) {
           setStatus("No results found");
@@ -225,6 +327,7 @@ export function ScreenpipeHandler({
             app: app,
             window: window,
             text: r.content.text || r.content.transcription,
+            url: r.content.url, // Include URL if ScreenPipe provides it
             preview:
               (r.content.text || r.content.transcription || "").substring(
                 0,
@@ -258,6 +361,19 @@ export function ScreenpipeHandler({
             }
           };
           
+          // Extract URL from items (if any item has a URL, use the first one)
+          const url = items.find(i => i.url)?.url;
+          
+          // Try to extract YouTube URL from text if ScreenPipe didn't provide one
+          let extractedUrl = url;
+          if (!extractedUrl && items[0].text) {
+            // Look for YouTube URLs in the text
+            const youtubeUrlMatch = items[0].text.match(/https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            if (youtubeUrlMatch) {
+              extractedUrl = youtubeUrlMatch[0];
+            }
+          }
+          
           return {
             app: app,
             window: window,
@@ -268,6 +384,8 @@ export function ScreenpipeHandler({
             lastTimestampLocal: formatLocalTime(items[items.length - 1].timestamp), // Local time for display
             // Combine text from all snapshots
             combinedText: items.map(i => i.text).filter(Boolean).join(" ").substring(0, 500),
+            // Include URL if available
+            url: extractedUrl,
             // Include all timestamps for reference (UTC)
             timestamps: items.map(i => i.timestamp),
             // Include local time versions for display

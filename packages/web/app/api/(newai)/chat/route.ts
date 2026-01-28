@@ -507,7 +507,7 @@ export async function POST(req: NextRequest) {
             );
             lastAssistant.toolInvocations.forEach(
               (invocation: any, idx: number) => {
-                console.log(`[Chat API] Tool invocation ${idx + 1}:`, {
+                const logData: any = {
                   toolName: invocation.toolName,
                   toolCallId: invocation.toolCallId,
                   hasResult: 'result' in invocation,
@@ -527,7 +527,38 @@ export async function POST(req: NextRequest) {
                   hasYouTubeTranscript:
                     typeof invocation.result === 'string' &&
                     invocation.result.includes('FULL TRANSCRIPT'),
-                });
+                };
+                
+                // For ScreenPipe searches, log the search parameters and result summary
+                if (invocation.toolName === 'searchScreenpipe' && invocation.args) {
+                  logData.searchParams = {
+                    app_name: invocation.args.app_name || '(empty)',
+                    window_name: invocation.args.window_name || '(empty)',
+                    limit: invocation.args.limit,
+                    content_type: invocation.args.content_type,
+                    q: invocation.args.q || '(empty)',
+                    start_time: invocation.args.start_time || '(empty)',
+                    end_time: invocation.args.end_time || '(empty)',
+                  };
+                  
+                  // Parse result to show how many results were found
+                  if (invocation.result && typeof invocation.result === 'string') {
+                    try {
+                      const parsed = JSON.parse(invocation.result);
+                      if (Array.isArray(parsed)) {
+                        logData.resultCount = parsed.length;
+                        logData.resultApps = [...new Set(parsed.map((r: any) => r.app))].slice(0, 5);
+                        logData.resultWindows = [...new Set(parsed.map((r: any) => r.window))].slice(0, 5);
+                      } else if (parsed.message) {
+                        logData.resultMessage = parsed.message;
+                      }
+                    } catch (e) {
+                      // Not JSON, ignore
+                    }
+                  }
+                }
+                
+                console.log(`[Chat API] Tool invocation ${idx + 1}:`, logData);
 
                 // CRITICAL: If this is a YouTube tool with a result, ensure it's accessible to the AI
                 // The result should be in the tool invocation, and convertToCoreMessages should extract it

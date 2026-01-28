@@ -18,6 +18,7 @@ export interface ScreenpipeResult {
     window_name?: string;
     file_path?: string;
     audio_file_path?: string;
+    url?: string; // URL if available (e.g., YouTube video URL, webpage URL)
   };
 }
 
@@ -52,7 +53,8 @@ export class ScreenpipeClient {
         searchParams.append("content_type", params.content_type);
       }
       // ScreenPipe API accepts limit parameter - examples show 20-50, no documented max
-      // We'll allow up to 50 to match their examples, but default to 10 for performance
+      // We'll cap at 50 for API compatibility, but allow user settings up to 100
+      // The client will cap at 50 when calling the API
       searchParams.append(
         "limit",
         String(Math.min(params.limit || 10, 50))
