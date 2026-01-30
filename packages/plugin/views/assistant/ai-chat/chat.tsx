@@ -1907,8 +1907,14 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                       return null;
                     }
                     
+                    // Require valid toolCallId so addToolResult can match results on the server
+                    if (!part.toolCallId || String(part.toolCallId).trim() === "") {
+                      console.warn("[Chat] Part missing toolCallId, skipping to avoid broken tool result matching");
+                      return null;
+                    }
+                    
                     return {
-                      toolCallId: part.toolCallId || "",
+                      toolCallId: part.toolCallId,
                       toolName: toolName,
                       args: part.input,
                       result: part.output,
@@ -1922,6 +1928,12 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                   })
                   .filter((inv) => inv !== null);
               }
+              
+              // Never pass invocations without a valid toolCallId (server matches results by it)
+              toolInvocations = toolInvocations.filter(
+                (inv: { toolCallId?: string }) =>
+                  inv?.toolCallId != null && String(inv.toolCallId).trim() !== ""
+              );
               
               console.log("[Chat] Final tool invocations:", toolInvocations);
 
