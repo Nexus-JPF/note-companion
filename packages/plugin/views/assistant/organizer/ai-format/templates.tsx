@@ -42,7 +42,7 @@ export const ClassificationContainer: React.FC<ClassificationBoxProps> = ({
         throw new Error("File content is not a string");
       }
 
-      // If formatting as youtube_video, fetch transcript first
+      // If formatting as youtube_video, fetch transcript and metadata first
       let videoTitle: string | null = null;
       let videoId: string | null = null;
 
@@ -54,21 +54,33 @@ export const ClassificationContainer: React.FC<ClassificationBoxProps> = ({
         console.log("[YouTube Format] Extracted video ID:", videoId);
         if (videoId) {
           try {
-            console.log("[YouTube Format] Starting transcript fetch...");
-            logger.info("Fetching YouTube transcript for formatting...");
+            console.log("[YouTube Format] Starting transcript and metadata fetch...");
+            logger.info("Fetching YouTube transcript and metadata for formatting...");
             new Notice("Fetching YouTube transcript...", 2000);
-            const { title, transcript } = await getYouTubeContent(
-              videoId,
-              plugin
-            );
+            const { title, transcript, channel, datePublished } =
+              await getYouTubeContent(videoId, plugin);
             videoTitle = title; // Store for potential file renaming
-            console.log("[YouTube Format] Successfully fetched transcript:", {
+            console.log("[YouTube Format] Successfully fetched:", {
               title,
+              channel: channel ?? "(none)",
+              datePublished: datePublished ?? "(none)",
               transcriptLength: transcript?.length,
             });
 
-            // Append transcript and title information so AI can use it
-            const videoInfo = `\n\n## YouTube Video Information\n\nTitle: ${title}\nVideo ID: ${videoId}\n\n## Full Transcript\n\n${transcript}`;
+            // Build YouTube Video Information block so AI can fill frontmatter (channel, date_published)
+            const infoLines = [
+              "## YouTube Video Information",
+              "",
+              `Title: ${title}`,
+              `Video ID: ${videoId}`,
+              ...(channel ? [`Channel: ${channel}`] : []),
+              ...(datePublished ? [`Date Published: ${datePublished}`] : []),
+              "",
+              "## Full Transcript",
+              "",
+              transcript,
+            ];
+            const videoInfo = "\n\n" + infoLines.join("\n");
             fileContent = fileContent + videoInfo;
 
             logger.info("YouTube transcript fetched successfully");

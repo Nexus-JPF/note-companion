@@ -180,6 +180,8 @@ summary: "{{short summary of the video's main theme and key takeaways}}"
 
 - Extract the video title from the "YouTube Video Information" section if provided, or infer from the transcript content.
 
+- Use the **Channel** and **Date Published** values from the "YouTube Video Information" section when present for the frontmatter \`channel\` and \`date_published\` fields. If not provided in that section, leave them empty.
+
 - Extract topics by analyzing the main themes discussed in the transcript. Use 2-5 specific, relevant topics.
 
 - Generate tags based on the video content. Always include "youtube" and add 2-4 additional relevant tags. Tags in frontmatter should NOT include the "#" symbol (only use "#" for inline tags in the content body). **CRITICAL: Tags must have NO spaces between words. Use hyphens or underscores to connect multi-word tags (e.g., "web-development" or "machine_learning", not "web development" or "machine learning").**
@@ -188,7 +190,7 @@ summary: "{{short summary of the video's main theme and key takeaways}}"
 
 - If a full transcript is provided in the "Full Transcript" section, use it to create an accurate, detailed summary below the embed link.
 
-- Extract the publication date if mentioned in the transcript or metadata. If not available, leave date_published empty.
+- If "Date Published" is in the YouTube Video Information section, use it for \`date_published\`. Otherwise extract from transcript if mentioned, or leave empty.
 
 - Maintain the exact markdown syntax for the frontmatter block (\`---\` at the top and bottom).
 

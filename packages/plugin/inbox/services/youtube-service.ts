@@ -109,13 +109,204 @@ function decodeHtmlEntities(text: string): string {
   return decoded;
 }
 
+export interface YouTubeMetadata {
+  title: string;
+  channel?: string;
+  datePublished?: string;
+}
+
 /**
- * Fetches YouTube video title from the video page using Obsidian's requestUrl
+ * Parses JSON-LD script tags from YouTube watch page HTML to extract
+ * channel name and upload date (VideoObject schema).
  */
-async function fetchYouTubeTitle(videoId: string): Promise<string> {
+function parseJsonLdFromHtml(html: string): {
+  channel?: string;
+  datePublished?: string;
+} {
+  const result: { channel?: string; datePublished?: string } = {};
+  const jsonLdRegex =
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = jsonLdRegex.exec(html)) !== null) {
+    const raw = match[1].trim();
+    if (!raw) continue;
+    try {
+      const data = JSON.parse(raw) as unknown;
+      const items = Array.isArray(data) ? data : [data];
+      for (const item of items) {
+        if (item && typeof item === "object") {
+          // VideoObject: uploadDate, author.name or publisher.name
+          if (item["@type"] === "VideoObject") {
+            if (item.uploadDate && typeof item.uploadDate === "string") {
+              result.datePublished = item.uploadDate;
+            }
+            const author = item.author;
+            if (author && typeof author === "object" && author.name) {
+              result.channel = String(author.name).trim();
+            }
+            if (!result.channel) {
+              const publisher = item.publisher;
+              if (publisher && typeof publisher === "object" && publisher.name) {
+                result.channel = String(publisher.name).trim();
+              }
+            }
+            if (result.channel && result.datePublished) return result;
+          }
+          // BreadcrumbList may contain channel in itemListElement
+          if (item["@type"] === "BreadcrumbList" && Array.isArray(item.itemListElement)) {
+            const last = item.itemListElement[item.itemListElement.length - 1];
+            if (last?.name && !result.channel) {
+              result.channel = String(last.name).trim();
+            }
+          }
+        }
+      }
+    } catch {
+      // Skip invalid JSON-LD blocks
+    }
+  }
+  return result;
+}
+
+/**
+ * Extracts the channel name from YouTube's ytInitialData (embedded in watch page).
+ * YouTube often omits author from JSON-LD; ytInitialData has the owner in
+ * videoSecondaryInfoRenderer.owner.videoOwnerRenderer.title (runs[0].text or simpleText).
+ */
+function parseYtInitialDataChannel(html: string): string | undefined {
+  const match = html.match(
+    /(?:var\s+)?(?:window\s*\[\s*["']ytInitialData["']\s*\]|ytInitialData)\s*=\s*(\{)/
+  );
+  if (!match || !match[1]) return undefined;
+
+  const startIndex = match.index! + match[0].length - 1; // index of first `{`
+  let depth = 0;
+  let inString: "'" | '"' | null = null;
+  let i = startIndex;
+  const len = html.length;
+
+  while (i < len) {
+    const c = html[i];
+    if (inString) {
+      if (c === "\\") {
+        i += 2;
+        continue;
+      }
+      if (c === inString) {
+        inString = null;
+      }
+      i++;
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      inString = c;
+      i++;
+      continue;
+    }
+    if (c === "{") {
+      depth++;
+      i++;
+      continue;
+    }
+    if (c === "}") {
+      depth--;
+      if (depth === 0) {
+        try {
+          const jsonStr = html.slice(startIndex, i + 1);
+          const data = JSON.parse(jsonStr) as unknown;
+          const channel = getChannelFromYtInitialData(data);
+          if (channel) return channel;
+        } catch {
+          // ignore parse errors
+        }
+        return undefined;
+      }
+      i++;
+      continue;
+    }
+    i++;
+  }
+  return undefined;
+}
+
+function getChannelFromYtInitialData(data: unknown): string | undefined {
+  const extractChannelFromOwner = (owner: unknown): string | undefined => {
+    const videoOwner = (owner as Record<string, unknown>)?.videoOwnerRenderer as Record<string, unknown> | undefined;
+    const title = videoOwner?.title as Record<string, unknown> | undefined;
+    if (!title) return undefined;
+    const runs = title.runs as Array<{ text?: string }> | undefined;
+    if (Array.isArray(runs) && runs[0]?.text) return String(runs[0].text).trim();
+    const simpleText = title.simpleText;
+    if (typeof simpleText === "string") return simpleText.trim();
+    return undefined;
+  };
+
+  const searchVideoSecondaryInfo = (items: unknown): string | undefined => {
+    if (!Array.isArray(items)) return undefined;
+    for (const item of items) {
+      const section = (item as Record<string, unknown>).itemSectionRenderer as Record<string, unknown> | undefined;
+      const sectionContents = section?.contents as Array<Record<string, unknown>> | undefined;
+      const direct = (item as Record<string, unknown>).videoSecondaryInfoRenderer as Record<string, unknown> | undefined;
+      if (direct?.owner) {
+        const ch = extractChannelFromOwner(direct.owner);
+        if (ch) return ch;
+      }
+      if (!Array.isArray(sectionContents)) continue;
+      for (const sec of sectionContents) {
+        const videoSecondary = sec.videoSecondaryInfoRenderer as Record<string, unknown> | undefined;
+        const owner = videoSecondary?.owner;
+        if (owner) {
+          const ch = extractChannelFromOwner(owner);
+          if (ch) return ch;
+        }
+      }
+    }
+    return undefined;
+  };
+
+  if (!data || typeof data !== "object") return undefined;
+  const d = data as Record<string, unknown>;
+  const contents = d.contents as Record<string, unknown> | undefined;
+  const twoCol = contents?.twoColumnWatchNextResults as Record<string, unknown> | undefined;
+  if (!twoCol) return undefined;
+
+  // Primary: results.results.contents
+  const results = twoCol.results as Record<string, unknown> | undefined;
+  const resultsInner = results?.results as Record<string, unknown> | undefined;
+  const resultsContents = resultsInner?.contents as unknown;
+  const ch1 = searchVideoSecondaryInfo(resultsContents);
+  if (ch1) return ch1;
+
+  // Fallback: secondaryResults.contents or secondaryResults.secondaryResults.contents
+  const secondaryResults = twoCol.secondaryResults as Record<string, unknown> | undefined;
+  const secondaryContents = Array.isArray(secondaryResults?.contents)
+    ? secondaryResults.contents
+    : (secondaryResults?.secondaryResults as Record<string, unknown> | undefined)?.contents;
+  return searchVideoSecondaryInfo(secondaryContents);
+}
+
+/**
+ * Converts an ISO 8601 date string (e.g. 2026-02-01T05:29:52-08:00) to a
+ * user-friendly date-only format YYYY-MM-DD for frontmatter and display.
+ */
+function formatDatePublished(isoDate: string): string {
+  try {
+    const date = new Date(isoDate);
+    if (Number.isNaN(date.getTime())) return isoDate;
+    return date.toISOString().slice(0, 10); // "YYYY-MM-DD"
+  } catch {
+    return isoDate;
+  }
+}
+
+/**
+ * Fetches YouTube video metadata (title, channel, date published) from the
+ * video page using Obsidian's requestUrl. Parses title tag and JSON-LD.
+ */
+async function fetchYouTubeMetadata(videoId: string): Promise<YouTubeMetadata> {
   try {
     const url = `https://www.youtube.com/watch?v=${videoId}`;
-    console.log("[YouTube Service] Fetching title from:", url);
+    console.log("[YouTube Service] Fetching metadata from:", url);
 
     const response = await requestUrl({
       url,
@@ -134,36 +325,50 @@ async function fetchYouTubeTitle(videoId: string): Promise<string> {
     }
 
     const html = response.text;
+    const metadata: YouTubeMetadata = { title: "" };
 
-    // Try to extract title from <title> tag
+    // Title: <title> or og:title
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    if (titleMatch && titleMatch[1]) {
-      // Decode HTML entities and remove " - YouTube" suffix
+    if (titleMatch?.[1]) {
       let title = decodeHtmlEntities(titleMatch[1]);
       title = title.replace(/\s*-\s*YouTube\s*$/, "").trim();
-      if (title) {
-        console.log("[YouTube Service] Extracted title:", title);
-        return title;
+      if (title) metadata.title = title;
+    }
+    if (!metadata.title) {
+      const ogTitleMatch = html.match(
+        /<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i
+      );
+      if (ogTitleMatch?.[1]) {
+        metadata.title = decodeHtmlEntities(ogTitleMatch[1]).trim();
       }
     }
 
-    // Fallback: try to find in JSON-LD or og:title
-    const ogTitleMatch = html.match(
-      /<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i
-    );
-    if (ogTitleMatch && ogTitleMatch[1]) {
-      // Decode HTML entities from og:title
-      let title = decodeHtmlEntities(ogTitleMatch[1]);
-      title = title.trim();
-      console.log("[YouTube Service] Extracted title from og:title:", title);
-      return title;
+    // Channel: prefer ytInitialData (YouTube often omits author from JSON-LD)
+    const ytChannel = parseYtInitialDataChannel(html);
+    if (ytChannel) {
+      metadata.channel = ytChannel;
+    }
+    // Date and optional channel fallback from JSON-LD
+    const jsonLd = parseJsonLdFromHtml(html);
+    if (!metadata.channel && jsonLd.channel) metadata.channel = jsonLd.channel;
+    if (jsonLd.datePublished) {
+      metadata.datePublished = formatDatePublished(jsonLd.datePublished);
     }
 
-    throw new Error("Could not extract title from YouTube page");
+    if (!metadata.title) {
+      throw new Error("Could not extract title from YouTube page");
+    }
+
+    console.log("[YouTube Service] Extracted metadata:", {
+      title: metadata.title,
+      channel: metadata.channel ?? "(none)",
+      datePublished: metadata.datePublished ?? "(none)",
+    });
+    return metadata;
   } catch (error) {
-    console.error("[YouTube Service] Error fetching title:", error);
+    console.error("[YouTube Service] Error fetching metadata:", error);
     throw new YouTubeError(
-      `Failed to fetch YouTube video title: ${
+      `Failed to fetch YouTube video metadata: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
     );
@@ -171,14 +376,19 @@ async function fetchYouTubeTitle(videoId: string): Promise<string> {
 }
 
 /**
- * Fetches YouTube content (title and transcript) directly from the client
+ * Fetches YouTube content (title, transcript, channel, date published) directly from the client
  * Uses youtube-transcript-plus for reliable transcript fetching
  * Uses Obsidian's requestUrl to bypass CORS restrictions
  */
 export async function getYouTubeContent(
   videoId: string,
   _plugin?: FileOrganizer
-): Promise<{ title: string; transcript: string }> {
+): Promise<{
+  title: string;
+  transcript: string;
+  channel?: string;
+  datePublished?: string;
+}> {
   // Validate and normalize videoId to ensure it's a string
   if (!videoId) {
     throw new YouTubeError("videoId is required");
@@ -212,12 +422,12 @@ export async function getYouTubeContent(
     // Create Obsidian-compatible fetch function
     const obsidianFetch = createObsidianFetch();
 
-    // Fetch transcript and title in parallel
+    // Fetch transcript and metadata (title, channel, date) in parallel
     console.log(
-      "[YouTube Service] Starting parallel fetch of transcript and title..."
+      "[YouTube Service] Starting parallel fetch of transcript and metadata..."
     );
 
-    const [transcriptItems, title] = await Promise.all([
+    const [transcriptItems, metadata] = await Promise.all([
       fetchTranscript(finalVideoId, {
         // Provide custom fetch functions that use Obsidian's requestUrl
         videoFetch: async ({ url, lang, userAgent }) => {
@@ -273,12 +483,13 @@ export async function getYouTubeContent(
           `Failed to fetch transcript: ${errorMessage}`
         );
       }),
-      fetchYouTubeTitle(finalVideoId).catch(error => {
+      fetchYouTubeMetadata(finalVideoId).catch(error => {
         console.warn(
-          "[YouTube Service] Title fetch failed, using fallback:",
+          "[YouTube Service] Metadata fetch failed, using fallback:",
           error
         );
-        return "Untitled YouTube Video";
+        const fallback: YouTubeMetadata = { title: "Untitled YouTube Video" };
+        return fallback;
       }),
     ]);
 
@@ -295,15 +506,21 @@ export async function getYouTubeContent(
     const decodedTranscript = decodeHtmlEntities(rawTranscript);
 
     // Ensure title is properly decoded (double-check)
-    const decodedTitle = decodeHtmlEntities(title);
+    const decodedTitle = decodeHtmlEntities(metadata.title);
 
     console.log("[YouTube Service] Successfully fetched:", {
-      originalTitle: title,
-      decodedTitle: decodedTitle,
+      title: decodedTitle,
+      channel: metadata.channel ?? "(none)",
+      datePublished: metadata.datePublished ?? "(none)",
       transcriptLength: decodedTranscript.length,
     });
 
-    return { title: decodedTitle, transcript: decodedTranscript };
+    return {
+      title: decodedTitle,
+      transcript: decodedTranscript,
+      channel: metadata.channel,
+      datePublished: metadata.datePublished,
+    };
   } catch (error) {
     if (error instanceof YouTubeError) {
       throw error; // Re-throw YouTubeError as-is
