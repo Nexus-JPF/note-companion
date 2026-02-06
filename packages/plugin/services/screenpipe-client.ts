@@ -1,3 +1,24 @@
+/**
+ * Parse a timestamp string from ScreenPipe into a Date.
+ * Handles: ISO 8601 (with or without Z), ISO without timezone (treated as UTC),
+ * Unix seconds (10 digits), Unix milliseconds (13 digits).
+ * Use this so we never show wrong dates (e.g. 01/27 when it should be 02/03)
+ * due to mis-parsing numeric or timezone-ambiguous values.
+ */
+export function parseScreenpipeTimestamp(ts: string): Date {
+  const s = ts.trim();
+  if (/^\d{10}$/.test(s)) {
+    return new Date(parseInt(s, 10) * 1000);
+  }
+  if (/^\d{13}$/.test(s)) {
+    return new Date(parseInt(s, 10));
+  }
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i.test(s)) {
+    return new Date(`${s}Z`);
+  }
+  return new Date(ts);
+}
+
 export interface ScreenpipeSearchParams {
   q?: string;
   content_type?: "all" | "ocr" | "audio";
@@ -55,10 +76,7 @@ export class ScreenpipeClient {
       // ScreenPipe API accepts limit parameter - examples show 20-50, no documented max
       // We'll cap at 50 for API compatibility, but allow user settings up to 100
       // The client will cap at 50 when calling the API
-      searchParams.append(
-        "limit",
-        String(Math.min(params.limit || 10, 50))
-      );
+      searchParams.append("limit", String(Math.min(params.limit || 10, 50)));
       if (params.start_time) {
         searchParams.append("start_time", params.start_time);
       }

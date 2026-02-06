@@ -346,7 +346,9 @@ export const chatTools = {
             // Tell the model to pass "" for root
             folder: z
               .string()
-              .describe('Folder path relative to vault root. Use "" for root folder.'),
+              .describe(
+                'Folder path relative to vault root. Use "" for root folder.'
+              ),
           })
         )
         .describe('Array of files to create'),
@@ -469,41 +471,51 @@ export const chatTools = {
 
   searchScreenpipe: {
     description:
-      "ALWAYS use this tool when the user asks about their screen activity, what they were working on, recent activity, or meetings. Search Screenpipe's recorded content: screen text (OCR) and audio transcriptions. When the user asks vaguely (e.g., 'search my screen activity', 'what was I doing in Chrome?'), use ONE BROAD SEARCH with: content_type='all', limit=30-40, app_name='Google Chrome' (if asking about Chrome), window_name='' (EMPTY - to search ALL tabs), start_time='', end_time=''. IMPORTANT: For general activity queries, make ONE broad search that captures everything, NOT multiple narrow searches. Only use window_name when user explicitly asks for a specific website (e.g., 'what was I doing on YouTube?'). For general Chrome activity, ALWAYS use window_name='' to search all tabs. Use time ranges of 1-2 hours max initially. If no results, expand gradually. CRITICAL: When presenting results, GROUP results by the same window/app (same activity). If multiple results have the same window title and app, summarize them together as one activity instead of listing each separately. For example, if there are 5 results from the same YouTube video, present it as one entry with a note like '5 snapshots from this activity'. CRITICAL APP NAME MAPPING: When user asks about YouTube, Gmail, or any website, the app_name is ALWAYS 'Google Chrome' (not 'YouTube', not 'Gmail', not the website name). For specific websites: use app_name='Google Chrome' and window_name='YouTube' (or 'Gmail', etc.). For general Chrome activity: use app_name='Google Chrome' and window_name='' (EMPTY). The app_name parameter must be the actual macOS application name: 'Google Chrome', 'Slack', 'zoom.us', 'Code', 'Terminal', 'Obsidian', etc. NEVER use website names as app_name.",
+      "ALWAYS use this tool when the user asks about their screen activity, what they were working on, recent activity, meetings, OR anything they listened to or watched. 'What did I listen to' / 'what I listened to' means ANY audio: meetings, calls, podcasts, music, videos, lectures, webinars, etc.—not just music. Search Screenpipe's recorded content: screen text (OCR) and audio transcriptions. When the user asks vaguely (e.g., 'search my screen activity', 'what was I doing in Chrome?', 'what did I listen to?'), use ONE BROAD SEARCH with: content_type='all' or content_type='audio' for listen-related queries, limit=30-40, app_name and window_name as appropriate (use '' for broad queries). IMPORTANT: For general activity queries, make ONE broad search that captures everything, NOT multiple narrow searches. Only use window_name when user explicitly asks for a specific website (e.g., 'what was I doing on YouTube?'). For general Chrome activity, ALWAYS use window_name='' to search all tabs. Use time ranges of 1-2 hours max initially. If no results, expand gradually. CRITICAL: When presenting results, GROUP results by the same window/app (same activity). If multiple results have the same window title and app, summarize them together as one activity instead of listing each separately. For example, if there are 5 results from the same YouTube video, present it as one entry with a note like '5 snapshots from this activity'. CRITICAL 'TODAY' QUERIES: When the user asks about 'today' (e.g. 'what meeting did I have today?', 'my meetings today', 'what did I do today'), you MUST pass explicit start_time and end_time: set start_time to the start of TODAY in UTC (e.g. 2026-02-05T00:00:00Z for Feb 5) and end_time to NOW in UTC. Do NOT use empty strings for start_time/end_time when the user said 'today' or you will get yesterday's or older results. When presenting: ONLY include results whose timestamp falls on today (use timestampsLocal to check the date). If every result is from a previous day, say clearly 'No meetings [or activity] found for today' and do NOT summarize or present those as if they were today. CRITICAL APP NAME MAPPING: When user asks about YouTube, Gmail, or any website, the app_name is ALWAYS 'Google Chrome' (not 'YouTube', not 'Gmail', not the website name). For specific websites: use app_name='Google Chrome' and window_name='YouTube' (or 'Gmail', etc.). For general Chrome activity: use app_name='Google Chrome' and window_name='' (EMPTY). The app_name parameter must be the actual macOS application name: 'Google Chrome', 'Slack', 'zoom.us', 'Code', 'Terminal', 'Obsidian', etc. NEVER use website names as app_name. DUAL-PLACE SERVICES: When the user asks about a service that exists both as a desktop app AND in the browser (e.g. GitHub, Notion, Figma, Linear), run the tool TWICE and combine results: (1) desktop app: app_name='GitHub Desktop' (or 'Notion', 'Figma', 'Linear', etc.—use the actual macOS app name), window_name=''; (2) browser: app_name='Google Chrome', window_name='GitHub' (or 'Notion', 'Figma', etc.). Then present both in your answer (e.g. 'On GitHub Desktop: …' and 'In Chrome (github.com): …'). For GitHub specifically: search app_name='GitHub Desktop' with window_name='', AND app_name='Google Chrome' with window_name='GitHub'.",
     parameters: z.object({
       // REQUIRED (satisfies OpenAI strict tools) - use "" for vague queries
       q: z
         .string()
-        .describe('Search keywords. For vague queries like "search my screen activity", use "". Only use keywords when user specifies them.'),
+        .describe(
+          'Search keywords. For vague queries like "search my screen activity", use "". Only use keywords when user specifies them.'
+        ),
       // REQUIRED (satisfies OpenAI strict tools) - use "all" as default
       content_type: z
         .enum(['all', 'ocr', 'audio'])
         .describe(
-          "Filter by type. Use 'audio' for meetings/conversations, 'ocr' for screen text. Use 'all' for general searches or when user doesn't specify."
+          "Filter by type. Use 'audio' for anything listened to: meetings, calls, podcasts, music, videos, lectures, webinars. Use 'ocr' for screen text only. Use 'all' for general searches or when user doesn't specify."
         ),
       // REQUIRED (satisfies OpenAI strict tools) - use 10 as default, can go up to 50
       limit: z
         .number()
         .min(1)
         .max(50)
-        .describe('Max results (1-50). Default to 10 for most queries. Use 20-50 if user asks for "all results", "more results", or wants comprehensive activity history. For recent activity, 10 is usually sufficient.'),
+        .describe(
+          'Max results (1-50). Default to 10 for most queries. Use 20-50 if user asks for "all results", "more results", or wants comprehensive activity history. For recent activity, 10 is usually sufficient.'
+        ),
       // REQUIRED (satisfies OpenAI strict tools) - use "" for recent/recent activity
       start_time: z
         .string()
-        .describe('ISO 8601 UTC start time. Example: 2024-01-15T10:00:00Z. Use "" for recent activity (last 30-60 min) or when not specified. NOTE: Results include both UTC timestamps and local time versions (timestampsLocal field). Always use the local time versions when displaying timestamps to users.'),
+        .describe(
+          'ISO 8601 UTC start time. Example: 2024-01-15T10:00:00Z. When user asks about "today", you MUST set this to the start of the current day in UTC (e.g. 2026-02-05T00:00:00Z)—do NOT use "" for "today" or yesterday\'s results may be returned. Use "" only for vague recent-activity queries (last 30-60 min). Results include timestampsLocal for display.'
+        ),
       // REQUIRED (satisfies OpenAI strict tools) - use "" for recent/recent activity
       end_time: z
         .string()
-        .describe('ISO 8601 UTC end time. Use "" for recent activity (now) or when not specified. NOTE: Results include local time versions in timestampsLocal field - use those for display.'),
+        .describe(
+          'ISO 8601 UTC end time. When user asks about "today", set this to now in UTC (current moment). Do NOT use "" for "today" queries. Use "" only for vague recent-activity. Results include timestampsLocal for display.'
+        ),
       // REQUIRED (satisfies OpenAI strict tools) - use "" for vague queries
       app_name: z
         .string()
         .describe(
-          "Filter by app name. Examples: 'Google Chrome' (for YouTube, web browsing), 'Slack', 'zoom.us', 'Code', 'Terminal'. IMPORTANT: YouTube runs inside Chrome, so use 'Google Chrome' for YouTube activity, not 'YouTube'. Use \"\" when user doesn't specify an app or asks about general activity."
+          "Filter by app name. Examples: 'Google Chrome' (for YouTube, web browsing), 'GitHub Desktop', 'Slack', 'zoom.us', 'Code', 'Terminal', 'Notion', 'Figma'. For GitHub/Notion/Figma-type questions, call the tool twice: once with the desktop app name (e.g. 'GitHub Desktop'), once with 'Google Chrome' and window_name set to the service (e.g. 'GitHub'). Use \"\" when user doesn't specify an app or asks about general activity."
         ),
       window_name: z
         .string()
-        .describe('Filter by window title substring. For websites, use the website name here (e.g., "YouTube", "Gmail"). CRITICAL: Use "" (EMPTY STRING) when user asks about general Chrome activity or doesn\'t specify a specific website. Only use a specific window_name when the user explicitly asks about a specific website (e.g., "what was I doing on YouTube?"). For "what was I doing in Chrome?" or general activity queries, ALWAYS use window_name="".'),
+        .describe(
+          'Filter by window title substring. For websites, use the website name here (e.g., "YouTube", "Gmail", "GitHub", "Notion"). For GitHub in browser use app_name="Google Chrome" and window_name="GitHub". CRITICAL: Use "" (EMPTY STRING) when user asks about general Chrome activity or doesn\'t specify a specific website. Only use a specific window_name when the user explicitly asks about a specific website or service (e.g., "what was I doing on YouTube?", "my GitHub activity"). For "what was I doing in Chrome?" or general activity queries, ALWAYS use window_name="".'
+        ),
     }),
   },
 } as const;
