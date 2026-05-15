@@ -117,12 +117,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   },
   web: {
-    favicon: "./assets/favicon.png",
+    favicon: "./assets/images/favicon.png",
     bundler: "metro",
   },
   plugins: [
     "expo-apple-authentication",
     "expo-router",
+    "expo-font",
+    "expo-localization",
+    "expo-web-browser",
     "expo-secure-store",
     "expo-file-system",
     "expo-asset",

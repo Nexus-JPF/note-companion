@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Platform, ScrollView, Linking, TouchableOpacity } from 'react-native';
-import { useAuth, useUser } from '@clerk/clerk-expo';
+import { useAuth, useUser } from '@clerk/clerk-react';
 import { Button } from '../../components/Button';
 import { ThemedView } from '../../components/ThemedView';
 import { ThemedText } from '../../components/ThemedText';
@@ -17,7 +17,7 @@ export default function SettingsScreen() {
   const { user } = useUser();
   const primaryColor = useSemanticColor('primary');
   const insets = useSafeAreaInsets();
-  const isUS = Localization.region === 'US';
+  const isUS = Localization.getLocales()[0]?.regionCode === 'US';
 
   type ExtraConfig = { upgradeCheckoutUrl?: string };
   const checkoutUrl = process.env.EXPO_PUBLIC_UPGRADE_CHECKOUT_URL;

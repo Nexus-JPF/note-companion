@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Share, Alert, Image, Platform, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { UploadedFile } from '@/utils/api';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
 import { useSemanticColor } from '@/hooks/useThemeColor';
 import { ThemedView } from '@/components/ThemedView';
@@ -234,11 +234,12 @@ export function FileCard({ file, onDelete, onView }: FileCardProps) {
   return (
     <View style={[styles.cardContainer, { backgroundColor }]}>
       {/* Processing Badge */}
-      {(file.status === "pending" || file.status === "processing") && (
+      {(file.processingStatus === "pending" ||
+        file.processingStatus === "processing") && (
         <View style={styles.processingOverlay}>
           <ActivityIndicator size="small" color="#fff" />
           <Text style={styles.processingText}>
-            {file.status === "pending" ? "queued" : "processing"}
+            {file.processingStatus === "pending" ? "queued" : "processing"}
           </Text>
         </View>
       )}

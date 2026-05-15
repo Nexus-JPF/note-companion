@@ -11,7 +11,8 @@ import {
   Alert,
   Linking,
 } from 'react-native';
-import { useOAuth, useSignIn } from '@clerk/clerk-expo';
+import { useOAuth } from '@clerk/clerk-expo';
+import { useSignIn } from '@clerk/clerk-react';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

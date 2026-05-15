@@ -13,7 +13,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { FileCard } from './FileCard';
 import { fetchFiles, deleteFile, UploadedFile, PaginationData } from '@/utils/api';
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth } from '@clerk/clerk-react';
 
 interface FileListProps {
   files: UploadedFile[];

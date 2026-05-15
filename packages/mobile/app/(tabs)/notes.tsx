@@ -13,13 +13,13 @@ import {
 import { useRouter, useFocusEffect } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { fetchFiles, UploadedFile } from "@/utils/api";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/clerk-react";
 import { FileList } from "@/components/FileList";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSemanticColor } from "@/hooks/useThemeColor";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as DocumentPicker from "expo-document-picker";
 import { Asset } from "expo-asset";
 

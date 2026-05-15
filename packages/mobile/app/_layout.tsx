@@ -1,41 +1,60 @@
-import 'react-native-gesture-handler';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, router, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useRootNavigationState, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import 'react-native-reanimated';
-import { Platform, ActivityIndicator, View } from 'react-native';
+import { Platform, ActivityIndicator, StyleSheet, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { processSharedFile, cleanupSharedFile } from '@/utils/share-handler';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
 // Remove direct ClerkProvider import and use our custom AuthProvider
 import { AuthProvider } from '@/providers/auth';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+/**
+ * Expo web forwards normal document + in-app URLs through Linking (/, /sign-in, …).
+ * Only local http(s) URLs that use the `share` path or share-style query should run
+ * deep-link handling; everything else is Expo Router / Clerk navigation.
+ */
+function isIgnorableLocalHttpUrl(url: string): boolean {
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return false;
+  try {
+    const parsed = new URL(url);
+    const local =
+      parsed.hostname === "localhost" ||
+      parsed.hostname === "127.0.0.1" ||
+      parsed.hostname.endsWith(".local");
+    if (!local) return false;
+    const { path, queryParams } = Linking.parse(url);
+    const p = (path ?? "").replace(/^\/+|\/+$/g, "") || "";
+    const q = queryParams ?? {};
+    if (q.uri || q.text) return false;
+    if (p === "share") return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export default function RootLayout() {
-  // Always use light mode by setting colorScheme to 'light' instead of using useColorScheme()
-  const colorScheme = 'light';
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
   const router = useRouter();
-  const segments = useSegments();
+  const rootNavigation = useRootNavigationState();
+  const navigationReady = Boolean(rootNavigation?.key);
   const [isProcessingShare, setIsProcessingShare] = useState(false);
   const [initialUrl, setInitialUrl] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
   const isMounted = useRef(false);
-
-  const publishableKey = CLERK_PUBLISHABLE_KEY;
+  const pendingNavRef = useRef<{
+    pathname: string;
+    params?: Record<string, unknown>;
+  } | null>(null);
 
   useEffect(() => {
     if (loaded) {
@@ -43,29 +62,24 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  // Safe navigation function to ensure we only navigate when component is mounted
-  const safeNavigate = (pathname: string, params?: Record<string, any>) => {
-    console.log(`[RootLayout] Safe Navigate - isMounted: ${isMounted.current}, isReady: ${isReady}, pathname: ${pathname}`);
-    
-    if (!isMounted.current || !isReady) {
-      console.log('[RootLayout] Component not fully ready, delaying navigation');
-      // Set a small timeout to ensure the component is mounted and ready
-      setTimeout(() => {
-        console.log('[RootLayout] Attempting delayed navigation');
-        if (isMounted.current && isReady) {
-          console.log('[RootLayout] Executing delayed navigation to:', pathname);
-          router.replace(params ? { pathname, params } : pathname);
-        } else {
-          console.log('[RootLayout] Still not ready for navigation, storing URL for later');
-          // Store the navigation intent for later if we're still not ready
-          setInitialUrl(JSON.stringify({ pathname, params }));
-        }
-      }, 300); // Small delay to ensure component is mounted
+  useEffect(() => {
+    if (!navigationReady || !pendingNavRef.current) return;
+    const next = pendingNavRef.current;
+    pendingNavRef.current = null;
+    router.replace(
+      (next.params
+        ? { pathname: next.pathname, params: next.params }
+        : next.pathname) as Href
+    );
+  }, [navigationReady, router]);
+
+  const safeNavigate = (pathname: string, params?: Record<string, unknown>) => {
+    if (!isMounted.current) return;
+    if (!navigationReady) {
+      pendingNavRef.current = { pathname, params };
       return;
     }
-    
-    console.log('[RootLayout] Navigating immediately to:', pathname);
-    router.replace(params ? { pathname, params } : pathname);
+    router.replace((params ? { pathname, params } : pathname) as Href);
   };
 
   const handleIncomingURL = async (url: string | null) => {
@@ -73,6 +87,10 @@ export default function RootLayout() {
     console.log('[RootLayout] Raw incoming URL:', url);
     if (!url) {
       console.log('[RootLayout] No URL provided');
+      return;
+    }
+
+    if (isIgnorableLocalHttpUrl(url)) {
       return;
     }
 
@@ -239,92 +257,53 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Handle delayed navigation after component is mounted and any stored URL
+  // Handle delayed navigation / deep links after the root navigator exists.
   useEffect(() => {
-    if (!isMounted.current || !isReady) return;
-    
-    // If we have a delayed URL to handle, process it now
+    if (!isMounted.current || !navigationReady) return;
+
     if (initialUrl) {
       try {
-        // Check if it's a stored navigation object
         if (initialUrl.startsWith('{')) {
           const navData = JSON.parse(initialUrl);
-          console.log('[RootLayout] Processing stored navigation:', navData);
-          router.replace(navData.params ? { pathname: navData.pathname, params: navData.params } : navData.pathname);
+          router.replace(
+            navData.params
+              ? { pathname: navData.pathname, params: navData.params }
+              : navData.pathname
+          );
         } else {
-          // Otherwise it's a URL to process
-          console.log('[RootLayout] Processing delayed URL now that component is mounted:', initialUrl);
           handleIncomingURL(initialUrl);
         }
       } catch (e) {
         console.error('[RootLayout] Error handling stored URL data:', e);
-        // Fallback to home on error
         router.replace('/(tabs)');
       }
       setInitialUrl(null);
     }
-  }, [initialUrl, isReady]);
+  }, [initialUrl, navigationReady]);
 
-  // Mark component as ready after Stack is rendered
   useEffect(() => {
-    // Set a small delay to ensure the Stack is fully rendered
-    const timer = setTimeout(() => {
-      console.log('[RootLayout] Setting isReady to true');
-      setIsReady(true);
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [loaded]);
-
-  // Add logging for URL handling setup
-  useEffect(() => {
-    console.log('[RootLayout] Setting up URL handlers');
-    // Handle initial URL when app is opened from share
-    Linking.getInitialURL().then(url => {
-      console.log('[RootLayout] Initial URL:', url);
-      if (url) {
-        // If we have a URL on initial load, we want to handle it
-        // But delay processing until the component is mounted and ready
-        setInitialUrl(url);
-      }
-    });
-
-    // Subscribe to URL open events
-    const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.log('[RootLayout] URL open event:', url);
-      if (isMounted.current && isReady) {
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      if (isIgnorableLocalHttpUrl(url)) return;
+      if (isMounted.current && navigationReady) {
         handleIncomingURL(url);
       } else {
-        console.log('[RootLayout] Delaying URL handling until component is mounted and ready');
         setInitialUrl(url);
       }
     });
 
-    return () => {
-      subscription.remove();
-    };
-  }, [isReady]);
+    Linking.getInitialURL().then((url) => {
+      if (url && !isIgnorableLocalHttpUrl(url)) setInitialUrl(url);
+    });
+
+    return () => sub.remove();
+  }, [navigationReady]);
 
   if (!loaded) {
     return null;
   }
 
-  // Show a loading spinner while processing shared content
-  if (isProcessingShare) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
-
-  if (!CLERK_PUBLISHABLE_KEY) {
-    throw new Error('Missing CLERK_PUBLISHABLE_KEY');
-  }
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* Import and use the AuthProvider from providers/auth.tsx instead of direct ClerkProvider */}
+    <View style={{ flex: 1 }}>
       <AuthProvider>
         <SafeAreaProvider>
           <ThemeProvider value={DefaultTheme}>
@@ -342,10 +321,25 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             </Stack>
+            {isProcessingShare ? (
+              <View
+                pointerEvents="auto"
+                style={[
+                  StyleSheet.absoluteFillObject,
+                  {
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.85)',
+                  },
+                ]}
+              >
+                <ActivityIndicator size="large" color="#0000ff" />
+              </View>
+            ) : null}
             <StatusBar style="dark" />
           </ThemeProvider>
         </SafeAreaProvider>
       </AuthProvider>
-    </GestureHandlerRootView>
+    </View>
   );
 }

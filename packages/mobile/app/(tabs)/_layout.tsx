@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth } from '@clerk/clerk-react';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform, StyleSheet, Animated } from 'react-native';
@@ -8,9 +8,6 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useSemanticColor } from '@/hooks/useThemeColor';
 import { HapticTab } from '@/components/HapticTab';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
-
-// Import TabBarBackground component
 import TabBarBackground from '@/components/ui/TabBarBackground';
 // Import the custom CameraTabButton
 import CameraTabButton from '@/components/ui/CameraTabButton';
@@ -122,7 +119,9 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size, focused }: TabIconProps) => renderTabIcon({ color, size, focused }, 'home'),
-          tabBarButton: (props: BottomTabBarButtonProps) => <HapticTab {...props} />,
+          tabBarButton: (props) => (
+            <HapticTab {...(props as unknown as React.ComponentProps<typeof HapticTab>)} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -130,7 +129,9 @@ export default function TabLayout() {
         options={{
           title: 'My Notes',
           tabBarIcon: ({ color, size, focused }: TabIconProps) => renderTabIcon({ color, size, focused }, 'note'),
-          tabBarButton: (props: BottomTabBarButtonProps) => <HapticTab {...props} />,
+          tabBarButton: (props) => (
+            <HapticTab {...(props as unknown as React.ComponentProps<typeof HapticTab>)} />
+          ),
         }}
       />
       
@@ -140,7 +141,9 @@ export default function TabLayout() {
         options={{
           title: 'Capture',
           tabBarIcon: ({ color, size, focused }: TabIconProps) => renderTabIcon({ color, size, focused }, 'camera-alt'),
-          tabBarButton: (props: BottomTabBarButtonProps) => <CameraTabButton {...props} />,
+          tabBarButton: (props) => (
+            <CameraTabButton {...(props as unknown as React.ComponentProps<typeof CameraTabButton>)} />
+          ),
         }}
       />
       
@@ -150,7 +153,9 @@ export default function TabLayout() {
         options={{
           title: 'Sync',
           tabBarIcon: ({ color, size, focused }: TabIconProps) => renderTabIcon({ color, size, focused }, 'sync'),
-          tabBarButton: (props: BottomTabBarButtonProps) => <HapticTab {...props} />,
+          tabBarButton: (props) => (
+            <HapticTab {...(props as unknown as React.ComponentProps<typeof HapticTab>)} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -158,7 +163,9 @@ export default function TabLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, size, focused }: TabIconProps) => renderTabIcon({ color, size, focused }, 'settings'),
-          tabBarButton: (props: BottomTabBarButtonProps) => <HapticTab {...props} />,
+          tabBarButton: (props) => (
+            <HapticTab {...(props as unknown as React.ComponentProps<typeof HapticTab>)} />
+          ),
         }}
       />
     </Tabs>

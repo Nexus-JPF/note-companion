@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
@@ -191,7 +191,7 @@ export const processSharedFile = async (file: SharedFile): Promise<SharedFile> =
   } catch (error) {
     console.error('\n[processSharedFile] === Error ===');
     console.error('[processSharedFile] Error details:', error);
-    console.error('[processSharedFile] Error stack:', error.stack);
+    console.error('[processSharedFile] Error stack:', error instanceof Error ? error.stack : error);
     throw error;
   }
 };

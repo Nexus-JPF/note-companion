@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { API_URL, API_CONFIG } from '@/constants/config';
 
 export type UploadStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'error' | 'pending';

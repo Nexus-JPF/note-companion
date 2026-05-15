@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   Platform,
 } from "react-native";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/clerk-react";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { useShareIntent } from "expo-share-intent";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ProcessingStatus } from "@/components/processing-status";

@@ -10,7 +10,8 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { useOAuth, useSignUp } from '@clerk/clerk-expo';
+import { useOAuth } from '@clerk/clerk-expo';
+import { useSignUp } from '@clerk/clerk-react';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,6 +47,11 @@ export default function SignUpScreen() {
       return;
     }
 
+    if (!isLoaded || !signUp) {
+      Alert.alert('Error', 'Sign up is not ready yet. Please try again.');
+      return;
+    }
+
     try {
       setLoading(true);
       const result = await signUp.create({
@@ -54,7 +60,7 @@ export default function SignUpScreen() {
       });
 
       if (result.status === 'complete') {
-        setSignUpActive({ session: result.createdSessionId });
+        await setSignUpActive?.({ session: result.createdSessionId });
         router.push('/(tabs)');
       } else {
         // Handle additional verification if needed

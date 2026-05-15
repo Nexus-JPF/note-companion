@@ -23,7 +23,14 @@
       "xcode@3.0.1": "patches/xcode@3.0.1.patch"
     },
     "overrides": {
-      "zod": "^3.25.76"
+      "zod": "^3.25.76",
+      "react": "19.1.0",
+      "react-dom": "19.1.0",
+      "expo-application": "7.0.8",
+      "expo-constants": "18.0.13",
+      "expo-crypto": "15.0.9",
+      "expo-linking": "8.0.12",
+      "expo-web-browser": "15.0.11"
     },
     "onlyBuiltDependencies": [
       "@ffprobe-installer/darwin-arm64",

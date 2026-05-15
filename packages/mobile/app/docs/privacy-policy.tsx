@@ -2,9 +2,9 @@ import React from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import ThemedText from '@/components/ThemedText';
-import ThemedView from '@/components/ThemedView';
-import Button from '@/components/Button';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Button } from '@/components/Button';
 
 export default function PrivacyPolicyScreen() {
   const router = useRouter();
@@ -102,7 +102,7 @@ export default function PrivacyPolicyScreen() {
           </ThemedText>
           <ThemedText style={styles.bulletPoint}>Email: support@notecompanion.com</ThemedText>
           
-          <ThemedText style={styles.paragraph} style={styles.finalParagraph}>
+          <ThemedText style={[styles.paragraph, styles.finalParagraph]}>
             By using Note Companion, you agree to the terms of this privacy policy.
           </ThemedText>
         </View>

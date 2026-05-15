@@ -1,6 +1,6 @@
 import { Stack, Redirect } from 'expo-router';
 import React from 'react';
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth } from '@clerk/clerk-react';
 import { View, ActivityIndicator } from 'react-native';
 import { useSemanticColor } from '@/hooks/useThemeColor';
 
