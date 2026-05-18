@@ -54,9 +54,22 @@ jest.mock('openai', () => ({
 }));
 
 const mockSplitAudioFileBySizeHeuristic = jest.fn();
+const mockNormalizeAudioForWhisper = jest.fn(
+  async (path: string, _extension?: string) => ({
+    path,
+    cleanup: null as string | null,
+  })
+);
 jest.mock('@/lib/audio/split-audio', () => ({
-  splitAudioFileBySizeHeuristic: (...args: unknown[]) =>
-    mockSplitAudioFileBySizeHeuristic(...args),
+  normalizeAudioForWhisper: (path: string, extension?: string) =>
+    mockNormalizeAudioForWhisper(path, extension),
+  splitAudioFileBySizeHeuristic: (
+    tempPath: string,
+    extension: string,
+    fileBytes: Buffer,
+    options?: { outputDir?: string }
+  ) =>
+    mockSplitAudioFileBySizeHeuristic(tempPath, extension, fileBytes, options),
 }));
 
 // Mock fs operations

@@ -22,7 +22,7 @@ import {
   FileImage,
   Eye,
   Download,
-  CloudUpload,
+  UploadCloud,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -554,7 +554,7 @@ export function FileList({ pageSize = 12 }: FileListProps) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4 space-y-6 bg-slate-50 rounded-xl text-center">
         <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm">
-          <CloudUpload className="h-10 w-10 text-violet-500" />
+          <UploadCloud className="h-10 w-10 text-violet-500" />
         </div>
         <div className="max-w-md">
           <h3 className="text-xl font-semibold mb-2">

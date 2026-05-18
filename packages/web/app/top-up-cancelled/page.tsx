@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import Link from 'next/link';
+import { Link } from '@/components/ui/link';
 
 // Force dynamic rendering to avoid static generation issues
 export const dynamic = 'force-dynamic';

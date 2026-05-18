@@ -66,10 +66,10 @@
   font-weight: normal;
 }
 
-/* Make sure text is readable */
+/* Sync tab — Obsidian-native colors (theme-aware) */
 .sync-tab-container {
-  color: #333;
-  background-color: #f8f9fa;
+  color: var(--text-normal);
+  background-color: var(--background-secondary);
   padding: 1.5rem;
 }
 
@@ -79,7 +79,7 @@
 }
 
 .sync-subtitle {
-  color: #6b7280;
+  color: var(--text-muted);
   margin-top: 0.25rem;
   margin-bottom: 0;
   font-size: 0.875rem;
@@ -87,14 +87,13 @@
 
 /* How-to card styles */
 .sync-how-to-card {
-  background-color: white;
-  border: 1px solid #e0e7ff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  color: #334155;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
   padding: 1.5rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-s);
   margin-bottom: 2rem;
-  transition: all 0.2s;
+  transition: border-color 0.2s, background-color 0.2s;
 }
 
 .sync-card-content {
@@ -105,7 +104,7 @@
 }
 
 .sync-icon-container {
-  background-color: #e0e7ff;
+  background-color: var(--background-modifier-hover);
   padding: 0.5rem;
   border-radius: 9999px;
   margin-top: 0.125rem;
@@ -114,13 +113,13 @@
 .sync-icon {
   width: 1.25rem;
   height: 1.25rem;
-  color: #4f46e5;
+  color: var(--interactive-accent);
 }
 
 .sync-card-title {
   font-weight: 500;
   font-size: 1.125rem;
-  color: #1e293b;
+  color: var(--text-normal);
   margin-bottom: 0.5rem;
 }
 
@@ -128,7 +127,7 @@
   font-size: 0.875rem;
   line-height: 1.5;
   margin-bottom: 0.75rem;
-  color: #475569;
+  color: var(--text-muted);
 }
 
 .sync-steps {
@@ -145,8 +144,8 @@
 }
 
 .sync-step-number {
-  background-color: #e0e7ff;
-  color: #4f46e5;
+  background-color: var(--background-modifier-hover);
+  color: var(--interactive-accent);
   border-radius: 9999px;
   width: 1.25rem;
   height: 1.25rem;
@@ -162,52 +161,51 @@
 .sync-step-text {
   font-size: 0.875rem;
   margin: 0;
-  color: #475569;
+  color: var(--text-muted);
 }
 
 .sync-footer-note {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
   padding-top: 0.75rem;
   margin-top: 0.75rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--background-modifier-border);
 }
 
 .sync-code {
-  background-color: #f1f5f9;
+  background-color: var(--background-modifier-form-field);
   padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  color: #334155;
+  border-radius: var(--radius-s);
+  color: var(--text-normal);
   font-family: monospace;
 }
 
 /* Special card styles for sync tab */
 .sync-file-card {
-  background-color: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
   padding: 1.25rem;
   margin-bottom: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s, border-color 0.2s;
+  transition: border-color 0.2s, background-color 0.2s;
 }
 
 .sync-file-card:hover {
-  border-color: #cbd5e0;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-color: var(--background-modifier-border-hover);
+  background-color: var(--background-modifier-hover);
 }
 
 .sync-file-downloaded {
-  border-color: #a3bffa;
-  background-color: #ebf4ff;
+  border-color: var(--interactive-accent);
+  background-color: var(--background-modifier-active-hover);
 }
 
 /* Button styles */
 .sync-button {
-  background-color: #4f46e5;
-  color: white;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
   padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-s);
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -215,28 +213,28 @@
 }
 
 .sync-button:hover {
-  background-color: #4338ca;
+  background-color: var(--interactive-accent-hover);
 }
 
 .sync-button:disabled {
-  background-color: #e2e8f0;
-  color: #94a3b8;
+  background-color: var(--background-modifier-border);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
 .sync-secondary-button {
-  background-color: white;
-  color: #4f46e5;
-  border: 1px solid #4f46e5;
+  background-color: var(--background-primary);
+  color: var(--interactive-accent);
+  border: 1px solid var(--interactive-accent);
   padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-s);
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s;
 }
 
 .sync-secondary-button:hover {
-  background-color: #f9fafb;
+  background-color: var(--background-modifier-hover);
 }
 
 /* Custom styles that might still be needed */
@@ -402,7 +400,7 @@
 }
 
 .tag:hover {
-  color: white;
+  color: var(--text-on-accent);
   background: var(--interactive-accent);
   font-weight: var(--nav-item-weight-hover);
 }
@@ -423,7 +421,7 @@
 .title-suggestion:hover,
 .folder-suggestion:hover {
   background-color: var(--interactive-accent) !important;
-  color: white;
+  color: var(--text-on-accent);
   font-weight: var(--nav-item-weight-hover);
 }
 

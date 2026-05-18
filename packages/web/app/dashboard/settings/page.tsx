@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Link from "next/link";
+import { Link } from "@/components/ui/link";
 import {
   CreditCard,
   Settings as SettingsIcon,

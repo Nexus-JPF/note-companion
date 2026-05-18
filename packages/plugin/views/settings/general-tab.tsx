@@ -213,7 +213,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
                     ? "border-[--text-error]"
                     : "border-[--background-modifier-border]"
                 }`}
-                placeholder="Enter your File Organizer License Key"
+                placeholder="Enter your Note Companion license key"
                 value={licenseKey}
                 onChange={e => handleLicenseKeyChange(e.target.value)}
               />

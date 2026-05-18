@@ -12,7 +12,7 @@ export const releaseNotesSchema = z.object({
     name: z
       .string()
       .describe(
-        'A catchy release name that captures the main theme of changes'
+        'A short theme title for the release (do not include the version number)'
       ),
     description: z
       .string()
@@ -80,8 +80,39 @@ function getDiffAndChangedFiles(
 
 export interface GenerateOptions {
   repoRoot: string;
+  /** New manifest version for the GitHub release title (e.g. 3.6.20). */
+  releaseVersion?: string;
   openAIApiKey?: string;
   anthropicApiKey?: string;
+}
+
+/** Obsidian requires the GitHub release title to include the manifest version. */
+export function formatReleaseName(releaseVersion: string, theme: string): string {
+  const trimmedTheme = theme.trim();
+  if (!releaseVersion) {
+    return trimmedTheme;
+  }
+  if (
+    trimmedTheme === releaseVersion ||
+    trimmedTheme.startsWith(`${releaseVersion} - `) ||
+    trimmedTheme.startsWith(`${releaseVersion}: `)
+  ) {
+    return trimmedTheme;
+  }
+  return `${releaseVersion} - ${trimmedTheme}`;
+}
+
+function applyReleaseVersion(
+  notes: ReleaseNotes,
+  releaseVersion?: string
+): ReleaseNotes {
+  if (!releaseVersion) {
+    return notes;
+  }
+  return {
+    ...notes,
+    name: formatReleaseName(releaseVersion, notes.name),
+  };
 }
 
 interface VersionInfo {
@@ -140,7 +171,8 @@ export async function updateVersions(
 }
 
 const RELEASE_NOTES_PROMPT = `You are a release notes generator for an Obsidian plugin called Note Companion.
-Given the following git diff between versions, generate a user-friendly release name and description.
+Given the following git diff between versions, generate a short theme title (name) and description.
+The name must be a catchy theme only — do not include version numbers (the version is added separately).
 Focus on the user-facing changes and new features that will benefit users.
 Note Companion is an Obsidian plugin that helps you organize your files and notes.
 
@@ -318,10 +350,13 @@ export async function generateReleaseNotes(
   );
   const errors: Error[] = [];
 
+  const finalize = (notes: ReleaseNotes) =>
+    applyReleaseVersion(notes, options.releaseVersion);
+
   // Try OpenAI first
   if (options.openAIApiKey) {
     try {
-      return await tryOpenAI(diff, options.openAIApiKey);
+      return finalize(await tryOpenAI(diff, options.openAIApiKey));
     } catch (error) {
       console.error(
         'OpenAI failed:',
@@ -336,7 +371,7 @@ export async function generateReleaseNotes(
   // Try Anthropic as fallback
   if (options.anthropicApiKey) {
     try {
-      return await tryAnthropic(diff, options.anthropicApiKey);
+      return finalize(await tryAnthropic(diff, options.anthropicApiKey));
     } catch (error) {
       console.error(
         'Anthropic failed:',
@@ -356,7 +391,7 @@ export async function generateReleaseNotes(
     console.log('Previous errors:', errors.map((e) => e.message).join('; '));
   }
 
-  return generateFallbackReleaseNotes(changedFiles);
+  return finalize(generateFallbackReleaseNotes(changedFiles));
 }
 
 export async function prepareReleaseArtifacts(

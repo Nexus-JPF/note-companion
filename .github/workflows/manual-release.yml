@@ -114,6 +114,7 @@ jobs:
                 console.log('Generating release notes...');
                 const notes = await generateReleaseNotes(versionInfo.previous, {
                   repoRoot,
+                  releaseVersion: versionInfo.new,
                   openAIApiKey: process.env.OPENAI_API_KEY,
                   anthropicApiKey: process.env.ANTHROPIC_API_KEY
                 });

@@ -2,7 +2,7 @@ import { SignedIn, SignedOut, SignIn, UserButton } from '@clerk/nextjs';
 import Logo from '@/components/ui/logo';
 import { Toaster } from 'react-hot-toast';
 import { NavigationBar } from '@/components/navigation-bar';
-import Link from 'next/link';
+import { Link } from '@/components/ui/link';
 import ExtraUserSettings from '@/components/user-management';
 import { PHProvider } from '@/app/providers';
 
@@ -18,7 +18,6 @@ export default function AuthLayoutWrapper({
       <SignedIn>
         {/* SignedIn renders its children only when the user is signed in */}
         {/* The body tag is rendered by the root layout, we only render the content here */}
-        {/* @ts-expect-error - react-hot-toast Toaster types not fully compatible with React 19 */}
         <Toaster />
         <header className="p-4 bg-white sticky top-0 z-50 max-w-6xl mx-auto">
           <nav className="max-w-9xl mx-auto flex items-center space-x-6 justify-between w-full">
@@ -41,7 +40,6 @@ export default function AuthLayoutWrapper({
       <SignedOut>
         {/* SignedOut renders its children only when the user is signed out */}
         {/* The body tag is rendered by the root layout */}
-        {/* @ts-expect-error - react-hot-toast Toaster types not fully compatible with React 19 */}
         <Toaster />
         <main className="min-h-screen text-stone-900 font-sans">
           <div className="flex items-center justify-center h-screen">

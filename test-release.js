@@ -38,6 +38,7 @@ async function run() {
     console.log('\n📝 Generating release notes...');
     const notes = await generateReleaseNotes(versionInfo.previous, {
       repoRoot,
+      releaseVersion: versionInfo.new,
       openAIApiKey: process.env.OPENAI_API_KEY
     });
     console.log('Release notes:', JSON.stringify(notes, null, 2));
