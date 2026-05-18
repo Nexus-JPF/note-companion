@@ -15,6 +15,7 @@ import { useSignUp } from '@clerk/clerk-react';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { GoogleGLogo } from '@/components/google-g-logo';
 import { Link } from 'expo-router';
 
 
@@ -163,7 +164,7 @@ export default function SignUpScreen() {
             style={[styles.button, styles.googleButton]}
             onPress={onSignUpWithGoogle}
           >
-            <Ionicons name="logo-google" size={24} color="#EA4335" />
+            <GoogleGLogo size={24} />
             <Text style={styles.buttonText}>Continue with Google</Text>
           </TouchableOpacity>
 

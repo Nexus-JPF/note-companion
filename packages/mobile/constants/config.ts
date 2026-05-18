@@ -6,4 +6,4 @@ export const API_CONFIG = {
   maxRetries: 3,
   retryDelay: 1000,
   timeout: 60000, // 60 seconds timeout
-}; 
+};

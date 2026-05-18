@@ -3,10 +3,11 @@ const { withNativeWind } = require("nativewind/metro");
 const path = require("path");
 
 const mobileRoot = __dirname;
+const repoRoot = path.join(mobileRoot, "../..");
 
 /** Resolve a bare specifier from this package only (avoids hoisted React 19 at repo root). */
 function resolveFromMobile(moduleName) {
-  return require.resolve(moduleName, { paths: [mobileRoot] });
+  return require.resolve(moduleName, { paths: [mobileRoot, repoRoot] });
 }
 
 let config = getDefaultConfig(mobileRoot);
