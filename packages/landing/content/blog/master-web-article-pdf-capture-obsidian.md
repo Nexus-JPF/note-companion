@@ -14,7 +14,7 @@ image: '/blog/images/master-web-article-pdf-capture-obsidian.png'
 
 If you’re a student, researcher, or knowledge worker, your Obsidian vault probably fills up with clipped web articles and PDF highlights at lightning speed. But without a disciplined system, this agile capture process can quickly create a landfill of poorly titled files, scattered highlights, and notes that never get connected to your actual projects.
 
-Take Sarah, a graduate student knee-deep in research. Her workflow is familiar: she clips articles from the web and highlights PDFs, which land in her `inbox/` as files named `web-clip-20240610.md` or `pdf-highlight-lecture1.md`. With no consistent titling, sparse metadata, and few links, Sarah spends hours hunting for insights she *knows* she saved. Her literature reviews stall because her notes aren’t connected to her main research threads. Sound familiar?
+Take Sarah, a graduate student knee-deep in research. Her workflow is familiar: she clips articles from the web and highlights PDFs, which land in her `inbox/` as files named `web-clip-20260610.md` or `pdf-highlight-lecture1.md`. With no consistent titling, sparse metadata, and few links, Sarah spends hours hunting for insights she *knows* she saved. Her literature reviews stall because her notes aren’t connected to her main research threads. Sound familiar?
 
 ## Why Dumping Captures Isn’t a Solution
 
@@ -43,7 +43,7 @@ Configure your tools so that web clippers (like the Markdown Web Clipper or Obsi
 
 Create a template in the Templates plugin with:
 
-- A descriptive title format: `source-topic-date.md` (e.g., `nyt-ai-ethics-2024-06-12.md`)
+- A descriptive title format: `source-topic-date.md` (e.g., `nyt-ai-ethics-2026-06-12.md`)
 - YAML front matter for tags (e.g., `#web-article`, `#research`), source, and author
 - A short section for key highlights or summary
 
@@ -55,7 +55,7 @@ Apply this template each time you capture a new article or highlight. This ensur
 ---
 tags: [web-article, research]
 source: https://www.nytimes.com/ai-ethics
-captured: 2024-06-12
+captured: 2026-06-12
 author: Jane Doe
 ---
 
