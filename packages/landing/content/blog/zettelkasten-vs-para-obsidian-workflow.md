@@ -22,7 +22,7 @@ Zettelkasten, meaning “slip box” in German, is rooted in writing and researc
 
 **Obsidian makes this workflow seamless:**
 - **Atomic notes:** Every note covers a single concept or fact.
-- **Unique IDs:** Most users adopt timestamp-based IDs (e.g., `202406051200`), making notes easy to reference and search.
+- **Unique IDs:** Most users adopt timestamp-based IDs (e.g., `202609121200`), making notes easy to reference and search.
 - **Wikilinks everywhere:** Obsidian’s `[[wikilinks]]` and backlink panes encourage connecting everything.
 - **Minimal folders:** Some keep all notes in a single folder, using links to surface structure instead.
 
@@ -31,7 +31,7 @@ Zettelkasten, meaning “slip box” in German, is rooted in writing and researc
 - Anyone who enjoys discovery and serendipity in their notes.
 
 **Example:**
-A PhD student, Maria, studies medieval trade. She captures each insight, fact, or quote as a separate note—like `inbox/202406051230-medieval-trade.md`—and immediately links it to related notes on geography or economics. Over time, Maria’s vault becomes a dense network where unexpected connections surface during writing sessions.
+A PhD student, Maria, studies medieval trade. She captures each insight, fact, or quote as a separate note—like `inbox/202609121230-medieval-trade.md`—and immediately links it to related notes on geography or economics. Over time, Maria’s vault becomes a dense network where unexpected connections surface during writing sessions.
 
 ## PARA: Clarity and Focus for Project Work
 
@@ -75,7 +75,7 @@ If your daily work revolves around deadlines, deliverables, or juggling multiple
    - Meeting notes, ideas, tasks—dump them here without worrying about placement.
 3. **Weekly processing ritual:**
    - Block 30 minutes to triage `Inbox/`, moving each note to its rightful PARA folder.
-   - Rename notes with clear titles: `2024-06-05-meeting-notes.md`, `Project-Brief-FeatureX.md`.
+   - Rename notes with clear titles: `2026-09-12-meeting-notes.md`, `Project-Brief-FeatureX.md`.
 4. **Link contextually:**
    - Within `Projects/`, link related resources or past meeting notes using `[[wikilinks]]`—but folders remain the backbone.
 5. **Tag for urgency:**
@@ -90,7 +90,7 @@ For research, writing, and deep thinking, Zettelkasten excels. Here’s how you 
 1. **Set up an `Inbox/` for raw capture:**
    - Every fleeting thought or quote goes here first.
 2. **Create atomic notes with unique IDs:**
-   - Use a plugin or template to generate IDs (e.g., `202406051530.md`).
+   - Use a plugin or template to generate IDs (e.g., `202609121530.md`).
    - Each note should express a single idea, not a summary or multi-topic brief.
 3. **Link as you process:**
    - When moving notes from `Inbox/`, link each one to related ideas using `[[wikilinks]]`.
@@ -113,11 +113,11 @@ Obsidian’s flexibility means processing notes can become a bottleneck. Here’
 
 - [ ] I prefer working with small, interlinked ideas rather than rigid hierarchies.
 - [ ] My work revolves around research, writing, or generating new insights.
-- [ ] I manage multiple active projects and need clear separation between reference and actionable materials.
 - [ ] I’m willing to invest time building linking habits.
+- [ ] I manage multiple active projects and need clear separation between reference and actionable materials.
 - [ ] I want a quick, folder-driven setup that aligns with task and project management.
 
-If you checked the first two, Zettelkasten is likely your best fit. The latter three? PARA will probably serve you better.
+If you checked the first three, Zettelkasten is likely your best fit. The last two? PARA will probably serve you better.
 
 ## Blending Approaches: When Rules Bend
 
