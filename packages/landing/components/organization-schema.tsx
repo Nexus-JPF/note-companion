@@ -9,7 +9,9 @@ const schema = {
   logo: 'https://www.notecompanion.ai/notecompanion.png',
   sameAs: [
     'https://github.com/Nexus-JPF/note-companion',
+    'https://www.youtube.com/@note-companion',
     'https://www.youtube.com/channel/UCd24YzGlvtIG4DYD3zlYLwg',
+    'https://www.linkedin.com/company/note-companion',
   ],
   contactPoint: {
     '@type': 'ContactPoint',

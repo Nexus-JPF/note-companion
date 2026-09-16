@@ -7,6 +7,8 @@
 - [Note Companion](https://www.notecompanion.ai/) - Achieve seamless meeting notes, instant handwriting digitization, and the smartest AI chat for your Obsidian workflow. One tool, endless possibilities.
 - [Note Companion Mobile](https://www.notecompanion.ai/mobile) - Access your notes anywhere with the Note Companion mobile app. Capture text from images with our powerful OCR, manage your knowledge, and stay organized on the go.
 - [GitHub repository](https://github.com/Nexus-JPF/note-companion) - Note Companion: AI assistant for Obsidian that goes beyond just a chat. (prev File Organizer 2000)
+- [YouTube channel](https://www.youtube.com/@note-companion) - Video walkthroughs and demos of Note Companion workflows in Obsidian.
+- [LinkedIn page](https://www.linkedin.com/company/note-companion) - Company updates and product news from the Note Companion team.
 
 ## Articles
 
