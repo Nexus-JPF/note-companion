@@ -95,8 +95,10 @@ shoot it in one pass or extend `packages/plugin/__mocks__/` into a demo mode
 with canned responses. The second option is also how you show the product at its
 best rather than at whatever it did that afternoon.
 
-**Never record with a real vault.** Beyond the polish argument, `meeting-demo.gif`
-currently shows a file named `Ref Rogers Sid Ali.mp3` in a public README.
+**Never record with a real vault.** Beyond the polish argument: `meeting-demo.gif`
+was removed from the README because it showed an audio filename that looked like
+real meeting participants. The name was baked into every frame, so there was no
+fixing it short of deleting the asset. Re-record the meeting demo here.
 
 ## Accent colour
 

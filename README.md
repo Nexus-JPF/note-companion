@@ -33,10 +33,6 @@ _YouTube link → Transcript + Summary + Structured Notes_
 
 _Chat with your notes using @mentions for files, folders, and tags_
 
-![Meeting Recorder & Note Enhancement](docs/screenshots/meeting-demo.gif)
-
-_Record meetings, then enhance notes with transcript, discussion points, and action items_
-
 ---
 
 ## Install
