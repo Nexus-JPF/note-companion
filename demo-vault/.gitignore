@@ -1,0 +1,14 @@
+# The plugin build and its data.json (which holds the license key) are installed
+# locally, never committed. Install Note Companion into this vault the normal way.
+.obsidian/plugins/
+.obsidian/themes/
+.obsidian/workspace-mobile.json
+
+# Folders the plugin creates while processing
+_NoteCompanion/
+
+# Recording scratch
+Recordings/
+*.m4a
+*.mp3
+*.wav
