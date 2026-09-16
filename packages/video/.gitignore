@@ -1,0 +1,8 @@
+# Rendered output -- large binaries, regenerate with pnpm render:episode
+out/
+
+# Captured screen recordings live here but are not committed. They are large,
+# they change every reshoot, and git is the wrong store for them.
+public/*.mp4
+public/*.mov
+public/*.webm

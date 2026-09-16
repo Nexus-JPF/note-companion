@@ -1,0 +1,24 @@
+{
+  "name": "@note-companion/video",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Remotion kit for Note Companion video: the branded wrapper around hand-captured product footage.",
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "tsc --noEmit",
+    "render:episode": "remotion render Episode out/episode.mp4",
+    "render:clip": "remotion render Clip out/clip.mp4",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.416",
+    "react": "catalog:react19",
+    "react-dom": "catalog:react19",
+    "remotion": "4.0.416"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:react19",
+    "@types/react-dom": "catalog:react19",
+    "typescript": "catalog:"
+  }
+}
