@@ -1,6 +1,9 @@
 {
   "name": "file-organizer-2000-monorepo",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "devDependencies": {
     "@ai-sdk/anthropic": "^1.0.6",
     "@eslint/js": "^9.39.4",
