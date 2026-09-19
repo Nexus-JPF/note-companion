@@ -8,24 +8,28 @@ on:
   workflow_dispatch:
 
 jobs:
-  npm-eslint:
+  obsidian-scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.x"
-          cache: npm
+          node-version: "24.x"
+          cache: pnpm
 
-      - name: Install with npm (Obsidian scanner compatibility)
-        run: npm ci
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Lint like Obsidian community review
-        run: npm run lint:obsidian-scan
+        run: pnpm lint:obsidian-scan
 
       - name: Lint plugin CSS (shipped bundle)
-        run: npm run lint:css
+        run: pnpm lint:css
 
       - name: Build like Obsidian community review
-        run: npm run build
+        run: pnpm build

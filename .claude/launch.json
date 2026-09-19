@@ -6,7 +6,7 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": [
         "-lc",
-        "source ~/.nvm/nvm.sh && nvm use v20.20.2 && npm run dev --prefix packages/landing"
+        "source ~/.nvm/nvm.sh && nvm use v24.21.0 && npm run dev --prefix packages/landing"
       ],
       "port": 3011
     }

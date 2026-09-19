@@ -34,7 +34,7 @@ Repository: Nexus-JPF/note-companion
 
 ### Environment Setup
 - **Package Manager**: Always use pnpm
-- **Node Version**: 18+
+- **Node Version**: 24.x (see `.nvmrc`; Vercel requires 24.x from 2026-10-01)
 - **Development Ports**: Web app runs on port 3010
 
 ### Code Style

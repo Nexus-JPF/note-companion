@@ -43,6 +43,7 @@ export const obsidianScannerIgnores = [
 /** Built release artifacts and repo tooling not meant for ESLint. */
 export const repoReleaseIgnores = [
   "release-artifacts",
+  "**/dist/**",
   "main.js",
   "styles.css",
   "main.css",

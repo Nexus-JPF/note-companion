@@ -1,4 +1,3 @@
-import { EventEmitter } from 'events';
 import { ErrorService, ErrorSeverity } from './error-service';
 import { IdService } from './id-service';
 import { TFile } from "obsidian";
@@ -33,7 +32,7 @@ interface QueueStatus {
   total: number;
 }
 
-export class Queue<T> extends EventEmitter {
+export class Queue<T> {
   private items: Map<string, QueueItem<T>> = new Map();
   private processing: Set<string> = new Set();
   private options: Required<QueueOptions<T>>;
@@ -46,7 +45,6 @@ export class Queue<T> extends EventEmitter {
   private queue: string[] = [];
 
   constructor(options: QueueOptions<T>) {
-    super();
     this.options = {
       concurrency: MAX_CONCURRENT_TASKS,
       timeout: 30000,
@@ -118,12 +116,8 @@ export class Queue<T> extends EventEmitter {
     } finally {
       this.processing.delete(hash);
 
-      this.emit('statsUpdated', this.getStats());
-
       if (this.queue.length > 0) {
         void this.processNext();
-      } else if (this.processing.size === 0) {
-        this.emit('drain');
       }
     }
   }
@@ -149,17 +143,6 @@ export class Queue<T> extends EventEmitter {
     this.completedItems.clear();
     this.errorItems.clear();
     this.bypassedItems.clear();
-  }
-
-  public pause(): void {
-    this.emit('pause');
-  }
-
-  public resume(): void {
-    this.emit('resume');
-    while (this.processing.size < this.options.concurrency && this.queue.length > 0) {
-      void this.processNext();
-    }
   }
 
   public get size(): number {
@@ -197,8 +180,6 @@ export class Queue<T> extends EventEmitter {
       if (item) {
         this.bypassedItems.add(hash);
         this.items.delete(hash);
-        this.emit('bypass', item);
-        this.emit('statsUpdated', this.getStats());
         return true;
       }
     }

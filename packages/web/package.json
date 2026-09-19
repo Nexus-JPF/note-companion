@@ -2,6 +2,9 @@
   "name": "@file-organizer/web",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "PORT=3010 pnpm next dev",
     "build:self-host": "pnpm next build",

@@ -3,8 +3,7 @@ import fs from "fs";
 import path from "path";
 import process from "process";
 import { fileURLToPath } from "url";
-import { createRequire } from "module";
-import builtins from "builtin-modules";
+import { builtinModules, createRequire } from "module";
 import postcss from 'esbuild-postcss';
 import { normalizeCssHexInDirectory } from "./normalize-css-hex.mjs";
 
@@ -76,7 +75,7 @@ const context = await esbuild.context({
 		"@lezer/highlight",
 		"@lezer/lr",
 		"sharp",
-		...builtins,
+		...builtinModules,
 	],
 	format: "cjs",
 	target: "es2022",
