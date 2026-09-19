@@ -72,9 +72,12 @@ export const CAPTION_LIFT = 152;
 export const FPS = 30;
 
 /**
- * 1920x1080 matches the 1536x864 capture in
- * scripts/demo-recording/set-window.sh at exactly 1.25x, so footage lands
- * pixel-aligned with no resampling.
+ * Both share the 16:9 shape of the 1536x864 window that
+ * scripts/demo-recording/set-window.sh pins, so footage never letterboxes.
+ *
+ * Capture at Retina: 1536x864 records at 3072x1728, which downsamples into
+ * 1080p. Capturing at 1x instead would mean upscaling by 1.25x, which is
+ * pixel-aligned but visibly softer.
  */
 export const FORMATS = {
   episode: { width: 1920, height: 1080 },

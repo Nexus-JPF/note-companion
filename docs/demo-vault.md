@@ -48,6 +48,53 @@ every take. `git checkout` puts it back.
 
 `1536x864` is exactly 16:9, so a Retina capture downscales cleanly to 1080p.
 
+## What `set-window.sh` does
+
+It resizes the Obsidian window to exactly 1536x864 and moves it to (80, 80),
+by driving System Events through AppleScript. That is all it does — it does not
+record anything, and it does not touch the vault.
+
+It exists because window size is the one recording variable you cannot fix
+afterwards. The four original README GIFs came out 1512x862, 1512x862, 1512x862
+and 1510x862: close, but neither 16:9 nor consistent with each other, because
+the window was sized by hand. Running one command instead removes the variable.
+
+macOS-only, and it needs Accessibility permission for whichever terminal runs
+it (System Settings → Privacy & Security → Accessibility). It refuses with a
+clear message if Obsidian is not already running, or if you are not on macOS.
+Pass different dimensions as arguments if you ever need them:
+`./scripts/demo-recording/set-window.sh 1920 1080`.
+
+## Recording with CleanShot X
+
+Any recorder works — the kit only needs an MP4. CleanShot is a good fit, with
+four settings that matter:
+
+**Capture a fixed area, not the window.** This is the one that will bite you.
+macOS window capture usually includes the drop shadow, which silently breaks
+the exact 1536x864 and puts you back where the old GIFs were. Run
+`set-window.sh` first, then select a capture *area* of exactly 1536x864.
+CleanShot shows live dimensions as you drag and can restore the previous
+selection, which is what makes it repeatable between episodes.
+
+**Record at full Retina, not scaled.** On a Retina display that area captures
+at 3072x1728, and downscaling that into 1080p is noticeably sharper than
+upscaling a 1x capture. Check the recorder is not set to 1x.
+
+**Turn on cursor highlighting and click visualisation.** This is where CleanShot
+earns its place over `Cmd+Shift+5`. In a plugin demo the viewer has to see
+*where* a click landed — which sidebar tab, which suggestion chip — or they lose
+the thread. Hide desktop icons while you are in there.
+
+**Record at 30fps**, matching `FPS` in `packages/video/src/tokens.ts`. 60 works
+but doubles the file for no visible gain on a screen recording.
+
+Export MP4, drop it in `packages/video/public/`, set `footage` in the episode
+file, and render.
+
+What no recorder can fix: an Obsidian notice drawn over the window is inside the
+capture regardless. See **Known gotchas** below.
+
 ## What's already pinned
 
 | Setting | Value | Why |
