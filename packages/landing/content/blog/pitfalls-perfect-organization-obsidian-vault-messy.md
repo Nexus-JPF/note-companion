@@ -35,21 +35,21 @@ Letting your vault stay a little messy isn’t about giving up on organization. 
 
 This approach reduces the pressure to classify everything perfectly, keeping your workflows fluid and your creative momentum high.
 
-## Real-World Example: Sarah the Graduate Researcher
+## Real-World Example: Over-Organizing a Thesis Vault
 
-Sarah, a graduate student, started her thesis research by designing an elaborate folder tree: `/research/2024/theories`, `/research/2024/methods`, `/notes/meetings`, and so on. She also created a dense tag scheme—`#qualitative`, `#quantitative`, `#literature-gap`—and tried to assign them precisely.
+When I started thesis research, I designed an elaborate folder tree: `/research/2024/theories`, `/research/2024/methods`, `/notes/meetings`, and so on. I also created a dense tag scheme—`#qualitative`, `#quantitative`, `#literature-gap`—and tried to assign them precisely.
 
-Soon, she realized she was spending more time on organization than on reading, thinking, or writing. Notes piled up in her inbox as she hesitated over where they "should" go.
+Soon I realized I was spending more time on organization than on reading, thinking, or writing. Notes piled up in my inbox as I hesitated over where they "should" go.
 
-Her turning point came when she simplified:
+The turning point came when I simplified:
 
 - All new notes dropped into `/inbox`.
 - Tags like `#research` and `#idea` used liberally at capture.
 - Connections made via backlinks (e.g., `[[Literature Review]]`) instead of folders.
-- Each weekend, she’d review `/inbox`, moving only notes that were clearly part of an ongoing project into `/projects/thesis`.
-- She leveraged Note Companion’s Organizer suggestions to quickly tag and file notes during review, letting AI offer ideas without dictating structure.
+- Each weekend, I’d review `/inbox`, moving only notes that were clearly part of an ongoing project into `/projects/thesis`.
+- I used Note Companion’s Organizer suggestions to tag and file during review, letting AI offer ideas without dictating structure.
 
-Sarah found she was writing more, connecting ideas more easily, and not getting bogged down in taxonomy debates. Her Obsidian vault was messier than before—but it was working for her, not the other way around.
+I started writing more, connecting ideas more easily, and spending less time on taxonomy debates. The vault was messier than before—but it was working for me, not the other way around.
 
 ## Try This: A Workflow for Embracing "Good Enough" Organization
 
@@ -61,31 +61,13 @@ If perfect organization has been slowing you down, give this workflow a try:
 4. **Weekly Review Ritual:** Set aside 30 minutes weekly to process your `/inbox`:
    - Move notes to project or archive folders only if they’re clearly needed elsewhere.
    - Refine tags and add missing backlinks where they help.
-   - Use Note Companion’s Organizer suggestions to spot patterns or merge redundant notes.
+   - Use Note Companion’s Organizer suggestions to spot patterns or merge redundant notes. Treat those suggestions as an advisor, not an enforcer: accept what helps, reject what doesn’t.
 5. **Trust Search and Graph:** When you need something, use Obsidian’s search and graph view to navigate—even if the vault’s structure looks messy.
-
-### Checklist: Stay Focused on Progress, Not Perfection
-
-- [ ] Capture all new notes in `/inbox` without hesitation
-- [ ] Tag loosely and evolve your system over time
-- [ ] Link notes with backlinks instead of worrying about folders
-- [ ] Block time for a regular review and gentle clean-up
-- [ ] Use AI suggestions as helpful nudges, not hard rules
-
-## Where AI Fits—And Where It Doesn’t
-
-AI-powered plugins like Note Companion can be a double-edged sword. Automatic tag and folder suggestions are great for surfacing connections you might miss, but they can also tempt you to over-organize. The key is to treat AI as an advisor—helpful for summarizing notes, spotting related items, and proposing folders or tags during review, but never as an enforcer of rigid order.
-
-Let AI speed up your review and help you see patterns, not dictate a system that doesn’t fit your real work. For example, during your weekly review, you might:
-
-- Let Note Companion analyze your `/inbox` and suggest where similar notes could be grouped.
-- Accept or reject suggested tags depending on what actually helps in practice.
-- Use AI-generated summaries to decide which notes are worth filing more formally, and which can stay right where they are.
 
 ## Progress Over Perfection: The Takeaway
 
 A perfectly organized vault sounds comforting, but in practice, it’s a productivity trap. The best Obsidian workflows leave space for creative mess, letting ideas and notes grow organically. Use simple folders, trust tags and backlinks to connect your knowledge, and make review a regular, low-stress ritual.
 
-Leverage AI tools like Note Companion to accelerate review and surface connections, but don’t let them push you into over-engineering your system. Remember Sarah’s lesson: organization should serve your thinking—not the other way around.
+The next time you’re tempted to re-architect your vault "just one more time," try capturing, connecting, and reviewing instead. Organization should serve your thinking—not the other way around.
 
-The next time you’re tempted to re-architect your vault "just one more time," try capturing, connecting, and reviewing instead. Your real work—and your future self—will thank you.
+If you want Organizer suggestions during that weekly review without handing the vault over to a rigid system, [try Note Companion](https://accounts.notecompanion.ai/sign-up).
