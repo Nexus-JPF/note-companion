@@ -91,7 +91,7 @@ Use this path to run AI through **your own** OpenAI, Claude, Gemini, Groq, or co
 ### 1) YouTube → Note
 
 1. Copy a YouTube link
-2. In **Note Companion Chat**, paste the link
+2. In **Note Companion Chat**, paste the link with what you want done — e.g. `summarize https://www.youtube.com/watch?v=...` (a bare link on its own is not an instruction)
 3. Get transcript + summary + optional structured notes
 
 ### 2) Audio recording → Meeting note (best demo)
