@@ -1,45 +1,26 @@
-import { init, get_encoding } from "tiktoken/init";
-import wasmBinary from "tiktoken/tiktoken_bg.wasm";
+/**
+ * Approximate token count without bundling tiktoken WASM.
+ * ASCII text is ~4 chars/token; this is used for UI budgets, not billing.
+ */
+const CHARS_PER_TOKEN = 4;
 
-interface TiktokenEncoding {
-  encode(text: string): { length: number };
-  free(): void;
-}
+let initialized = false;
 
-let encoding: TiktokenEncoding | null = null;
-let initPromise: Promise<void> | null = null;
-
-export function initializeTokenCounter() {
-  // Return existing promise if initialization is in progress
-  if (initPromise !== null) return initPromise;
-  
-  // Create new initialization promise
-  initPromise = init((imports) => {
-    return WebAssembly.instantiate(wasmBinary, imports);
-  })
-    .then(() => {
-      encoding = get_encoding("cl100k_base");
-    })
-    .catch((error) => {
-      console.error("Error initializing tiktoken:", error);
-      initPromise = null;
-      throw error;
-    });
-
-  return initPromise;
+export function initializeTokenCounter(): Promise<void> {
+  initialized = true;
+  return Promise.resolve();
 }
 
 export function getTokenCount(text: string): number {
-  if (!encoding) {
-    throw new Error("Token counter not initialized. Call initializeTokenCounter() first.");
+  if (!initialized) {
+    throw new Error(
+      "Token counter not initialized. Call initializeTokenCounter() first."
+    );
   }
-  return encoding.encode(text).length;
+  if (!text) return 0;
+  return Math.ceil(text.length / CHARS_PER_TOKEN);
 }
 
-export function cleanup() {
-  if (encoding) {
-    encoding.free();
-    encoding = null;
-    initPromise = null;
-  }
-} 
+export function cleanup(): void {
+  initialized = false;
+}

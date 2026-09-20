@@ -80,7 +80,9 @@ const context = await esbuild.context({
 	format: "cjs",
 	target: "es2022",
 	logLevel: "info",
-	platform: "node",
+	platform: "browser",
+	minify: prod,
+	legalComments: "none",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
 	outdir: outdir,
@@ -105,13 +107,23 @@ const context = await esbuild.context({
 	},
 	loader: {
 		'.ts': 'ts',
-		'.wasm': 'binary',
 	},
 	tsconfig: path.join(pluginDir, "tsconfig.json"),
 });
 
 if (prod) {
 	await context.rebuild();
+	const mainJsPath = path.join(outdir, "main.js");
+	const size = fs.statSync(mainJsPath).size;
+	const sizeMb = size / (1024 * 1024);
+	const syncStandardLimit = 5 * 1024 * 1024;
+	console.log(`main.js size: ${sizeMb.toFixed(2)} MB (${size} bytes)`);
+	if (size > syncStandardLimit) {
+		console.error(
+			`main.js exceeds the 5 MB Obsidian Sync Standard limit (${sizeMb.toFixed(2)} MB).`
+		);
+		process.exit(1);
+	}
 	process.exit(0);
 } else {
 	await context.watch();

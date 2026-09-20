@@ -9,12 +9,13 @@ import {
   repoReleaseIgnores,
 } from "./eslint/scanner-ignores.mjs";
 
-const obsidianScan = process.env.OBSIDIAN_SCAN === "1";
 const pluginDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "packages/plugin");
 const pluginFiles = ["packages/plugin/**/*.{ts,tsx}"];
 
-/** Excluded for fast dev lint only; not excluded when OBSIDIAN_SCAN=1. */
-const devMonorepoIgnores = [
+/** Excluded from our ESLint runs. The official Obsidian scanner uses its own
+ * ignore list and does not read this file; see memory/2026-09-19-obsidian-review-scorecard.md.
+ */
+const monorepoPackageIgnores = [
   "packages/web/**",
   "packages/mobile/**",
   "packages/landing/**",
@@ -25,7 +26,7 @@ export default tseslint.config(
   globalIgnores([
     ...obsidianScannerIgnores,
     ...repoReleaseIgnores,
-    ...(obsidianScan ? [] : devMonorepoIgnores),
+    ...monorepoPackageIgnores,
   ]),
   {
     files: pluginFiles,

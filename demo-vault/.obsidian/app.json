@@ -1,4 +1,5 @@
 {
+  "showInlineTitle": true,
   "attachmentFolderPath": "Attachments",
   "alwaysUpdateLinks": true,
   "newLinkFormat": "shortest",

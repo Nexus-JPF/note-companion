@@ -15,10 +15,8 @@ Issue [#478](https://github.com/Nexus-JPF/note-companion/issues/478): Obsidian c
 - Restored vault-root `manifest.json` (iCloud had deleted it; plugin + eslint-plugin-obsidianmd both need it)
 
 ## Next review wins (not done)
-- Remove unused plugin deps that never import: `natural`, `compromise`, `node-fetch`, `openai`, `lodash`, `form-data`. `moment` is a package.json dep but runtime uses Obsidian `window.moment`.
-- Setup-mode selector on General (Cloud / Self-hosted / Ollama) — see `memory/2026-06-09-byok-setup-ux-followups.md`
-- Monorepo scan risk: the community scanner ignores a fixed list, not this repo's eslint config. `packages/web` / `packages/mobile` can still pollute the Scorecard if the GitHub source URL is the whole monorepo.
 - Preview scan from https://community.obsidian.md/account/plugins/fileorganizer2000 before the next release
+- If the official scanner still lints `packages/web` / `packages/mobile` / `packages/landing`, ask Discord about a source subdirectory (see `memory/2026-09-19-obsidian-review-scorecard.md`)
 
 ## How to apply
 ```bash

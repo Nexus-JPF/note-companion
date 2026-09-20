@@ -39,20 +39,25 @@ jobs:
     needs: check_release
     if: needs.check_release.outputs.is_releasing != 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      actions: write
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 10.8.1
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24.x"
           cache: pnpm
@@ -183,6 +188,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Attest plugin release assets
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            release-artifacts/main.js
+            release-artifacts/styles.css
+            release-artifacts/manifest.json
+
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -206,12 +219,11 @@ jobs:
             exit 1
           fi
           
-          # Create the GitHub release
+          # Create the GitHub release (only files Obsidian downloads)
           gh release create "${{ steps.save_release_data.outputs.version }}" \
             --title="${{ steps.save_release_data.outputs.release_name }}" \
             --notes-file=release-notes.md \
             --draft=false \
             release-artifacts/main.js \
             release-artifacts/styles.css \
-            release-artifacts/manifest.json \
-            release-artifacts/checksums.txt
+            release-artifacts/manifest.json

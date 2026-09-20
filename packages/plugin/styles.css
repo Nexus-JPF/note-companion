@@ -3,24 +3,26 @@
 @tailwind utilities;
 
 /* Remove Obsidian's default view padding for our plugin */
+.vertical-tab-content.fo2k-view,
+.workspace-leaf-content[data-type="fo2k.assistant.sidebar2"],
+.workspace-leaf-content[data-type="fo2k.dashboard"],
 .fo2k-view {
-  padding: 0 !important;
-  height: 100% !important;
-  width: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /*
- * Style isolation for all plugin components using fo- prefix
+ * Style isolation for plugin components.
+ * Prefer Obsidian CSS variables so the UI follows the active theme.
  */
 .fo-container {
-  all: initial;
   display: flex;
   flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
-  font-size: 14px;
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
   line-height: 1.5;
   color: var(--text-normal);
   background: var(--background-primary);
@@ -35,8 +37,7 @@
 }
 
 .sync-tab-container {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
+  font-family: var(--font-interface);
   color-scheme: light dark;
   box-sizing: border-box;
   line-height: 1.4;
@@ -408,8 +409,8 @@
 /* Title and Folder Suggestion Styles */
 .title-suggestion,
 .folder-suggestion {
-  box-shadow: none !important;
-  background: var(--background-secondary) !important;
+  box-shadow: none;
+  background: var(--background-secondary);
   border-radius: 0.25rem;
   padding: 0.25rem 0.5rem;
   font-size: 0.9rem;
@@ -420,7 +421,7 @@
 
 .title-suggestion:hover,
 .folder-suggestion:hover {
-  background-color: var(--interactive-accent) !important;
+  background-color: var(--interactive-accent);
   color: var(--text-on-accent);
   font-weight: var(--nav-item-weight-hover);
 }
@@ -429,13 +430,6 @@
   background: transparent;
   border: 1px dashed var(--text-muted);
   color: var(--text-muted);
-}
-
-/* Apply Tailwind to a specific class */
-@layer utilities {
-  .fo2k-* {
-    @apply *;
-  }
 }
 
 /* Fabric Prompt Manager Styles */

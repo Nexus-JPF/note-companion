@@ -12,8 +12,6 @@ const config: Config.InitialOptions = {
   // Module name mapper for Obsidian and other aliases
   moduleNameMapper: {
     '^obsidian$': '<rootDir>/__mocks__/obsidian.ts',
-    '^tiktoken/init$': '<rootDir>/__mocks__/tiktoken/init.ts',
-    '^tiktoken/tiktoken_bg.wasm$': '<rootDir>/__mocks__/tiktoken/wasm.ts',
     '^./services/logger$': '<rootDir>/__mocks__/services/logger.ts',
     '^../services/logger$': '<rootDir>/__mocks__/services/logger.ts',
     '^../../services/logger$': '<rootDir>/__mocks__/services/logger.ts',

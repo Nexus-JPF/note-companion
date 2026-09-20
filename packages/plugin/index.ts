@@ -5,16 +5,6 @@ interface ProcessEnv {
   NODE_ENV?: string;
 }
 declare const process: { env: ProcessEnv };
-declare class Buffer {
-  constructor(arg: ArrayBuffer | string, encoding?: string);
-  toString(encoding?: string): string;
-  slice(start?: number, end?: number): Buffer;
-  byteLength: number;
-  length: number;
-  readonly buffer: ArrayBuffer;
-  readonly byteOffset: number;
-  static from(arrayBuffer: ArrayBuffer): Buffer;
-}
 
 import {
   Plugin,
@@ -37,7 +27,7 @@ import {
   DashboardView,
   DASHBOARD_VIEW_TYPE,
 } from "./views/assistant/dashboard/view";
-import Jimp from "jimp/es/index";
+import { compressImageForVision, isWebP } from "./lib/compress-image";
 
 import { FileOrganizerSettings, DEFAULT_SETTINGS } from "./settings";
 
@@ -138,18 +128,6 @@ type PdfDocument = {
 type PdfJsLib = {
   getDocument: (opts: { data: Uint8Array }) => { promise: Promise<PdfDocument> };
 };
-
-type JimpImage = {
-  getWidth: () => number;
-  getHeight: () => number;
-  scaleToFit: (w: number, h: number) => void;
-  getBufferAsync: (mime: string) => Promise<Buffer>;
-};
-type JimpStatic = {
-  read: (buf: Buffer) => Promise<JimpImage>;
-  MIME_PNG: string;
-};
-const JimpLib = Jimp as JimpStatic;
 
 async function parseApiErrorMessage(
   response: Response,
@@ -1234,23 +1212,12 @@ export default class FileOrganizer extends Plugin {
     return this.userFoldersCache;
   }
 
-  async compressImage(fileContent: Buffer): Promise<Buffer> {
-    const image = await JimpLib.read(fileContent);
-
-    // Check if the image is bigger than 1000 pixels in either width or height
-    if (image.getWidth() > 1000 || image.getHeight() > 1000) {
-      // Resize the image to a maximum of 1000x1000 while preserving aspect ratio
-      image.scaleToFit(1000, 1000);
-    }
-
-    return await image.getBufferAsync(JimpLib.MIME_PNG);
+  async compressImage(fileContent: ArrayBuffer): Promise<ArrayBuffer> {
+    return compressImageForVision(fileContent);
   }
 
-  isWebP(fileContent: Buffer): boolean {
-    return (
-      fileContent.slice(0, 4).toString("hex") === "52494646" &&
-      fileContent.slice(8, 12).toString("hex") === "57454250"
-    );
+  isWebP(fileContent: ArrayBuffer | Uint8Array): boolean {
+    return isWebP(fileContent);
   }
 
   async generateImageAnnotation(file: TFile) {
@@ -1258,30 +1225,11 @@ export default class FileOrganizer extends Plugin {
     if (!arrayBuffer || arrayBuffer.byteLength === 0) {
       throw new Error(`Could not read image file: ${file.path}`);
     }
-    const fileContent = Buffer.from(arrayBuffer);
-    const imageSize = fileContent.byteLength;
-    const imageSizeInMB2 = imageSize / (1024 * 1024);
+    const imageSizeInMB2 = arrayBuffer.byteLength / (1024 * 1024);
     logMessage(`Image size: ${imageSizeInMB2.toFixed(2)} MB`);
 
-    let processedArrayBuffer: ArrayBuffer;
-    if (this.isWebP(fileContent)) {
-      // Jimp 0.22 cannot decode WebP — send raw bytes; server sniffs image/webp
-      processedArrayBuffer = arrayBuffer;
-    } else {
-      const resizedImage = await this.compressImage(fileContent);
-      const compressedBytes = new Uint8Array(
-        resizedImage.buffer,
-        resizedImage.byteOffset,
-        resizedImage.byteLength
-      );
-      processedArrayBuffer = compressedBytes.slice().buffer;
-    }
-
-    const processedContent = await this.extractTextFromImage(
-      processedArrayBuffer
-    );
-
-    return processedContent;
+    const processedArrayBuffer = await this.compressImage(arrayBuffer);
+    return this.extractTextFromImage(processedArrayBuffer);
   }
 
   async extractTextFromImage(image: ArrayBuffer): Promise<string> {

@@ -1,9 +1,12 @@
 import React from "react";
-import { init, get_encoding } from "tiktoken/init";
-import wasmBinary from "tiktoken/tiktoken_bg.wasm";
 import { useDebouncedCallback } from "use-debounce";
 import { logger } from "../../../services/logger";
 import { useContextItems } from "./use-context-items";
+import {
+  cleanup,
+  getTokenCount,
+  initializeTokenCounter,
+} from "../../../utils/token-counter";
 
 interface TokenStats {
   contextSize: number;
@@ -22,48 +25,33 @@ export function ContextLimitIndicator({
     percentUsed: 0,
   });
   const [error, setError] = React.useState<string>();
-  const [tiktokenInitialized, setTiktokenInitialized] = React.useState(false);
+  const [counterReady, setCounterReady] = React.useState(false);
   const { isLightweightMode, toggleLightweightMode } = useContextItems();
 
-  // Initialize encoder once on mount
   React.useEffect(() => {
-    async function setup() {
-      try {
-        if (!tiktokenInitialized) {
-          await init(imports => WebAssembly.instantiate(wasmBinary, imports));
-          setTiktokenInitialized(true);
-        }
-      } catch {
-        setError("Failed to initialize token counter");
-      }
-    }
-
-    void setup();
+    void initializeTokenCounter().then(() => setCounterReady(true));
+    return () => cleanup();
   }, []);
 
-  // Debounced token calculation
   const calculateTokens = useDebouncedCallback((text: string) => {
-    if (!text || !tiktokenInitialized) return;
-    const encoder = get_encoding("cl100k_base");
+    if (!text || !counterReady) return;
 
     try {
-      const tokens = encoder.encode(text);
+      const tokens = getTokenCount(text);
       logger.debug("tokens", { tokens });
       setStats({
-        contextSize: tokens.length,
-        percentUsed: (tokens.length / maxContextSize) * 100,
+        contextSize: tokens,
+        percentUsed: (tokens / maxContextSize) * 100,
       });
     } catch {
       setError("Token counting failed");
-    } finally {
-      encoder.free();
     }
   }, 300);
 
   // Update tokens when context changes
   React.useEffect(() => {
     calculateTokens(unifiedContext);
-  }, [unifiedContext]);
+  }, [unifiedContext, counterReady, calculateTokens]);
 
   if (error) {
     return (

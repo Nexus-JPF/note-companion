@@ -42,5 +42,6 @@ module.exports = {
     displayContents: false,
   },
   // Tailwind's content scanner matches `.contents` inside TS (e.g. `section?.contents`).
-  blocklist: ["contents"],
+  // `!visible` is the only remaining `!important` utility the Obsidian CSS scan flags.
+  blocklist: ["contents", "!visible"],
 }
