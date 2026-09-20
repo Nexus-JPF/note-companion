@@ -6,3 +6,8 @@ out/
 public/*.mp4
 public/*.mov
 public/*.webm
+
+# Thumbnail source frames, pulled out of the footage with ffmpeg. Derived,
+# like the footage itself:
+#   ffmpeg -ss 45 -i public/ep01.mp4 -frames:v 1 public/shot-organizer.png
+public/shot-*.png
