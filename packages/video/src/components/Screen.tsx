@@ -12,13 +12,24 @@ import type { Layout } from '../layout';
  * Note Companion panel lives in the right ~32% of the Obsidian window, so the
  * default focus is right-biased rather than centred. Centring a 16:9 Obsidian
  * capture in a 9:16 frame shows the file tree and cuts off the product.
+ *
+ * 0.80 is measured off the real capture, not guessed. Scaling 1536x864 to
+ * fill a 1080x1920 frame shows 486px of source width. The panel's chrome runs
+ * x=971..1524, which is wider than that, but its *content* only spans
+ * x=996..1457 (461px) -- the tab bar is the widest row. Centring on that
+ * content, 1226/1536, leaves roughly 12px of margin each side and clips only
+ * the panel's own padding.
+ *
+ * Measure again if the window size or the sidebar width changes; the number
+ * is specific to a 1536x864 capture with the layout committed in
+ * demo-vault/.obsidian/workspace.json.
  */
 export const Screen: React.FC<{
   src?: string;
   layout: Layout;
   /** 0 = crop to left edge, 1 = crop to right edge. */
   focusX?: number;
-}> = ({ src, layout, focusX = 0.78 }) => {
+}> = ({ src, layout, focusX = 0.8 }) => {
   if (!src) {
     return <CaptureSpec layout={layout} />;
   }

@@ -46,7 +46,7 @@ export const Episode: React.FC<EpisodeProps> = ({
         <Screen
           src={footage}
           layout={layout}
-          focusX={format === 'clip' ? 0.78 : 0.5}
+          focusX={format === 'clip' ? 0.8 : 0.5}
         />
 
         {lowerThirds.map((cue, i) => {
