@@ -1,7 +1,16 @@
 import React from 'react';
-import { AbsoluteFill, OffthreadVideo, staticFile } from 'remotion';
-import { color, type } from '../tokens';
+import {
+  AbsoluteFill,
+  Easing,
+  interpolate,
+  OffthreadVideo,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from 'remotion';
+import { color, FOCUS, motion, type } from '../tokens';
 import type { Layout } from '../layout';
+import type { FocusCue } from '../types';
 
 /**
  * Wraps the hand-captured screen recording.
@@ -24,12 +33,35 @@ import type { Layout } from '../layout';
  * is specific to a 1536x864 capture with the layout committed in
  * demo-vault/.obsidian/workspace.json.
  */
+const ease = Easing.bezier(...motion.ease);
+
 export const Screen: React.FC<{
   src?: string;
   layout: Layout;
-  /** 0 = crop to left edge, 1 = crop to right edge. */
-  focusX?: number;
-}> = ({ src, layout, focusX = 0.8 }) => {
+  /** A fixed position, or a track to pan along. 0 = left edge, 1 = right. */
+  focus?: number | FocusCue[];
+}> = ({ src, layout, focus = FOCUS.panel }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  // A single value holds still; a track pans. Two cues sharing an x hold, so
+  // a move is just a pair that differ -- no separate "hold" concept needed.
+  let focusX: number;
+  if (typeof focus === 'number') {
+    focusX = focus;
+  } else if (focus.length === 0) {
+    focusX = FOCUS.panel;
+  } else if (focus.length === 1) {
+    focusX = focus[0].x;
+  } else {
+    focusX = interpolate(
+      frame / fps,
+      focus.map((c) => c.at),
+      focus.map((c) => c.x),
+      { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: ease },
+    );
+  }
+
   if (!src) {
     return <CaptureSpec layout={layout} />;
   }

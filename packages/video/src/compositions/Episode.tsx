@@ -1,6 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Sequence, useVideoConfig } from 'remotion';
-import { color, motion } from '../tokens';
+import { color, FOCUS, motion } from '../tokens';
 import { getLayout } from '../layout';
 import { TitleCard } from '../components/TitleCard';
 import { LowerThird } from '../components/LowerThird';
@@ -22,6 +22,7 @@ export const Episode: React.FC<EpisodeProps> = ({
   footageDurationInSeconds,
   captions,
   lowerThirds,
+  focus,
   endCard,
 }) => {
   const { fps } = useVideoConfig();
@@ -46,7 +47,8 @@ export const Episode: React.FC<EpisodeProps> = ({
         <Screen
           src={footage}
           layout={layout}
-          focusX={format === 'clip' ? 0.8 : 0.5}
+          // 16:9 shows the whole frame, so a camera move would be a no-op.
+          focus={format === 'clip' ? focus ?? FOCUS.panel : 0.5}
         />
 
         {lowerThirds.map((cue, i) => {

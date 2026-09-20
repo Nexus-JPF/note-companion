@@ -1,3 +1,4 @@
+import { FOCUS } from '../tokens';
 import type { EpisodeProps } from '../types';
 
 /**
@@ -26,6 +27,23 @@ export const ep01: Omit<EpisodeProps, 'format'> = {
     { at: 3, duration: 5, title: 'Ask for a summary', detail: 'Note Companion Chat' },
     { at: 25.5, duration: 5, title: 'Straight into a note', detail: 'One click from the chat' },
     { at: 37, duration: 6, title: 'Filed automatically', detail: 'Tags and folder suggested' },
+  ],
+
+  /**
+   * Vertical cut only. The action moves between two panes, so the crop
+   * follows it: the chat panel while the summary is being asked for and
+   * written, the editor while the note fills, then back to the panel for the
+   * tag and folder suggestions. Arrives on the editor at 27s, just as the
+   * append lands, and is settled back on the panel before the Organizer
+   * caption at 37s.
+   */
+  focus: [
+    { at: 0, x: FOCUS.panel },
+    { at: 23.5, x: FOCUS.panel },
+    { at: 27, x: FOCUS.editor },
+    { at: 34, x: FOCUS.editor },
+    { at: 37, x: FOCUS.panel },
+    { at: 60.8, x: FOCUS.panel },
   ],
 
   captions: [

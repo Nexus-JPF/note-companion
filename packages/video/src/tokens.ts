@@ -94,4 +94,23 @@ export const safeArea = {
   clip: { top: 0.12, bottom: 0.16, left: 0.07, right: 0.07 },
 } as const;
 
+/**
+ * Horizontal focus positions for the vertical crop, as a fraction of the
+ * 1536px-wide capture. Both measured off public/ep01.mp4; see Screen.tsx for
+ * the method and re-measure if the window or sidebar width changes.
+ *
+ * A 1080x1920 frame shows 486px of source width.
+ *
+ * - panel  0.80 -> shows 986..1472. The Note Companion panel's content runs
+ *   996..1457, so it fits with ~12px each side.
+ * - editor 0.40 -> shows 371..857. The note text runs 376..929, wider than
+ *   the frame, so this is biased left: line starts and the heading stay
+ *   readable and the ragged right edge is what gets clipped. The viewer needs
+ *   to see that a note filled with structured markdown exists, not to read it.
+ */
+export const FOCUS = {
+  panel: 0.8,
+  editor: 0.4,
+} as const;
+
 export type FormatName = keyof typeof FORMATS;

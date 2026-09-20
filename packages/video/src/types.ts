@@ -7,6 +7,19 @@ export type Cue = {
   text: string;
 };
 
+/**
+ * Where the vertical crop should be looking, over time. Values between cues
+ * are interpolated, so two cues with the same x hold still and a pair with
+ * different x pans between them. Ignored by the 16:9 format, which shows the
+ * whole frame anyway.
+ */
+export type FocusCue = {
+  /** Seconds from the start of the footage. */
+  at: number;
+  /** 0 = crop to the left edge of the capture, 1 = the right edge. */
+  x: number;
+};
+
 /** A labelled moment -- what the viewer is looking at right now. */
 export type LowerThirdCue = {
   at: number;
@@ -31,6 +44,11 @@ export type EpisodeProps = {
   footageDurationInSeconds: number;
   captions: Cue[];
   lowerThirds: LowerThirdCue[];
+  /**
+   * Optional camera move for the vertical cut. Omit to hold on FOCUS.panel
+   * for the whole episode.
+   */
+  focus?: FocusCue[];
   endCard: {
     headline: string;
     url: string;
