@@ -1,7 +1,7 @@
 # Plugin audit: Obsidian review quick wins (2026-09-18)
 
 ## Context
-Issue [#478](https://github.com/Nexus-JPF/note-companion/issues/478): Obsidian community directory automated review is failing. After **2026-10-30** a failing latest release is delisted.
+Issue [#478](https://github.com/Nexus-JPF/note-companion/issues/478): directory review failed on `3.6.32`, then **Completed** on `3.6.33` (2026-09-20). Canonical write-up: `memory/2026-09-19-obsidian-review-scorecard.md`. After **2026-10-30** a failing latest release is delisted.
 
 `memory/2026-06-10-obsidian-eslint-setup.md` still says ~2000 lint violations. That is stale. A local `pnpm lint:obsidian-scan` of `packages/plugin` (2026-09-18) had **6 errors**, all either:
 
@@ -14,9 +14,8 @@ Issue [#478](https://github.com/Nexus-JPF/note-companion/issues/478): Obsidian c
 - esbuild: `builtinModules` from `node:module` instead of the `builtin-modules` package (scanner lists that package as replaceable)
 - Restored vault-root `manifest.json` (iCloud had deleted it; plugin + eslint-plugin-obsidianmd both need it)
 
-## Next review wins (not done)
-- Preview scan from https://community.obsidian.md/account/plugins/fileorganizer2000 before the next release
-- If the official scanner still lints `packages/web` / `packages/mobile` / `packages/landing`, ask Discord about a source subdirectory (see `memory/2026-09-19-obsidian-review-scorecard.md`)
+## Follow-up (optional, not listing-blocking)
+See `memory/2026-09-19-obsidian-review-scorecard.md` for `3.6.33` leftovers (`fs` Behavior warning, `createEl` vs canvas, monorepo source false positives).
 
 ## How to apply
 ```bash

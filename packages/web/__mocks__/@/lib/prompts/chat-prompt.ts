@@ -21,3 +21,14 @@ export const getChatSystemPrompt = jest.fn(
     return `You are a helpful assistant. Context: ${contextString}. Current time: ${currentDatetime}`;
   }
 );
+
+export const lastUserMessageHasYoutubeUrl = jest.fn((messages: unknown[]) => {
+  const list = Array.isArray(messages) ? messages : [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    const m = list[i] as { role?: string; content?: unknown };
+    if (m?.role !== 'user') continue;
+    const content = typeof m.content === 'string' ? m.content : '';
+    return /(?:youtube\.com|youtu\.be)\//i.test(content);
+  }
+  return false;
+});

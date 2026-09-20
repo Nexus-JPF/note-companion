@@ -24,7 +24,7 @@ export const CHAT_PROMPT_HINTS_FULL: ChatPromptHints = {
   includeMerge: true,
 };
 
-function getLastUserText(messages: unknown[]): string {
+export function getLastUserText(messages: unknown[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i] as { role?: string; content?: unknown };
     if (m?.role !== 'user') continue;
@@ -40,6 +40,11 @@ function getLastUserText(messages: unknown[]): string {
     return '';
   }
   return '';
+}
+
+/** True when the latest user message contains a YouTube watch/share URL. */
+export function lastUserMessageHasYoutubeUrl(messages: unknown[]): boolean {
+  return /(?:youtube\.com|youtu\.be)\//i.test(getLastUserText(messages));
 }
 
 /**
@@ -170,6 +175,7 @@ Use \`[[Note Title]]\` for vault notes. Never put \`**\` on a line that contains
 }
 
 const MODULE_YOUTUBE = `### YouTube transcripts
+If the user message contains a youtube.com or youtu.be URL, you MUST call \`getYoutubeVideoId\` with that URL (or the video id) before answering. Do not use web search or \`fetchUrlContent\` for YouTube. Do not say you cannot watch or access the video — the tool fetches the transcript.
 Transcripts appear under \`YouTube Video:\` / Full Transcript in this prompt or in tool stubs pointing here. If the user asked for summary/analysis: cover themes, key points, takeaway; **omit sponsors/ads** (promo codes, "sponsored by", mid-rolls — skip those sections entirely). If they asked a specific question, answer it only; don't add an unrequested summary. If nothing specific, a short acknowledgment is enough. Prioritize the user's question over extra summary.`;
 
 const MODULE_WEB_FETCH = `### Web pages (non-YouTube)

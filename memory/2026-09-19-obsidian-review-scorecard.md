@@ -1,55 +1,53 @@
-# Obsidian community review scorecard (release 3.6.32)
+# Obsidian community review scorecard
 
-## What failed
-This is **not** GitHub Actions. CI (`Obsidian review lint`, `Build Obsidian Plugin`) is green after the 2026-09-18 pnpm workflow fix.
+Dashboard: https://community.obsidian.md/account/plugins/fileorganizer2000  
+Issue: [#478](https://github.com/Nexus-JPF/note-companion/issues/478)  
+This is **not** GitHub Actions. The community directory clones the GitHub repo and scans the latest GitHub release. After **2026-10-30** a failing latest release is delisted.
 
-The failure is the **Obsidian community directory automated review** of GitHub release `3.6.32` ([issue #478](https://github.com/Nexus-JPF/note-companion/issues/478)). After **2026-10-30** a failing latest release is delisted.
+## Outcome
 
-Dashboard: https://community.obsidian.md/account/plugins/fileorganizer2000
-
-Release `3.6.32` shipped `main.js` at **13,982,917 bytes (~13.3 MiB)**. After this pass, a local production build is **1.43 MB (1,498,585 bytes)**.
-
-## Triage
-
-### Must fix (user-facing or scanner-blocking)
-
-| Finding | Cause | Fix |
+| Release | Date | Directory status |
 | --- | --- | --- |
-| `main.js` > 5 MB | Production esbuild had **no `minify`**. tiktoken WASM was inlined as a JS byte array. jimp pulled image codecs + Node `fs`. | `minify: prod`; replace tiktoken with a char/4 estimate; replace jimp with canvas; drop unused deps; fail the build if `main.js` exceeds 5 MB |
-| Extra release file `checksums.txt` | Obsidian only downloads `main.js`, `manifest.json`, `styles.css` | Keep checksums in release notes; do not attach `checksums.txt` |
-| Missing artifact attestations | Release workflow did not call `actions/attest-build-provenance` | Attest the three plugin assets before `gh release create` |
-| Direct filesystem access | Bundled `jimp` + `platform: "node"` left `require("fs")` in `main.js` | Canvas compressor; `platform: "browser"` |
-| Dynamic `eval` / `new Function` | tiktoken WASM glue (and possibly jimp) | Remove those deps from the plugin bundle |
-| CSS `all` / `!important` / system fonts | Isolation reset and leaf padding overrides | More specific selectors + Obsidian CSS variables |
+| `3.6.32` | 2026-09-19 | Failed (`main.js` 13.98 MB, no attestations, extra `checksums.txt`) |
+| `3.6.33` | 2026-09-20, commit `a9aade4` | **Completed** — plugin stays listed |
 
-### Acceptable plugin behavior (document, do not "fix")
+`3.6.33` also **Pass**: artifact attestations on `main.js` and `styles.css`, no vulnerable deps, `main.js` reproduced byte-for-byte from source. Local / CI production `main.js` is **1.43 MB** (build fails if it exceeds 5 MB).
 
-- **Vault enumeration** (`getMarkdownFiles` / `getFiles`): required for inbox, search tools, and organizer.
-- **Clipboard write**: copy chat / logs. User-initiated only.
-- **Vault read/write** via the Obsidian API: already a **Pass**.
+## What we changed (for `3.6.33`)
 
-### False positives (monorepo source scan)
+| Finding on `3.6.32` | Fix |
+| --- | --- |
+| `main.js` > 5 MB | `minify: prod` in `packages/plugin/esbuild.config.mjs`; drop tiktoken WASM (char/4 estimate in `utils/token-counter.ts`); replace jimp with canvas (`lib/compress-image.ts`); remove unused plugin deps |
+| Extra release file `checksums.txt` | Keep checksums in release notes only; do not attach the file (`.github/workflows/manual-release.yml`) |
+| Missing artifact attestations | `actions/attest-build-provenance@v2` on `main.js`, `styles.css`, `manifest.json` |
+| Direct `fs` / `eval` | Stopped bundling jimp and tiktoken; esbuild `platform: "browser"` |
+| CSS `all` / `!important` / system fonts | More specific leaf selectors + Obsidian CSS variables in `packages/plugin/styles.css` |
 
-The official scanner clones the **whole GitHub repo** and applies `eslint-plugin-obsidianmd` with **its** ignore list. It does **not** use this repo's `eslint.config.mjs` `files: packages/plugin/**` glob. ESLint 9 also ignores `.eslintignore`.
+Do **not** mass-rewrite `packages/web` / `packages/mobile` / `packages/landing` to Obsidian rules (`requestUrl`, `window.setTimeout`, no `fetch`). Those are Next.js / Expo apps. The official scanner does not use this repo's `eslint.config.mjs` plugin-only globs.
 
-That is why the scorecard lists `packages/web`, `packages/mobile`, `packages/landing`, and `packages/release-notes` for `fetch`, `any`, `console`, `require()`, `setTimeout`, etc. Those packages are Next.js / Expo apps, not the Obsidian plugin.
+## Still on the `3.6.33` scorecard (informational)
 
-Plugin TypeScript already passes `pnpm lint:obsidian-scan` (0 errors). Non-plugin packages are ignored in `eslint.config.mjs`.
+**Keep — real plugin behavior**
 
-Do **not** mass-rewrite web/mobile/landing to Obsidian rules (`requestUrl`, `window.setTimeout`, no `fetch`).
+- Vault enumeration (`getMarkdownFiles` / `getFiles`): inbox, search tools, organizer
+- Clipboard write: copy chat / logs, user-initiated
+- Vault read/write via the Obsidian API: already **Pass**
 
-Tailwind `@tailwind` / `@theme` CSS hits in other packages are the same class of false positive. Our `pnpm lint:css` already ignores those trees.
+**Leftover plugin-adjacent warnings (did not block Completed)**
+
+- **Direct Filesystem Access** on the Behavior scan of `main.js`. Plugin *source* only imports `fs` in `.mjs` build scripts (`esbuild.config.mjs`, `version-bump.mjs`, `normalize-css-hex.mjs`). Detector still fires on the bundle; not listing-blocking.
+- **`document.createElement("canvas")`** in `packages/plugin/lib/compress-image.ts` — Obsidian prefers `createEl`. Introduced when replacing jimp.
+
+**Ignore — monorepo false positives**
+
+Every `fetch` / `any` / `console` / `require()` / `setTimeout` / unused-import hit on `packages/web`, `packages/mobile`, `packages/landing`, `packages/release-notes`. Same for CSS `@tailwind` / `@theme` in those packages and in plugin *source* `styles.css` (shipped artifact is compiled `styles.css` without those at-rules).
 
 ## How to apply
 ```bash
-pnpm install
 pnpm lint:obsidian-scan
 pnpm lint:css
 pnpm --filter @file-organizer/plugin test
 pnpm build   # fails if main.js > 5 MB
 ```
 
-Preview the community scan before the next release: https://community.obsidian.md/account/plugins/fileorganizer2000
-
-## Remaining risk after this pass
-If the official scanner still lints `packages/web` / `packages/mobile` / `packages/landing`, those warnings will remain until Obsidian supports a source subdirectory or we split the plugin repo. Ask in the Community Directory Discord if that happens after the next release.
+Earlier Node-builtin / pnpm CI fixes: `memory/2026-09-18-plugin-obsidian-review-quick-win.md`.

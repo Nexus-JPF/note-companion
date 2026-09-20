@@ -212,6 +212,31 @@ describe('Chat API Route', () => {
     expect(streamOptions.tools?.web_search_preview).toBeDefined();
   });
 
+  it('uses non-search path when the user pastes a YouTube URL', async () => {
+    const mockRequest = new NextRequest('http://localhost:3000/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'user',
+            content:
+              'Summarize this: https://www.youtube.com/watch?v=1vzes3R8xhA',
+          },
+        ],
+      }),
+      headers: {
+        'x-user-id': 'test-user',
+      },
+    });
+
+    await POST(mockRequest);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(streamText).toHaveBeenCalled();
+    const streamOptions = (streamText as jest.Mock).mock.calls[0][0];
+    expect(streamOptions.tools?.web_search_preview).toBeUndefined();
+  });
+
   it('uses non-search path when enableChatWebSearch is false', async () => {
     const mockRequest = new NextRequest('http://localhost:3000/api/chat', {
       method: 'POST',
@@ -503,5 +528,83 @@ describe('Chat API Route', () => {
     expect(firstPart.result).toContain('test123');
 
     consoleLogSpy.mockRestore();
+  });
+
+  it('parses unified context when the plugin prepends attached file paths', async () => {
+    process.env[webSearchEnvKey] = 'false';
+
+    const unifiedContext = {
+      files: {},
+      youtubeVideos: {
+        'youtube-1vzes3R8xhA': {
+          id: 'youtube-1vzes3R8xhA',
+          videoId: '1vzes3R8xhA',
+          title: "Inside Arsenal's summer transfer window",
+          transcript: 'Arteta laid out his manifesto',
+          reference: "YouTube Video: Inside Arsenal's summer transfer window",
+        },
+      },
+    };
+    const newUnifiedContext = `Attached file paths — use these exact strings for mergeFiles sourceFiles, getFileMetadata filePaths, deleteFiles filePaths, or extractHighlights filePath/filePaths (do not modify):
+Untitled.md
+
+${JSON.stringify(unifiedContext)}`;
+
+    const mockRequest = new NextRequest('http://localhost:3000/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'user',
+            content:
+              'Summarize https://www.youtube.com/watch?v=1vzes3R8xhA',
+          },
+          {
+            role: 'assistant',
+            content: '',
+            toolInvocations: [
+              {
+                toolCallId: 'call_okzw',
+                toolName: 'getYoutubeVideoId',
+                state: 'result',
+                args: { videoId: '1vzes3R8xhA' },
+                result:
+                  "YouTube Video Transcript Retrieved\n\nTitle: Inside Arsenal's summer transfer window\n\nVideo ID: 1vzes3R8xhA\n\nFULL TRANSCRIPT:\nArteta laid out his manifesto",
+              },
+            ],
+          },
+        ],
+        newUnifiedContext,
+      }),
+      headers: {
+        'x-user-id': 'test-user',
+      },
+    });
+
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    const response = await POST(mockRequest);
+    expect(response instanceof Response).toBe(true);
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const parseError = consoleErrorSpy.mock.calls.find((call) =>
+      String(call[0]).includes('Failed to parse context JSON')
+    );
+    expect(parseError).toBeUndefined();
+
+    const parsedLog = consoleLogSpy.mock.calls.find((call) =>
+      String(call[0]).includes('Parsed context items:')
+    );
+    expect(parsedLog).toBeDefined();
+
+    const skipLog = consoleLogSpy.mock.calls.find((call) =>
+      call[0]?.includes('Skipping redundant YouTube hoist')
+    );
+    expect(skipLog).toBeDefined();
+
+    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 });

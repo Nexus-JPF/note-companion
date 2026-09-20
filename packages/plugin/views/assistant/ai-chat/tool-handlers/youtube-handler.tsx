@@ -1,23 +1,10 @@
 import React, { useRef, useState } from "react";
 import { logger } from "../../../../services/logger";
 import { addYouTubeContext, useContextItems } from "../use-context-items";
-import {
-  getYouTubeContent,
-  extractYouTubeVideoId,
-} from "../../../../inbox/services/youtube-service";
+import { getYouTubeContent } from "../../../../inbox/services/youtube-service";
 import { usePlugin } from "../../provider";
 import { ToolHandlerProps } from "./types";
-
-interface YouTubeArgs {
-  videoId?: string;
-}
-
-function isThenable(value: unknown): boolean {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  return typeof Reflect.get(value, "then") === "function";
-}
+import { resolveYoutubeToolInvocation } from "./youtube-tool-ready";
 
 export function YouTubeHandler({
   toolInvocation,
@@ -28,66 +15,45 @@ export function YouTubeHandler({
   const [fetchSuccess, setFetchSuccess] = useState<boolean | null>(null);
 
   React.useEffect(() => {
-    const args = toolInvocation.args as YouTubeArgs;
+    const resolved = resolveYoutubeToolInvocation({
+      args: toolInvocation.args,
+      hasResult: "result" in toolInvocation,
+    });
 
     console.debug("[YouTube Handler] useEffect triggered", {
       toolName: toolInvocation.toolName,
-      hasArgs: !!args,
-      videoId: args.videoId,
+      hasArgs: !!toolInvocation.args,
+      resolved,
       hasFetched: hasFetchedRef.current,
       hasResult: "result" in toolInvocation,
     });
 
     const handleYouTubeTranscript = async () => {
-      if (hasFetchedRef.current || "result" in toolInvocation) {
+      if (hasFetchedRef.current || resolved.status === "wait") {
         console.debug(
-          "[YouTube Handler] Skipping - already fetched or has result",
+          "[YouTube Handler] Skipping - already fetched, waiting for args, or has result",
           {
             hasFetched: hasFetchedRef.current,
-            hasResult: "result" in toolInvocation,
+            resolved,
           }
         );
         return;
       }
 
+      if (resolved.status === "error") {
+        logger.error(resolved.message, { args: toolInvocation.args });
+        hasFetchedRef.current = true;
+        handleAddResult(JSON.stringify({ error: resolved.message }));
+        setFetchSuccess(false);
+        return;
+      }
+
+      const videoId = resolved.videoId;
+
       console.debug("[YouTube Handler] Starting handler execution");
       hasFetchedRef.current = true;
 
       try {
-        let videoId = args.videoId;
-
-        if (isThenable(videoId)) {
-          const errorMsg =
-            "Invalid videoId: received a Promise instead of a string value";
-          logger.error(errorMsg, { args: toolInvocation.args });
-          handleAddResult(JSON.stringify({ error: errorMsg }));
-          setFetchSuccess(false);
-          return;
-        }
-
-        if (!videoId || typeof videoId !== "string") {
-          const errorMsg = `Invalid videoId: videoId is required and must be a string. Received type: ${typeof videoId}, value: ${String(
-            videoId
-          ).substring(0, 100)}`;
-          logger.error(errorMsg, { args: toolInvocation.args });
-          handleAddResult(JSON.stringify({ error: errorMsg }));
-          setFetchSuccess(false);
-          return;
-        }
-
-        const extractedId = extractYouTubeVideoId(videoId);
-        if (extractedId) {
-          videoId = extractedId;
-        } else if (!/^[a-zA-Z0-9_-]+$/.test(videoId)) {
-          const errorMsg = `Invalid videoId format. Expected YouTube video ID or URL, got: ${videoId.substring(
-            0,
-            50
-          )}`;
-          logger.error(errorMsg);
-          handleAddResult(JSON.stringify({ error: errorMsg }));
-          setFetchSuccess(false);
-          return;
-        }
 
         console.debug(
           "[YouTube Handler] About to fetch content for videoId:",
