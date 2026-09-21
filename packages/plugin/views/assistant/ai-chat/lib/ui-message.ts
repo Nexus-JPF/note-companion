@@ -76,6 +76,32 @@ export function getFileParts(message: {
     }));
 }
 
+function rewriteLegacyParts(parts: UIMessage["parts"]): UIMessage["parts"] {
+  return parts.map(part => {
+    const typed = part as {
+      type?: string;
+      toolCallId?: string;
+      toolName?: string;
+      state?: string;
+      input?: unknown;
+      args?: unknown;
+      output?: unknown;
+      result?: unknown;
+      toolInvocation?: LegacyToolInvocation;
+    };
+    if (typed.type !== "tool-invocation") return part;
+    return toolPartFromLegacy({
+      toolCallId: typed.toolInvocation?.toolCallId ?? typed.toolCallId,
+      toolName: typed.toolInvocation?.toolName ?? typed.toolName,
+      state: typed.toolInvocation?.state ?? typed.state,
+      input: typed.toolInvocation?.input ?? typed.input,
+      args: typed.toolInvocation?.args ?? typed.args,
+      output: typed.toolInvocation?.output ?? typed.output,
+      result: typed.toolInvocation?.result ?? typed.result,
+    });
+  });
+}
+
 function toolPartFromLegacy(inv: LegacyToolInvocation): UIMessage["parts"][number] {
   const name = inv.toolName || "unknown";
   const hasOut =
@@ -109,7 +135,7 @@ export function convertLegacyToUIMessage(raw: unknown): UIMessage {
         ? message.id
         : generateId(),
       role,
-      parts: message.parts,
+      parts: rewriteLegacyParts(message.parts),
       ...(message.metadata != null ? { metadata: message.metadata } : {}),
     };
   }

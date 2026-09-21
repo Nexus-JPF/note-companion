@@ -125,9 +125,10 @@ jest.mock('ai-v5', () => {
   };
 });
 
-jest.mock('@ai-sdk/openai', () => ({
+jest.mock('@ai-sdk/openai-v5', () => ({
   openai: Object.assign(
     jest.fn(() => ({
+      specificationVersion: 'v2',
       generateText: jest.fn(),
     })),
     {
@@ -137,8 +138,11 @@ jest.mock('@ai-sdk/openai', () => ({
           searchContextSize: options?.searchContextSize || 'low',
         })),
       },
-      responses: jest.fn(),
+      responses: jest.fn(() => ({ specificationVersion: 'v2' })),
     }
+  ),
+  createOpenAI: jest.fn(() =>
+    jest.fn(() => ({ specificationVersion: 'v2' }))
   ),
 }));
 

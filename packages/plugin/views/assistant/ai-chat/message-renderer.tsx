@@ -21,6 +21,7 @@ export function toRenderableChatMessage(
 ): RenderableChatMessage {
   const createdAt =
     existingTimestamp ??
+    (msg as RenderableChatMessage).createdAt ??
     Date.now();
 
   return { ...msg, createdAt };
@@ -46,10 +47,15 @@ function hasPendingToolCalls(message: RenderableChatMessage): boolean {
 
   return toolParts.some((p) => {
     const part = p as {
+      state?: string;
       output?: unknown;
-      toolInvocation?: { result?: unknown };
+      toolInvocation?: { result?: unknown; state?: string };
     };
+    if (part.state === "output-available" || part.state === "output-error") {
+      return false;
+    }
     if (part.output !== undefined) return false;
+    if (part.toolInvocation?.state === "result") return false;
     return part.toolInvocation?.result === undefined;
   });
 }

@@ -8,10 +8,10 @@ import {
 } from 'ai-v5';
 import { NextRequest } from 'next/server';
 import { incrementAndLogTokenUsage } from '@/lib/incrementAndLogTokenUsage';
-import { openai } from '@ai-sdk/openai';
-import { getModel, getResponsesModel } from '@/lib/models';
 import { LARGE_CONTEXT_CHAR_THRESHOLD } from '@/lib/chat/chat-max-steps';
 import { getChatResponsesProviderOptions } from '@/lib/chat/chat-openai-options';
+import { coerceToUiMessages } from '@/lib/chat/coerce-ui-messages';
+import { getModelV5, getResponsesModelV5, openaiV5 } from '@/lib/models-v5';
 import { buildV5ChatTools } from '../tools';
 import {
   AuthorizationError,
@@ -40,50 +40,6 @@ function mapCitations(
     startIndex: 0,
     endIndex: 0,
   }));
-}
-
-/**
- * Accept UIMessage parts, or v4-shaped { content, toolInvocations } so tests
- * (and a future probe) can hit this route before the plugin useChat rewrite.
- */
-function coerceToUiMessages(messages: unknown[]): any[] {
-  if (!Array.isArray(messages)) return [];
-  return messages.map((raw) => {
-    const m = raw as any;
-    if (!m || typeof m !== 'object') return m;
-    if (Array.isArray(m.parts) && m.parts.length > 0) {
-      return m;
-    }
-    const parts: any[] = [];
-    if (typeof m.content === 'string' && m.content.length > 0) {
-      parts.push({ type: 'text', text: m.content });
-    } else if (Array.isArray(m.content)) {
-      for (const part of m.content) {
-        if (part?.type === 'text' && typeof part.text === 'string') {
-          parts.push({ type: 'text', text: part.text });
-        }
-      }
-    }
-    if (Array.isArray(m.toolInvocations)) {
-      for (const inv of m.toolInvocations) {
-        const name = inv.toolName || 'unknown';
-        const hasOut =
-          inv.result != null ||
-          inv.output != null ||
-          inv.state === 'result' ||
-          inv.state === 'output-available';
-        parts.push({
-          type: `tool-${name}`,
-          toolCallId: inv.toolCallId,
-          toolName: name,
-          state: hasOut ? 'output-available' : 'input-available',
-          input: inv.args ?? inv.input,
-          output: inv.result ?? inv.output,
-        });
-      }
-    }
-    return { ...m, parts };
-  });
 }
 
 export async function POST(req: NextRequest) {
@@ -152,16 +108,16 @@ export async function POST(req: NextRequest) {
 
         const searchTools = prepared.shouldUseSearch
           ? {
-              web_search_preview: openai.tools.webSearchPreview({
+              web_search_preview: openaiV5.tools.webSearchPreview({
                 searchContextSize: prepared.deepSearch ? 'medium' : 'low',
               }) as any,
             }
           : {};
 
         const result = streamText({
-          model: (prepared.shouldUseSearch
-            ? getResponsesModel()
-            : getModel()) as any,
+          model: prepared.shouldUseSearch
+            ? getResponsesModelV5()
+            : getModelV5(),
           ...(prepared.shouldUseSearch
             ? { providerOptions: getChatResponsesProviderOptions() }
             : {}),

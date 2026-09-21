@@ -586,6 +586,12 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
           };
         }
       ).data;
+      if (type === "data-notification") {
+        const notice = (
+          dataPart as { data?: { message?: string } }
+        ).data?.message;
+        if (notice) new Notice(notice);
+      }
       if (type === "data-search-results" && data?.citations) {
         setGroundingMetadata({
           groundingSupports: data.citations.map(citation => ({
@@ -1582,7 +1588,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     void regenerate();
 
     // Save the context from the body for onFinish snapshotting
-    if (body.newUnifiedContext) {
+    if (body?.newUnifiedContext) {
       lastContextSentRef.current = body.newUnifiedContext;
     }
 

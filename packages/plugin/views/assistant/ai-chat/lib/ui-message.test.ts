@@ -43,6 +43,40 @@ describe("convertLegacyToUIMessage", () => {
     expect(message.parts).toEqual([{ type: "text", text: "hello" }]);
   });
 
+  it("rewrites v4 tool-invocation parts instead of passing them through", () => {
+    const message = convertLegacyToUIMessage({
+      id: "m4",
+      role: "assistant",
+      parts: [
+        { type: "text", text: "searching" },
+        {
+          type: "tool-invocation",
+          toolInvocation: {
+            toolCallId: "t2",
+            toolName: "getSearchQuery",
+            args: { query: "inbox" },
+            result: "[{}]",
+            state: "result",
+          },
+        },
+      ],
+    });
+    expect(message.parts.find(part => part.type === "text")).toEqual({
+      type: "text",
+      text: "searching",
+    });
+    expect(
+      message.parts.some(part => part.type === "tool-invocation")
+    ).toBe(false);
+    const toolPart = message.parts.find(
+      part => (part as { type?: string }).type === "tool-getSearchQuery"
+    ) as { toolCallId: string; state: string; output?: unknown; input?: unknown };
+    expect(toolPart.toolCallId).toBe("t2");
+    expect(toolPart.state).toBe("output-available");
+    expect(toolPart.output).toBe("[{}]");
+    expect(toolPart.input).toEqual({ query: "inbox" });
+  });
+
   it("converts experimental_attachments to file parts", () => {
     const message = convertLegacyToUIMessage({
       id: "m3",
