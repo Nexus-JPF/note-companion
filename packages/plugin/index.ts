@@ -46,7 +46,7 @@ import {
 } from "./fileUtils";
 
 import { checkLicenseKey } from "./apiUtils";
-import { generateObject } from "ai";
+import { generateObject } from "ai-v4";
 import { ollama } from "ollama-ai-provider";
 import { z } from "zod";
 

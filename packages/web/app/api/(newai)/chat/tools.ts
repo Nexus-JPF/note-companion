@@ -435,3 +435,23 @@ export type ChatToolsMode = 'full';
 export function buildChatToolsForMode(_mode: ChatToolsMode = 'full'): typeof chatTools {
   return chatTools;
 }
+
+type V5ToolFactory = (def: {
+  description: string;
+  inputSchema: z.ZodTypeAny;
+}) => unknown;
+
+/**
+ * Wrap the shared Zod schemas for AI SDK 5 (`inputSchema`, no execute).
+ * The v5 route injects `tool` from `ai-v5` so this file never imports SDK 5.
+ */
+export function buildV5ChatTools(toolFactory: V5ToolFactory): Record<string, unknown> {
+  const tools: Record<string, unknown> = {};
+  for (const [name, def] of Object.entries(chatTools)) {
+    tools[name] = toolFactory({
+      description: def.description,
+      inputSchema: def.parameters,
+    });
+  }
+  return tools;
+}

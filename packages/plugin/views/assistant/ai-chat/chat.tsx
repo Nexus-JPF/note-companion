@@ -15,7 +15,7 @@ import { StyledContainer } from "@/components/ui/utils";
 import { Editor } from "@tiptap/react";
 
 import FileOrganizer from "../../..";
-import { GroundingMetadata, DataChunk } from "./types/grounding";
+import { GroundingMetadata } from "./types/grounding";
 import Tiptap from "./tiptap";
 import { usePlugin } from "../provider";
 
@@ -26,8 +26,15 @@ import {
   type RenderableChatMessage,
 } from "./message-renderer";
 import ToolInvocationHandler from "./tool-handlers/tool-invocation-handler";
-import { convertToCoreMessages, streamText, Message } from "ai";
-import { ollama } from "ollama-ai-provider";
+import {
+  convertToModelMessages,
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+  stepCountIs,
+  streamText,
+  type UIMessage,
+} from "ai";
+import { ollama } from "ollama-ai-provider-v2";
 import { SourcesSection } from "./components/SourcesSection";
 import { ContextLimitIndicator } from "./context-limit-indicator";
 import { ModelSelector } from "./model-selector";
@@ -38,11 +45,9 @@ import { obsidianFetch, type ObsidianFetchInit } from "../../../lib/obsidian-fet
 import { parseRequestBodyJson } from "../../../lib/api-json";
 import {
   type ChatRequestBody,
-  type NoteCompanionUseChatOptions,
   type YouTubeVideoSummary,
   extractToolInvocationsFromMessage,
   getMessageToolSummary,
-  normalizeMessagesForRequest,
   shouldDeferAssistantContent,
   toToolInvocation,
 } from "./types/chat-api";
@@ -52,8 +57,6 @@ import {
 } from "./use-context-items";
 import { ContextItems } from "./components/context-items";
 import { useCurrentFile } from "./hooks/use-current-file";
-import { SearchAnnotationHandler } from "./tool-handlers/search-annotation-handler";
-import { isSearchResultsAnnotation } from "./types/annotations";
 import { LocalAttachment } from "./types/attachments";
 import {
   useEditorSelection,
@@ -71,6 +74,7 @@ import {
   copyChatToClipboard,
 } from "./export-chat-as-markdown";
 import { tw } from "../../../lib/utils";
+import { getMessageText } from "./lib/ui-message";
 
 const getCurrentDatetime = () =>
   window.moment().format("YYYY-MM-DDTHH:mm:ssZ");
@@ -131,7 +135,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
   const forcedReloadBodyRef = useRef<ReloadBody | null>(null);
 
   // Ref to track latest messages for onFinish (to avoid stale closure)
-  const messagesRef = useRef<Message[]>([]);
+  const messagesRef = useRef<UIMessage[]>([]);
 
   // Ref to track if we're currently loading a session (to prevent save on load)
   const isLoadingSessionRef = useRef<boolean>(false);
@@ -237,6 +241,9 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
   const [selectedModel, setSelectedModel] = useState<ModelType>(
     plugin.settings.selectedModel
   );
+  const [input, setInput] = useState("");
+  const selectedModelRef = useRef(selectedModel);
+  selectedModelRef.current = selectedModel;
 
   // Format editor context for AI - MEMOIZED to prevent infinite loop
   const editorContextString = React.useMemo(
@@ -253,35 +260,13 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     [contextString, editorContextString]
   );
 
-  // MEMOIZE chatBody to prevent infinite loop from RAF updates
-  const chatBody = React.useMemo(
-    () => ({
-      newUnifiedContext: fullContext,
-      model: plugin.settings.selectedModel,
-      enableChatWebSearch: plugin.settings.enableChatWebSearch,
-      ...(plugin.settings.chatMaxStepsPreference !== "auto"
-        ? { requestedMaxSteps: plugin.settings.chatMaxStepsPreference }
-        : {}),
-    }),
-    [
-      fullContext,
-      plugin.settings.selectedModel,
-      plugin.settings.enableChatWebSearch,
-      plugin.settings.chatMaxStepsPreference,
-    ]
-  );
-
   const [groundingMetadata, setGroundingMetadata] =
     useState<GroundingMetadata | null>(null);
 
-  const chatOptions: NoteCompanionUseChatOptions = {
-    // CRITICAL: Must use experimental_prepareRequestBody (the SDK ignores "prepareRequestBody")
-    experimental_prepareRequestBody: ({ messages: requestMessages }) => {
-      const normalizedMessages = normalizeMessagesForRequest(requestMessages);
-
+  const buildChatRequestBody = useCallback((requestMessages: UIMessage[]): ChatRequestBody => {
       console.debug(
         "[Chat] prepareRequestBody called with messages:",
-        normalizedMessages.length,
+        requestMessages.length,
         "tool summary:",
         JSON.stringify(requestMessages.map(getMessageToolSummary))
       );
@@ -486,7 +471,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       }
 
       const requestBody: ChatRequestBody = {
-        messages: normalizedMessages,
+        messages: requestMessages,
         currentDatetime: getCurrentDatetime(),
         newUnifiedContext: contextToSend,
         model: plugin.settings.selectedModel,
@@ -498,70 +483,129 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
       return requestBody;
     },
-    onDataChunk: (chunk: DataChunk) => {
-      if (chunk.type === "metadata" && chunk.data?.groundingMetadata) {
-        setGroundingMetadata(chunk.data.groundingMetadata);
-      }
-    },
-    api: `${plugin.getServerUrl()}/api/chat`,
-    headers: (() => {
-      const apiKey = plugin.getApiKey()?.trim();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
+    [plugin, app, editorContext]
+  );
 
-      // Only include Authorization header if API key is valid
-      if (apiKey && apiKey.length > 0) {
-        headers.Authorization = `Bearer ${apiKey}`;
-      } else {
-        console.warn(
-          "[Chat] API key is missing or empty, requests will fail authentication"
-        );
-      }
-
-      return headers;
-    })(),
-    fetch: async (url: RequestInfo | URL, options?: RequestInit) => {
+  const chatFetch = useCallback(async (url: RequestInfo | URL, options?: RequestInit) => {
       logMessage(plugin.settings.showLocalLLMInChat, "showLocalLLMInChat");
-      logMessage(selectedModel, "selectedModel");
+      logMessage(selectedModelRef.current, "selectedModel");
 
       // Handle different model types
-      if (!plugin.settings.showLocalLLMInChat || selectedModel === "gpt-4o") {
+      if (!plugin.settings.showLocalLLMInChat || selectedModelRef.current === "gpt-4o") {
         return obsidianFetch(url, options as ObsidianFetchInit | undefined);
       }
 
       const { messages: localMessages, newUnifiedContext, currentDatetime: localDatetime } =
         parseRequestBodyJson<{
-          messages: Message[];
+          messages: UIMessage[];
           newUnifiedContext: string;
           currentDatetime: string;
         }>(options?.body);
       logger.debug("local model context", {
-        model: selectedModel,
+        model: selectedModelRef.current,
         contextLength: newUnifiedContext.length,
         contextPreview: newUnifiedContext.slice(0, 200),
         messageCount: localMessages.length,
       });
-      // Local Ollama runs on the user's machine — there is no cloud tier to cap against.
-      // Keep "auto" at 5 so multi-step tools are not arbitrarily limited; cloud chat still
-      // uses server-side free/paid caps via requestedMaxSteps + tier.
       const localMaxSteps =
         plugin.settings.chatMaxStepsPreference === "auto"
           ? 5
           : plugin.settings.chatMaxStepsPreference;
       const result = streamText({
-        model: ollama(selectedModel),
+        model: ollama(selectedModelRef.current),
         system: `
           ${newUnifiedContext},
           currentDatetime: ${localDatetime},
           `,
-        messages: convertToCoreMessages(localMessages),
-        maxSteps: localMaxSteps,
+        messages: convertToModelMessages(localMessages, {
+          ignoreIncompleteToolCalls: true,
+        }),
+        stopWhen: stepCountIs(localMaxSteps),
       });
 
-      return result.toDataStreamResponse();
+      return result.toUIMessageStreamResponse();
+    }, [plugin]);
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: `${plugin.getServerUrl()}/api/chat/v5`,
+        headers: () => {
+          const apiKey = plugin.getApiKey()?.trim();
+          const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+          };
+          if (apiKey && apiKey.length > 0) {
+            headers.Authorization = `Bearer ${apiKey}`;
+          } else {
+            console.warn(
+              "[Chat] API key is missing or empty, requests will fail authentication"
+            );
+          }
+          return headers;
+        },
+        fetch: chatFetch,
+        prepareSendMessagesRequest: ({ messages: requestMessages, body }) => {
+          if (forcedReloadBodyRef.current) {
+            const forced = forcedReloadBodyRef.current;
+            forcedReloadBodyRef.current = null;
+            lastContextSentRef.current = forced.newUnifiedContext;
+            return { body: { messages: requestMessages, ...forced } };
+          }
+          const payload = buildChatRequestBody(requestMessages);
+          lastContextSentRef.current = payload.newUnifiedContext;
+          return { body: { ...payload, ...(body || {}) } };
+        },
+      }),
+    [plugin, buildChatRequestBody, chatFetch]
+  );
+
+  const {
+    status,
+    messages,
+    stop,
+    addToolOutput,
+    regenerate,
+    setMessages,
+    sendMessage,
+  } = useChat({
+    transport,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    onData: dataPart => {
+      const type = (dataPart as { type?: string }).type;
+      const data = (
+        dataPart as {
+          data?: {
+            citations?: Array<{
+              url?: string;
+              title?: string;
+              startIndex?: number;
+              endIndex?: number;
+            }>;
+            groundingMetadata?: GroundingMetadata;
+          };
+        }
+      ).data;
+      if (type === "data-search-results" && data?.citations) {
+        setGroundingMetadata({
+          groundingSupports: data.citations.map(citation => ({
+            segment: {
+              text: `${citation.title ?? ""} ${citation.url ?? ""}`.trim(),
+              startIndex: citation.startIndex ?? 0,
+              endIndex: citation.endIndex ?? 0,
+            },
+            groundingChunkIndices: [],
+            confidenceScores: [],
+          })),
+        });
+      }
+      if (
+        (type === "data-metadata" || type === "metadata") &&
+        data?.groundingMetadata
+      ) {
+        setGroundingMetadata(data.groundingMetadata);
+      }
     },
-    keepLastMessageOnError: true,
     onError: error => {
       logger.error("Chat error:", error);
       logger.error("Error details:", {
@@ -666,7 +710,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
       setErrorMessage(userFriendlyMessage);
     },
-    onFinish: message => {
+    onFinish: ({ message }) => {
       // Store the exact context that produced THIS assistant message
       // Store by message ID directly (we have it in onFinish, no need to find index)
       console.debug("[Chat] onFinish called:", {
@@ -957,19 +1001,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       // because refresh won't depend on Zustand store anymore.
       // clearEphemeralContext();
     },
-  };
-
-  const {
-    status,
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    stop,
-    addToolResult,
-    reload,
-    setMessages,
-  } = useChat(chatOptions);
+  });
 
   // Update messagesRef and chatHasStarted when messages change (must be after useChat)
   useEffect(() => {
@@ -1004,8 +1036,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       tool => tool.result != null || tool.state === "result"
     );
     const waitingForAI =
-      allToolsComplete &&
-      (!lastMessage.content || lastMessage.content.length === 0);
+      allToolsComplete && getMessageText(lastMessage).length === 0;
 
     return hasExecutingTools || waitingForAI;
   }, [messages]);
@@ -1030,7 +1061,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       }));
 
   const normalizeMessage = (
-    msg: Message,
+    msg: UIMessage,
     existingTimestamp?: number
   ): RenderableChatMessage =>
     toRenderableChatMessage(msg, existingTimestamp);
@@ -1441,32 +1472,24 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       return;
     }
 
-    // Update input state if it's different from editor content
-    // This ensures useChat's handleSubmit will use the correct content
-    if (editorContent !== input) {
-      handleInputChange({
-        target: { value: editorContent },
-      } as React.ChangeEvent<HTMLInputElement>);
+    const files =
+      attachments.length > 0
+        ? attachments.map(attachment => ({
+            type: "file" as const,
+            filename: attachment.name,
+            mediaType: attachment.contentType,
+            url: attachment.url,
+          }))
+        : undefined;
+
+    void sendMessage({
+      text: editorContent,
+      ...(files ? { files } : {}),
+    });
+    setInput("");
+    if (editor) {
+      editor.commands.clearContent();
     }
-
-    const messageBody = {
-      ...chatBody,
-      experimental_attachments: attachments.map(
-        ({ id, size, ...attachment }) => ({
-          name: attachment.name,
-          contentType: attachment.contentType,
-          url: attachment.url,
-        })
-      ),
-    };
-
-    // Use setTimeout to ensure the input state update is processed before handleSubmit
-    // React batches state updates, so we need to wait for the next tick
-    // This ensures useChat's handleSubmit will read the updated input value
-    window.setTimeout(() => {
-      handleSubmit(e, { body: messageBody });
-      // Don't clear ephemeral context here - it's now handled in onFinish after snapshotting
-    }, 0);
 
     // Clear attachments after sending
     setAttachments([]);
@@ -1477,9 +1500,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
   };
 
   const handleTiptapChange = async (newContent: string) => {
-    handleInputChange({
-      target: { value: newContent },
-    } as React.ChangeEvent<HTMLInputElement>);
+    setInput(newContent);
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
@@ -1518,14 +1539,12 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
   }, [plugin.settings.selectedModel]);
 
   const handleTranscriptionComplete = (text: string) => {
-    handleInputChange({
-      target: { value: text },
-    } as React.ChangeEvent<HTMLInputElement>);
+    setInput(text);
   };
 
   const handleRetry = () => {
     setErrorMessage(null);
-    void reload();
+    void regenerate();
   };
 
   const handleDismissError = () => {
@@ -1552,7 +1571,6 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     pendingReloadRef.current = null;
 
     const body = forcedReloadBodyRef.current;
-    forcedReloadBodyRef.current = null;
 
     console.debug(
       "[Chat] Triggering reload after message refresh, messages count:",
@@ -1561,17 +1579,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       !!body
     );
 
-    if (!body) {
-      console.warn(
-        "[Chat] Missing forced reload body, calling reload() without body"
-      );
-      void reload();
-      return;
-    }
-
-    // Use reload({ body }) to pass the exact body we want
-    // This is the cleanest approach - reload accepts the same options as handleSubmit
-    void reload({ body });
+    void regenerate();
 
     // Save the context from the body for onFinish snapshotting
     if (body.newUnifiedContext) {
@@ -1581,7 +1589,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
     // Reset saved state after reload is triggered so new messages from reload will be saved
     // The reload will add new messages, and we want to ensure they get saved when they arrive
     lastSavedMessagesRef.current = "";
-  }, [messages.length, reload]);
+  }, [messages.length, regenerate]);
 
   const handleMessageRefresh = useCallback(
     (messageId: string) => {
@@ -1714,7 +1722,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
             {
               id: `format-${Date.now()}`,
               role: "user",
-              content: `Format as ${templateName}`,
+              parts: [{ type: "text", text: `Format as ${templateName}` }],
             },
           ]);
 
@@ -1759,9 +1767,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
           if (editor) {
             editor.chain().focus().insertContent("Search my vault for: ").run();
           } else {
-            handleInputChange({
-              target: { value: "Search my vault for: " },
-            } as React.ChangeEvent<HTMLInputElement>);
+            setInput("Search my vault for: ");
           }
           break;
         case "summarize":
@@ -1772,18 +1778,14 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
               .insertContent("Summarize the current context")
               .run();
           } else {
-            handleInputChange({
-              target: { value: "Summarize the current context" },
-            } as React.ChangeEvent<HTMLInputElement>);
+            setInput("Summarize the current context");
           }
           break;
         case "explain":
           if (editor) {
             editor.chain().focus().insertContent("Explain: ").run();
           } else {
-            handleInputChange({
-              target: { value: "Explain: " },
-            } as React.ChangeEvent<HTMLInputElement>);
+            setInput("Explain: ");
           }
           break;
         case "extractToNote": {
@@ -1792,9 +1794,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
           if (editor) {
             editor.chain().focus().insertContent(extractPrompt).run();
           } else {
-            handleInputChange({
-              target: { value: extractPrompt },
-            } as React.ChangeEvent<HTMLInputElement>);
+            setInput(extractPrompt);
           }
           break;
         }
@@ -1812,7 +1812,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
   }, [
     input,
     handleNewChat,
-    handleInputChange,
+    setInput,
     messages,
     setMessages,
     app,
@@ -1943,23 +1943,17 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                       <ToolInvocationHandler
                         key={toolInvocation.toolCallId}
                         toolInvocation={toToolInvocation(toolInvocation)}
-                        addToolResult={addToolResult}
+                        addToolResult={({ toolCallId, result }) => {
+                          addToolOutput({
+                            tool: toolInvocation.toolName || "unknown",
+                            toolCallId,
+                            output: result,
+                          });
+                        }}
                         app={app}
                         chatStatus={status}
                       />
                     );
-                  })}
-                  {/* Then render annotations */}
-                  {message.annotations?.map((annotation, index) => {
-                    if (isSearchResultsAnnotation(annotation)) {
-                      return (
-                        <SearchAnnotationHandler
-                          key={`${message.id}-annotation-${index}`}
-                          annotation={annotation}
-                        />
-                      );
-                    }
-                    return null;
                   })}
                   {/* Finally render the message content (summary) so it appears below tool invocations */}
                   {!deferContent && (

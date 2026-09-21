@@ -210,6 +210,7 @@ describe('Chat API Route', () => {
     expect(streamText).toHaveBeenCalled();
     const streamOptions = (streamText as jest.Mock).mock.calls[0][0];
     expect(streamOptions.tools?.web_search_preview).toBeDefined();
+    expect(streamOptions.maxSteps).toBe(3);
   });
 
   it('uses non-search path when the user pastes a YouTube URL', async () => {
