@@ -62,3 +62,64 @@ export async function submitBetaRequest(email: string): Promise<SubmitBetaReques
     };
   }
 }    
+export async function submitProWaitlist(
+  email: string,
+  billing: 'monthly' | 'yearly'
+): Promise<SubmitBetaRequestResult> {
+  if (!email || !email.includes('@')) {
+    return {
+      success: false,
+      message: 'Please enter a valid email address'
+    };
+  }
+
+  try {
+    const apiKey = process.env.LOOPS_API_KEY;
+    if (!apiKey) {
+      console.error('LOOPS_API_KEY environment variable is not set');
+      return {
+        success: false,
+        message: 'Server configuration error. Please try again later.'
+      };
+    }
+
+    const response = await fetch('https://app.loops.so/api/v1/contacts/update', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        email,
+        subscribed: true,
+        userGroup: 'ProWaitlist',
+        source: 'pro_waitlist_pricing',
+        proWaitlistBilling: billing,
+        mailingLists: {
+          "cmuddxgi61q9l0j0wdf7d65mn": true
+        }
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      return {
+        success: true,
+        message: "You're on the Pro waitlist. We'll email you when it opens."
+      };
+    } else {
+      console.error('Loops API error:', data);
+      return {
+        success: false,
+        message: data.message || 'Something went wrong. Please try again.'
+      };
+    }
+  } catch (error) {
+    console.error('Error submitting Pro waitlist request:', error);
+    return {
+      success: false,
+      message: 'Network error. Please check your connection and try again.'
+    };
+  }
+}
