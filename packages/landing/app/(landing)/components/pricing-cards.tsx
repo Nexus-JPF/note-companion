@@ -26,15 +26,18 @@ export function PricingCards() {
   >('idle');
   const [proMessage, setProMessage] = useState('');
   const billing = isYearly ? 'yearly' : 'monthly';
+  // Locked in when the waitlist form opens so a mid-form toggle can't make
+  // the click and join events (or the stored billing) disagree.
+  const [proBilling, setProBilling] = useState<'monthly' | 'yearly'>(billing);
 
   const handleProSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setProStatus('loading');
-    const result = await submitProWaitlist(proEmail, billing);
+    const result = await submitProWaitlist(proEmail, proBilling);
     setProStatus(result.success ? 'success' : 'error');
     setProMessage(result.message ?? '');
     if (result.success) {
-      capture('pro_waitlist_joined', { billing });
+      capture('pro_waitlist_joined', { billing: proBilling });
       setProEmail('');
     }
   };
@@ -250,6 +253,7 @@ export function PricingCards() {
                 className="w-full"
                 onClick={() => {
                   setShowProForm(true);
+                  setProBilling(billing);
                   capture('pro_waitlist_clicked', { billing });
                 }}
               >
