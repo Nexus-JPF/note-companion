@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ArrowRight, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Switch } from '@/components/ui/switch';
@@ -25,20 +26,52 @@ export function PricingCards() {
     'idle' | 'loading' | 'success' | 'error'
   >('idle');
   const [proMessage, setProMessage] = useState('');
+  const [proFeatureRequest, setProFeatureRequest] = useState('');
   const billing = isYearly ? 'yearly' : 'monthly';
   // Locked in when the waitlist form opens so a mid-form toggle can't make
   // the click and join events (or the stored billing) disagree.
   const [proBilling, setProBilling] = useState<'monthly' | 'yearly'>(billing);
 
+  // Tells us which gate people want (featureRequest) and lets us tell heavy
+  // users apart from casual ones (userId). We don't have a session on this
+  // marketing site, so: prefer a `?uid=` the app/plugin can pass when
+  // linking here for a logged-in user, and fall back to the PostHog
+  // anonymous id so repeat visits/clicks can still be correlated.
+  const [proUserId, setProUserId] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const uid = new URLSearchParams(window.location.search).get('uid');
+      if (uid) {
+        setProUserId(uid);
+        return;
+      }
+    } catch {
+      // ignore, fall through to the PostHog id below
+    }
+    void import('posthog-js').then(({ default: posthog }) => {
+      try {
+        setProUserId(posthog.get_distinct_id() ?? null);
+      } catch {
+        // analytics not available; leave userId unset
+      }
+    });
+  }, []);
+
   const handleProSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setProStatus('loading');
-    const result = await submitProWaitlist(proEmail, proBilling);
+    const result = await submitProWaitlist(
+      proEmail,
+      proBilling,
+      proFeatureRequest.trim() || undefined,
+      proUserId ?? undefined
+    );
     setProStatus(result.success ? 'success' : 'error');
     setProMessage(result.message ?? '');
     if (result.success) {
       capture('pro_waitlist_joined', { billing: proBilling });
       setProEmail('');
+      setProFeatureRequest('');
     }
   };
 
@@ -243,6 +276,13 @@ export function PricingCards() {
                     {proStatus === 'loading' ? 'Joining...' : 'Notify me'}
                   </Button>
                 </div>
+                <Textarea
+                  placeholder="Optional: what would you use Pro for?"
+                  value={proFeatureRequest}
+                  onChange={(e) => setProFeatureRequest(e.target.value)}
+                  rows={2}
+                  className="resize-none text-sm"
+                />
                 {proStatus === 'error' && (
                   <p className="text-sm text-destructive">{proMessage}</p>
                 )}

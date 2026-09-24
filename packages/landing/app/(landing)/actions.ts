@@ -64,7 +64,9 @@ export async function submitBetaRequest(email: string): Promise<SubmitBetaReques
 }    
 export async function submitProWaitlist(
   email: string,
-  billing: 'monthly' | 'yearly'
+  billing: 'monthly' | 'yearly',
+  featureRequest?: string,
+  userId?: string
 ): Promise<SubmitBetaRequestResult> {
   if (!email || !email.includes('@')) {
     return {
@@ -95,6 +97,8 @@ export async function submitProWaitlist(
         userGroup: 'ProWaitlist',
         source: 'pro_waitlist_pricing',
         proWaitlistBilling: billing,
+        ...(featureRequest ? { proWaitlistFeatureRequest: featureRequest } : {}),
+        ...(userId ? { proWaitlistUserId: userId } : {}),
         mailingLists: {
           "cmuddxgi61q9l0j0wdf7d65mn": true
         }
