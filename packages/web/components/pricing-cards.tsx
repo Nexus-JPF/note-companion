@@ -32,11 +32,15 @@ const PRO_WAITLIST_BASE_URL = "https://notecompanion.ai/";
 export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
   const [isYearly, setIsYearly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useUser();
+  const { user, isLoaded: isUserLoaded } = useUser();
 
-  const proWaitlistHref = user?.id
-    ? `${PRO_WAITLIST_BASE_URL}?uid=${encodeURIComponent(user.id)}#pricing`
-    : `${PRO_WAITLIST_BASE_URL}#pricing`;
+  // Only attach a uid once Clerk has actually resolved the user, so a click
+  // during that brief loading window doesn't silently drop the id. Landing
+  // still falls back to a PostHog anonymous id either way.
+  const proWaitlistHref =
+    isUserLoaded && user?.id
+      ? `${PRO_WAITLIST_BASE_URL}?uid=${encodeURIComponent(user.id)}#pricing`
+      : `${PRO_WAITLIST_BASE_URL}#pricing`;
 
   const handlePlanSelection = async (planKey: string) => {
     setIsLoading(true);
@@ -196,9 +200,14 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
       <CardHeader className="pb-4">
         <CardTitle className="text-2xl font-bold">Pro</CardTitle>
         <CardDescription className="text-3xl font-bold text-black mt-3 mb-3">
-          $30
+          {isYearly ? '$239' : '$30'}
           <span className="text-sm font-normal text-gray-500 ml-1">
-            /month
+            /{isYearly ? 'year' : 'month'}
+            {isYearly && (
+              <div className="text-xs text-violet-600 font-semibold mt-1">
+                Save 33% with yearly billing
+              </div>
+            )}
           </span>
         </CardDescription>
       </CardHeader>
@@ -209,6 +218,7 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
             'Whole-vault indexing & semantic search',
             'Premium AI models for chat and document extraction',
             'Priority processing',
+            'Early access to new features',
           ].map((feature) => (
             <li key={feature} className="flex items-start text-sm">
               <Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0 mt-0.5" />
