@@ -206,6 +206,7 @@ export function getNoteCompanionSettingDefinitions(
         },
         {
           name: 'Use inbox',
+          desc: 'Automatically process files dropped into or created in the inbox folder. Turn off to only process files when you run "Process inbox now".',
           control: { type: 'toggle', key: 'useInbox' },
         },
       ],

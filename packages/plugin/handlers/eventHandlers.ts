@@ -16,6 +16,7 @@ export function registerEventHandlers(plugin: FileOrganizer) {
 
   plugin.registerEvent(
     plugin.app.vault.on("create", async file => {
+      if (!plugin.settings.useInbox) return;
       await new Promise(resolve => window.setTimeout(resolve, 1000));
       if (!isInInboxFolder(file.path, pathToWatch)) return;
       if (file instanceof TFile) {
@@ -34,6 +35,7 @@ export function registerEventHandlers(plugin: FileOrganizer) {
 
   plugin.registerEvent(
     plugin.app.vault.on("rename", async (file, _oldPath) => {
+      if (!plugin.settings.useInbox) return;
       await new Promise(resolve => window.setTimeout(resolve, 1000));
       if (!isInInboxFolder(file.path, pathToWatch)) return;
       if (file instanceof TFile) {
@@ -54,6 +56,7 @@ export function registerEventHandlers(plugin: FileOrganizer) {
   // Obsidian may fire "modify" instead of "create" — enqueue so we still process it.
   plugin.registerEvent(
     plugin.app.vault.on("modify", (file) => {
+      if (!plugin.settings.useInbox) return;
       if (!(file instanceof TFile)) return;
       if (!isInInboxFolder(file.path, pathToWatch)) return;
       if (!VALID_MEDIA_EXTENSIONS.includes(file.extension)) return;

@@ -190,6 +190,14 @@ export default class FileOrganizer extends Plugin {
     if (migratedLevel) {
       this.settings.inboxNotificationLevel = migratedLevel;
     }
+
+    if (!this.settings.useInboxMigrated) {
+      // `useInbox` was previously saved but never actually read anywhere, so any
+      // stored value doesn't reflect real user intent. Force it on once so existing
+      // vaults keep today's always-on inbox processing now that the toggle works.
+      this.settings.useInbox = true;
+      this.settings.useInboxMigrated = true;
+    }
   }
 
   async checkCatalystAccess(): Promise<boolean> {
@@ -1704,7 +1712,9 @@ export default class FileOrganizer extends Plugin {
     initializeFileOrganizationCommands(this);
 
     this.app.workspace.onLayoutReady(() => registerEventHandlers(this));
-    void this.processBacklog();
+    if (this.settings.useInbox) {
+      void this.processBacklog();
+    }
 
     this.addCommand({
       id: "open-organizer-tab",
