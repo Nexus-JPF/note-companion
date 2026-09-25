@@ -148,11 +148,12 @@ export function ExecuteActionsHandler({ toolInvocation, handleAddResult, app }: 
           </button>
           <button
             className="px-4 py-2 bg-[--background-modifier-border] text-[--text-normal] hover:bg-[--background-modifier-border-hover] disabled:opacity-50"
-            onClick={() =>
+            onClick={() => {
+              setIsDone(true);
               handleAddResult(
                 JSON.stringify({ success: false, message: "User cancelled action execution" })
-              )
-            }
+              );
+            }}
             disabled={isProcessing}
           >
             Cancel

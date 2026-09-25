@@ -57,6 +57,7 @@ import {
 } from "./constants";
 import { initializeInboxQueue, Inbox } from "./inbox";
 import { migrateInboxNotificationLevel } from "./inbox/notification-level";
+import { migrateUseInbox } from "./inbox/use-inbox-migration";
 import { logger } from "./services/logger";
 import { layoutPdfTextItems } from "./lib/pdf-text-layout";
 import { obsidianFetch } from "./lib/obsidian-fetch";
@@ -191,12 +192,10 @@ export default class FileOrganizer extends Plugin {
       this.settings.inboxNotificationLevel = migratedLevel;
     }
 
-    if (!this.settings.useInboxMigrated) {
-      // `useInbox` was previously saved but never actually read anywhere, so any
-      // stored value doesn't reflect real user intent. Force it on once so existing
-      // vaults keep today's always-on inbox processing now that the toggle works.
-      this.settings.useInbox = true;
-      this.settings.useInboxMigrated = true;
+    const useInboxMigration = migrateUseInbox(this.settings);
+    if (useInboxMigration) {
+      this.settings.useInbox = useInboxMigration.useInbox;
+      this.settings.useInboxMigrated = useInboxMigration.useInboxMigrated;
     }
   }
 
