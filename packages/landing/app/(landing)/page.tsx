@@ -304,7 +304,7 @@ export default function Page() {
       </section>
 
       {/* Pricing Section */}
-      <div className="w-full py-20 md:py-28 bg-transparent">
+      <div id="pricing" className="w-full py-20 md:py-28 bg-transparent">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">

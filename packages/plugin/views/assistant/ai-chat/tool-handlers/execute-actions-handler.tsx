@@ -2,12 +2,19 @@ import React, { useState } from "react";
 import { TFile } from "obsidian";
 import { ToolHandlerProps } from "./types";
 import { usePlugin } from "../../provider";
+import { capFilePaths } from "./execute-actions-cap";
 
 export function ExecuteActionsHandler({ toolInvocation, handleAddResult, app }: ToolHandlerProps) {
   const plugin = usePlugin();
   const [isDone, setIsDone] = useState(false);
   const [results, setResults] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const { filePaths: requestedFilePaths, userPrompt } = toolInvocation.args as {
+    filePaths: string[];
+    userPrompt: string;
+  };
+  const { filePaths, truncatedCount } = capFilePaths(requestedFilePaths);
 
   const determineAction = (userPrompt: string): 'tags' | 'folders' | 'name' => {
     const prompt = userPrompt.toLowerCase();
@@ -23,10 +30,6 @@ export function ExecuteActionsHandler({ toolInvocation, handleAddResult, app }: 
   const handleExecute = async () => {
     try {
       setIsProcessing(true);
-      const { filePaths, userPrompt } = toolInvocation.args as {
-        filePaths: string[];
-        userPrompt: string;
-      };
       const actionResults: string[] = [];
       const action = determineAction(userPrompt);
 
@@ -84,9 +87,22 @@ export function ExecuteActionsHandler({ toolInvocation, handleAddResult, app }: 
         }
       }
 
+      if (truncatedCount > 0) {
+        actionResults.push(
+          `ℹ️ Only processed the first ${filePaths.length} of ${requestedFilePaths.length} requested files. Ask again to process the rest.`
+        );
+      }
+
       setResults(actionResults);
       setIsDone(true);
-      handleAddResult(JSON.stringify({ success: true, actionResults }));
+      handleAddResult(
+        JSON.stringify({
+          success: true,
+          actionResults,
+          processedCount: filePaths.length,
+          requestedCount: requestedFilePaths.length,
+        })
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       setResults([`❌ Error: ${errorMessage}`]);
@@ -100,7 +116,8 @@ export function ExecuteActionsHandler({ toolInvocation, handleAddResult, app }: 
   return (
     <div className="flex flex-col space-y-4 p-4 border border-[--background-modifier-border]">
       <div className="text-[--text-normal]">
-        Ready to process {toolInvocation.args.filePaths.length} file(s) based on content analysis
+        Ready to process {filePaths.length} file(s) based on content analysis
+        {truncatedCount > 0 && ` (capped from ${requestedFilePaths.length} requested)`}
       </div>
       {results.length > 0 && (
         <div className="text-sm space-y-1">
@@ -121,13 +138,27 @@ export function ExecuteActionsHandler({ toolInvocation, handleAddResult, app }: 
         </div>
       )}
       {!isDone && (
-        <button
-          className="px-4 py-2 bg-[--interactive-accent] text-[--text-on-accent] hover:bg-[--interactive-accent-hover] disabled:opacity-50"
-          onClick={() => { void handleExecute(); }}
-          disabled={isProcessing}
-        >
-          {isProcessing ? "Processing..." : "Execute Actions"}
-        </button>
+        <div className="flex space-x-2">
+          <button
+            className="px-4 py-2 bg-[--interactive-accent] text-[--text-on-accent] hover:bg-[--interactive-accent-hover] disabled:opacity-50"
+            onClick={() => { void handleExecute(); }}
+            disabled={isProcessing}
+          >
+            {isProcessing ? "Processing..." : `Execute Actions on ${filePaths.length} File(s)`}
+          </button>
+          <button
+            className="px-4 py-2 bg-[--background-modifier-border] text-[--text-normal] hover:bg-[--background-modifier-border-hover] disabled:opacity-50"
+            onClick={() => {
+              setIsDone(true);
+              handleAddResult(
+                JSON.stringify({ success: false, message: "User cancelled action execution" })
+              );
+            }}
+            disabled={isProcessing}
+          >
+            Cancel
+          </button>
+        </div>
       )}
     </div>
   );

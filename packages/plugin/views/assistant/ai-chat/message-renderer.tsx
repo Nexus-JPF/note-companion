@@ -3,31 +3,28 @@ import { motion } from "framer-motion";
 import { User, Bot } from "lucide-react";
 import { AIMarkdown } from "./ai-message-renderer";
 import { UserMarkdown } from "./user-message-renderer";
-import { Message } from "ai";
+import { type UIMessage } from "ai";
 import { usePlugin } from "../provider";
 import { AppendButton } from "./components/append-button";
 import { CopyButton } from "./components/copy-button";
 import { RefreshButton } from "./components/refresh-button";
+import { getFileParts, getMessageText } from "./lib/ui-message";
 
 /** Message for UI rendering; timestamps are stored as ms, not SDK `Date`. */
-export type RenderableChatMessage = Omit<Message, "createdAt"> & {
+export type RenderableChatMessage = UIMessage & {
   createdAt?: number;
 };
 
 export function toRenderableChatMessage(
-  msg: Message,
+  msg: UIMessage,
   existingTimestamp?: number
 ): RenderableChatMessage {
-  const { createdAt: sdkCreatedAt, ...rest } = msg;
   const createdAt =
     existingTimestamp ??
-    (sdkCreatedAt instanceof Date
-      ? sdkCreatedAt.getTime()
-      : typeof sdkCreatedAt === "number"
-        ? sdkCreatedAt
-        : Date.now());
+    (msg as RenderableChatMessage).createdAt ??
+    Date.now();
 
-  return { ...rest, createdAt };
+  return { ...msg, createdAt };
 }
 
 interface MessageRendererProps {
@@ -50,10 +47,15 @@ function hasPendingToolCalls(message: RenderableChatMessage): boolean {
 
   return toolParts.some((p) => {
     const part = p as {
+      state?: string;
       output?: unknown;
-      toolInvocation?: { result?: unknown };
+      toolInvocation?: { result?: unknown; state?: string };
     };
+    if (part.state === "output-available" || part.state === "output-error") {
+      return false;
+    }
     if (part.output !== undefined) return false;
+    if (part.toolInvocation?.state === "result") return false;
     return part.toolInvocation?.result === undefined;
   });
 }
@@ -63,6 +65,8 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
   onMessageRefresh,
 }) => {
   const plugin = usePlugin();
+  const content = getMessageText(message);
+  const fileParts = getFileParts(message);
 
   // Format timestamp - use createdAt if available, otherwise fallback to message ID timestamp or current time
   const getTimestamp = () => {
@@ -88,7 +92,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
   if (hasPendingToolCalls(message)) {
     return null;
   }
-  if (message.content.length === 0) {
+  if (content.length === 0 && fileParts.length === 0) {
     return null;
   }
 
@@ -119,9 +123,9 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
           style={{ marginTop: 0, paddingTop: 0, marginLeft: 0, paddingLeft: 0 }}
         >
           {message.role === "user" ? (
-            <UserMarkdown content={message.content} />
+            <UserMarkdown content={content} />
           ) : (
-            <AIMarkdown content={message.content} app={plugin.app} />
+            <AIMarkdown content={content} app={plugin.app} />
           )}
         </div>
 
@@ -139,24 +143,23 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
                   onRefresh={onMessageRefresh}
                 />
               )}
-              <AppendButton content={message.content} />
-              <CopyButton content={message.content} />
+              <AppendButton content={content} />
+              <CopyButton content={content} />
             </div>
           )}
         </div>
 
-        {message.experimental_attachments &&
-          message.experimental_attachments.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {message.experimental_attachments.map((attachment, index) => (
-                <div
-                  key={`${attachment.name || index}`}
-                  className="relative group"
-                >
-                  {attachment.contentType?.startsWith("image/") ? (
+        {fileParts.length > 0 && (
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {fileParts.map((attachment, index) => (
+              <div
+                key={`${attachment.filename || index}`}
+                className="relative group"
+              >
+                  {attachment.mediaType?.startsWith("image/") ? (
                     <img
                       src={attachment.url}
-                      alt={attachment.name}
+                      alt={attachment.filename}
                       className="w-full h-32 object-cover"
                     />
                   ) : (
@@ -180,7 +183,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100">
                       <a
                         href={attachment.url}
-                        download={attachment.name}
+                        download={attachment.filename}
                         className="text-white text-sm bg-black bg-opacity-75 px-3 py-1 rounded-full"
                       >
                         Download

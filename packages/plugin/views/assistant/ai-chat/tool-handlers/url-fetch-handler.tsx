@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { logger } from "../../../../services/logger";
 import { usePlugin } from "../../provider";
-import { ToolInvocation } from "ai";
+import { ToolInvocation } from "./types";
 import { readResponseJson } from "../../../../lib/api-json";
 import { obsidianFetch } from "../../../../lib/obsidian-fetch";
 

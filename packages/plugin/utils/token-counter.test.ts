@@ -67,12 +67,10 @@ describe("token-counter", () => {
       expect(count).toBeGreaterThan(0);
     });
 
-    it("should throw error if not initialized", () => {
+    it("should still count after cleanup (cleanup is a no-op)", () => {
       cleanup();
 
-      expect(() => getTokenCount("test")).toThrow(
-        "Token counter not initialized. Call initializeTokenCounter() first."
-      );
+      expect(getTokenCount("test")).toBeGreaterThan(0);
     });
 
     it("should return consistent counts for same input", () => {
@@ -85,15 +83,13 @@ describe("token-counter", () => {
   });
 
   describe("cleanup", () => {
-    it("should cleanup encoding and reset state", async () => {
+    it("should still count after cleanup because cleanup is a no-op", async () => {
       await initializeTokenCounter();
       getTokenCount("test");
 
       cleanup();
 
-      expect(() => getTokenCount("test")).toThrow(
-        "Token counter not initialized. Call initializeTokenCounter() first."
-      );
+      expect(getTokenCount("test")).toBeGreaterThan(0);
     });
 
     it("should allow re-initialization after cleanup", async () => {

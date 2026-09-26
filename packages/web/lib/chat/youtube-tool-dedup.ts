@@ -65,6 +65,40 @@ export function createYoutubeToolDedupState(
   };
 }
 
+function readToolResultText(item: any): string | null {
+  if (typeof item?.result === 'string') {
+    return item.result;
+  }
+  const output = item?.output;
+  if (typeof output === 'string') {
+    return output;
+  }
+  if (output && typeof output === 'object') {
+    if (typeof output.value === 'string') {
+      return output.value;
+    }
+    if (output.value != null) {
+      try {
+        return JSON.stringify(output.value);
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+function writeToolResultText(item: any, text: string): any {
+  if (item && typeof item === 'object' && 'output' in item) {
+    const output = item.output;
+    if (output && typeof output === 'object') {
+      return { ...item, output: { ...output, value: text } };
+    }
+    return { ...item, output: { type: 'text', value: text } };
+  }
+  return { ...item, result: text };
+}
+
 function getFirstToolResultContent(tool: any): {
   firstItem: any;
   rest: any[];
@@ -117,9 +151,8 @@ export function applyYoutubeToolDedupToMessage(
   }
 
   const fullResult =
-    extracted?.firstItem.result != null &&
-    typeof extracted.firstItem.result === 'string'
-      ? extracted.firstItem.result
+    extracted != null
+      ? readToolResultText(extracted.firstItem)
       : typeof tool.content === 'string'
         ? tool.content
         : null;
@@ -148,7 +181,7 @@ export function applyYoutubeToolDedupToMessage(
         toolCallId: extracted.firstItem.toolCallId,
         toolName: extracted.firstItem.toolName,
         content: [
-          { ...extracted.firstItem, result: stub },
+          writeToolResultText(extracted.firstItem, stub),
           ...extracted.rest,
         ],
       };
@@ -194,7 +227,7 @@ export function applyYoutubeToolDedupToMessage(
       toolCallId: extracted.firstItem.toolCallId,
       toolName: extracted.firstItem.toolName,
       content: [
-        { ...extracted.firstItem, result: stub },
+        writeToolResultText(extracted.firstItem, stub),
         ...extracted.rest,
       ],
     };
@@ -207,7 +240,8 @@ export function applyYoutubeToolDedupToMessage(
 }
 
 /**
- * Applies YouTube tool dedup to already-converted core messages (search and non-search chat paths).
+ * Applies YouTube tool dedup to already-converted core / model messages
+ * (v4 CoreMessage and v5 ModelMessage both use role:"tool" content arrays).
  */
 export function applyYoutubeToolDedupToCoreMessages(
   coreMessages: any[],
@@ -219,3 +253,6 @@ export function applyYoutubeToolDedupToCoreMessages(
   );
   return { finalCoreMessages, state };
 }
+
+export const applyYoutubeToolDedupToModelMessages =
+  applyYoutubeToolDedupToCoreMessages;

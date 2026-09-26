@@ -25,10 +25,17 @@ export const getChatSystemPrompt = jest.fn(
 export const lastUserMessageHasYoutubeUrl = jest.fn((messages: unknown[]) => {
   const list = Array.isArray(messages) ? messages : [];
   for (let i = list.length - 1; i >= 0; i--) {
-    const m = list[i] as { role?: string; content?: unknown };
+    const m = list[i] as { role?: string; content?: unknown; parts?: unknown };
     if (m?.role !== 'user') continue;
-    const content = typeof m.content === 'string' ? m.content : '';
-    return /(?:youtube\.com|youtu\.be)\//i.test(content);
+    let text = typeof m.content === 'string' ? m.content : '';
+    if (!text && Array.isArray(m.parts)) {
+      text = m.parts
+        .map((p: { type?: string; text?: string }) =>
+          p?.type === 'text' && typeof p.text === 'string' ? p.text : ''
+        )
+        .join('');
+    }
+    return /(?:youtube\.com|youtu\.be)\//i.test(text);
   }
   return false;
 });

@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { App } from "obsidian";
-import { ToolInvocation } from "ai";
+import { ToolInvocation } from "./types";
 import { YouTubeHandler } from "./youtube-handler";
 import { SearchHandler } from "./search-handler";
 import { DateRangeHandler } from "./date-range-handler";

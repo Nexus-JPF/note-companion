@@ -21,6 +21,22 @@ describe('lastUserMessageHasYoutubeUrl', () => {
     ).toBe(true);
   });
 
+  it('detects a YouTube URL in UIMessage text parts', () => {
+    expect(
+      lastUserMessageHasYoutubeUrl([
+        {
+          role: 'user',
+          parts: [
+            {
+              type: 'text',
+              text: 'Summarize https://www.youtube.com/watch?v=1vzes3R8xhA',
+            },
+          ],
+        },
+      ])
+    ).toBe(true);
+  });
+
   it('ignores messages that only mention YouTube without a URL', () => {
     expect(
       lastUserMessageHasYoutubeUrl([

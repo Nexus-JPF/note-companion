@@ -1,15 +1,19 @@
 import { normalizePath, App } from "obsidian";
-import { Message } from "ai";
+import { UIMessage } from "ai";
 import { logger } from "../../../../services/logger";
 import { parseJsonString } from "../../../../lib/api-json";
 import type { SavedContextItems } from "../use-context-items";
+import {
+  convertLegacyMessagesToUIMessages,
+  getMessageText,
+} from "../lib/ui-message";
 
 type TimeoutID = ReturnType<typeof setTimeout>;
 
 export interface ChatSession {
   id: string;
   title: string; // Auto-generated from first user message (max 50 chars)
-  messages: Message[];
+  messages: UIMessage[];
   createdAt: number; // Unix timestamp
   updatedAt: number; // Unix timestamp
   model?: string; // Selected model for this session
@@ -103,14 +107,23 @@ export class ChatHistoryManager {
         dataKeys: Object.keys(data),
       });
 
+      const hydrateSession = (session: ChatSession): ChatSession => ({
+        ...session,
+        messages: convertLegacyMessagesToUIMessages(session.messages),
+      });
+
       // Convert array of entries back to Map
       if ("sessions" in data && data.sessions && Array.isArray(data.sessions)) {
-        this.sessions = new Map(data.sessions);
+        this.sessions = new Map(
+          data.sessions.map(([id, session]) => [id, hydrateSession(session)])
+        );
         console.debug("[ChatHistory] ✅ Loaded", this.sessions.size, "sessions");
       } else if (data && typeof data === "object" && !Array.isArray(data)) {
         // Handle legacy format (object with session IDs as keys)
         this.sessions = new Map(
-          Object.entries(data as Record<string, ChatSession>)
+          Object.entries(data as Record<string, ChatSession>).map(
+            ([id, session]) => [id, hydrateSession(session)]
+          )
         );
         console.debug("[ChatHistory] ✅ Loaded", this.sessions.size, "sessions (legacy format)");
       } else {
@@ -266,10 +279,13 @@ export class ChatHistoryManager {
    * Takes first 50 characters of the first user message
    * Excludes file mentions entirely from the title
    */
-  public static generateTitleFromMessages(messages: Message[]): string {
+  public static generateTitleFromMessages(messages: UIMessage[]): string {
     const firstUserMessage = messages.find(m => m.role === 'user');
-    if (firstUserMessage && firstUserMessage.content) {
-      let title = firstUserMessage.content.trim();
+    const firstUserText = firstUserMessage
+      ? getMessageText(firstUserMessage)
+      : "";
+    if (firstUserMessage && firstUserText) {
+      let title = firstUserText.trim();
 
       // Remove all @ mentions completely (not just the @ symbol)
       // This removes patterns like "@file_name", "@my file", "@file_name what is this", etc.

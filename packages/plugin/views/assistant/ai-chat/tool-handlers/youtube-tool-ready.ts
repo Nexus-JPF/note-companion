@@ -62,9 +62,7 @@ export function resolveYoutubeToolInvocation(params: {
   if (typeof videoId !== "string") {
     return {
       status: "error",
-      message: `Invalid videoId: videoId is required and must be a string. Received type: ${typeof videoId}, value: ${String(
-        videoId
-      ).substring(0, 100)}`,
+      message: `Invalid videoId: videoId is required and must be a string. Received type: ${typeof videoId}`,
     };
   }
 

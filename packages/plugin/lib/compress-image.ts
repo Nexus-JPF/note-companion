@@ -19,7 +19,10 @@ export async function compressImageForVision(
     throw new Error("Image data is empty");
   }
 
-  if (typeof createImageBitmap !== "function" || typeof document === "undefined") {
+  if (
+    typeof createImageBitmap !== "function" ||
+    typeof activeDocument === "undefined"
+  ) {
     return data;
   }
 
@@ -38,7 +41,7 @@ export async function compressImageForVision(
       height = Math.max(1, Math.round(height * scale));
     }
 
-    const canvas = document.createElement("canvas");
+    const canvas = activeDocument.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext("2d");

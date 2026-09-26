@@ -46,7 +46,7 @@ import {
 } from "./fileUtils";
 
 import { checkLicenseKey } from "./apiUtils";
-import { generateObject } from "ai";
+import { generateObject } from "ai-v4";
 import { ollama } from "ollama-ai-provider";
 import { z } from "zod";
 
@@ -57,6 +57,7 @@ import {
 } from "./constants";
 import { initializeInboxQueue, Inbox } from "./inbox";
 import { migrateInboxNotificationLevel } from "./inbox/notification-level";
+import { migrateUseInbox } from "./inbox/use-inbox-migration";
 import { logger } from "./services/logger";
 import { layoutPdfTextItems } from "./lib/pdf-text-layout";
 import { obsidianFetch } from "./lib/obsidian-fetch";
@@ -189,6 +190,12 @@ export default class FileOrganizer extends Plugin {
     const migratedLevel = migrateInboxNotificationLevel(loaded);
     if (migratedLevel) {
       this.settings.inboxNotificationLevel = migratedLevel;
+    }
+
+    const useInboxMigration = migrateUseInbox(this.settings);
+    if (useInboxMigration) {
+      this.settings.useInbox = useInboxMigration.useInbox;
+      this.settings.useInboxMigrated = useInboxMigration.useInboxMigrated;
     }
   }
 
@@ -1704,7 +1711,9 @@ export default class FileOrganizer extends Plugin {
     initializeFileOrganizationCommands(this);
 
     this.app.workspace.onLayoutReady(() => registerEventHandlers(this));
-    void this.processBacklog();
+    if (this.settings.useInbox) {
+      void this.processBacklog();
+    }
 
     this.addCommand({
       id: "open-organizer-tab",

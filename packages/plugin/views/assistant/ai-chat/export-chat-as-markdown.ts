@@ -1,9 +1,10 @@
-import type { Message } from "ai";
+import type { UIMessage } from "ai";
 import type { App } from "obsidian";
 import { Notice } from "obsidian";
 import { safeCreate } from "../../../fileUtils";
 import { sanitizeFileName } from "../../../someUtils";
 import { ChatHistoryManager } from "./services/chat-history-manager";
+import { getMessageText } from "./lib/ui-message";
 
 const CHAT_EXPORT_FOLDER = "Chat exports";
 const TOOL_RESULT_MAX_CHARS = 200;
@@ -22,31 +23,17 @@ interface ToolInvocationLike {
 }
 
 /**
- * Normalize message content to string (handles AI SDK string or array of parts).
+ * Normalize message content to string (handles AI SDK parts or legacy content).
  */
-function getMessageContentAsString(message: Message): string {
-  const content = message.content;
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    type TextPart = { type?: string; text?: string };
-    const parts = content as TextPart[];
-    return parts
-      .map((part) =>
-        part && typeof part === "object" && typeof part.text === "string"
-          ? part.text
-          : ""
-      )
-      .filter(Boolean)
-      .join("\n");
-  }
-  return "";
+function getMessageContentAsString(message: UIMessage): string {
+  return getMessageText(message);
 }
 
 /**
  * Extract tool invocations from message (parts or deprecated toolInvocations).
  */
-function getToolInvocations(message: Message): ToolInvocationLike[] {
-  const msg = message as Message & {
+function getToolInvocations(message: UIMessage): ToolInvocationLike[] {
+  const msg = message as UIMessage & {
     parts?: Array<{
       type?: string;
       toolCallId?: string;
@@ -74,7 +61,7 @@ function getToolInvocations(message: Message): ToolInvocationLike[] {
       })
       .filter((t) => t.toolCallId);
   }
-  const legacyInvocations = (msg as Record<string, unknown>)["toolInvocations"];
+  const legacyInvocations = (msg as unknown as Record<string, unknown>)["toolInvocations"];
   if (Array.isArray(legacyInvocations)) {
     return legacyInvocations.map((t) => ({
       toolCallId: (t as ToolInvocationLike).toolCallId,
@@ -104,7 +91,7 @@ function formatToolResultSummary(result: unknown): string {
  * Convert chat messages to markdown string.
  */
 export function messagesToMarkdown(
-  messages: Message[],
+  messages: UIMessage[],
   options: MessagesToMarkdownOptions = {}
 ): string {
   const {
@@ -129,16 +116,14 @@ export function messagesToMarkdown(
   for (const message of messages) {
     const content = getMessageContentAsString(message);
     const roleLabel = message.role === "user" ? "User" : "Assistant";
-    const createdAtMs =
-      message.createdAt == null
-        ? null
-        : typeof message.createdAt === "number"
-          ? message.createdAt
-          : message.createdAt instanceof Date
-            ? message.createdAt.getTime()
-            : typeof message.createdAt === "string"
-              ? Date.parse(message.createdAt)
-              : Number.NaN;
+    const createdAtMs = (() => {
+      const createdAt = (message as { createdAt?: unknown }).createdAt;
+      if (createdAt == null) return null;
+      if (typeof createdAt === "number") return createdAt;
+      if (createdAt instanceof Date) return createdAt.getTime();
+      if (typeof createdAt === "string") return Date.parse(createdAt);
+      return Number.NaN;
+    })();
     const timestamp =
       includeTimestamps &&
       createdAtMs != null &&
@@ -177,7 +162,7 @@ export function messagesToMarkdown(
  */
 export async function exportChatToVault(
   app: App,
-  messages: Message[],
+  messages: UIMessage[],
   sessionTitle: string | null
 ): Promise<void> {
   const title = sessionTitle || ChatHistoryManager.generateTitleFromMessages(messages);
@@ -200,7 +185,7 @@ export async function exportChatToVault(
  * Copy current chat as markdown to the clipboard.
  */
 export async function copyChatToClipboard(
-  messages: Message[],
+  messages: UIMessage[],
   sessionTitle: string | null
 ): Promise<void> {
   const title = sessionTitle || ChatHistoryManager.generateTitleFromMessages(messages);

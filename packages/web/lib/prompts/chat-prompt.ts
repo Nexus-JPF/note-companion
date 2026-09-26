@@ -24,20 +24,36 @@ export const CHAT_PROMPT_HINTS_FULL: ChatPromptHints = {
   includeMerge: true,
 };
 
+function textFromUserMessage(message: {
+  content?: unknown;
+  parts?: unknown;
+}): string {
+  const c = message.content;
+  if (typeof c === 'string' && c.length > 0) return c;
+  if (Array.isArray(c)) {
+    const fromContent = c
+      .map((p: { text?: string }) =>
+        typeof p?.text === 'string' ? p.text : ''
+      )
+      .join('');
+    if (fromContent.length > 0) return fromContent;
+  }
+  if (Array.isArray(message.parts)) {
+    return message.parts
+      .map((p: { type?: string; text?: string }) =>
+        p?.type === 'text' && typeof p.text === 'string' ? p.text : ''
+      )
+      .join('');
+  }
+  if (typeof c === 'string') return c;
+  return '';
+}
+
 export function getLastUserText(messages: unknown[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
-    const m = messages[i] as { role?: string; content?: unknown };
+    const m = messages[i] as { role?: string; content?: unknown; parts?: unknown };
     if (m?.role !== 'user') continue;
-    const c = m.content;
-    if (typeof c === 'string') return c;
-    if (Array.isArray(c)) {
-      return c
-        .map((p: { text?: string }) =>
-          typeof p?.text === 'string' ? p.text : ''
-        )
-        .join('');
-    }
-    return '';
+    return textFromUserMessage(m);
   }
   return '';
 }

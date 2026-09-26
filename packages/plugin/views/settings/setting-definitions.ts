@@ -55,6 +55,11 @@ export function getNoteCompanionSettingDefinitions(
           heading: 'Inbox processing',
           items: [
             {
+              name: 'Use inbox',
+              desc: 'Automatically process files dropped into or created in the inbox folder. Turn off to only process files when you run "Process inbox now".',
+              control: { type: 'toggle', key: 'useInbox' },
+            },
+            {
               name: 'Process attachments through inbox',
               control: { type: 'toggle', key: 'enableAttachmentProcessing' },
             },
@@ -203,10 +208,6 @@ export function getNoteCompanionSettingDefinitions(
         {
           name: 'Sync folder',
           control: { type: 'folder', key: 'syncFolderPath' },
-        },
-        {
-          name: 'Use inbox',
-          control: { type: 'toggle', key: 'useInbox' },
         },
       ],
     },
