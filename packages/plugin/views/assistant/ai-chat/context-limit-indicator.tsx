@@ -2,10 +2,7 @@ import React from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { logger } from "../../../services/logger";
 import { useContextItems } from "./use-context-items";
-import {
-  getTokenCount,
-  initializeTokenCounter,
-} from "../../../utils/token-counter";
+import { getTokenCount } from "../../../utils/token-counter";
 
 interface TokenStats {
   contextSize: number;
@@ -23,43 +20,23 @@ export function ContextLimitIndicator({
     contextSize: 0,
     percentUsed: 0,
   });
-  const [error, setError] = React.useState<string>();
-  const [counterReady, setCounterReady] = React.useState(false);
   const [isTooltipOpen, setIsTooltipOpen] = React.useState(false);
   const { isLightweightMode, toggleLightweightMode } = useContextItems();
 
-  React.useEffect(() => {
-    void initializeTokenCounter().then(() => setCounterReady(true));
-  }, []);
-
   const calculateTokens = useDebouncedCallback((text: string) => {
-    if (!text || !counterReady) return;
+    if (!text) return;
 
-    try {
-      const tokens = getTokenCount(text);
-      logger.debug("tokens", { tokens });
-      setStats({
-        contextSize: tokens,
-        percentUsed: (tokens / maxContextSize) * 100,
-      });
-      setError(undefined);
-    } catch {
-      setError("Token counting failed");
-    }
+    const tokens = getTokenCount(text);
+    logger.debug("tokens", { tokens });
+    setStats({
+      contextSize: tokens,
+      percentUsed: (tokens / maxContextSize) * 100,
+    });
   }, 300);
 
-  // Update tokens when context changes
   React.useEffect(() => {
     calculateTokens(unifiedContext);
-  }, [unifiedContext, counterReady, calculateTokens]);
-
-  if (error) {
-    return (
-      <div className="mt-2 p-2 rounded text-xs text-[--text-error] border border-[--text-error]">
-        {error}
-      </div>
-    );
-  }
+  }, [unifiedContext, calculateTokens]);
 
   const isOverLimit = stats.contextSize > maxContextSize;
   const shouldWarn = stats.percentUsed > 80;

@@ -67,7 +67,7 @@ describe("token-counter", () => {
       expect(count).toBeGreaterThan(0);
     });
 
-    it("should lazy-initialize if cleanup ran (shared module, multiple consumers)", () => {
+    it("should still count after cleanup (cleanup is a no-op)", () => {
       cleanup();
 
       expect(getTokenCount("test")).toBeGreaterThan(0);
@@ -83,7 +83,7 @@ describe("token-counter", () => {
   });
 
   describe("cleanup", () => {
-    it("should still count after cleanup because getTokenCount re-inits", async () => {
+    it("should still count after cleanup because cleanup is a no-op", async () => {
       await initializeTokenCounter();
       getTokenCount("test");
 
