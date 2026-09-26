@@ -3,7 +3,6 @@ import { useDebouncedCallback } from "use-debounce";
 import { logger } from "../../../services/logger";
 import { useContextItems } from "./use-context-items";
 import {
-  cleanup,
   getTokenCount,
   initializeTokenCounter,
 } from "../../../utils/token-counter";
@@ -26,11 +25,11 @@ export function ContextLimitIndicator({
   });
   const [error, setError] = React.useState<string>();
   const [counterReady, setCounterReady] = React.useState(false);
+  const [isTooltipOpen, setIsTooltipOpen] = React.useState(false);
   const { isLightweightMode, toggleLightweightMode } = useContextItems();
 
   React.useEffect(() => {
     void initializeTokenCounter().then(() => setCounterReady(true));
-    return () => cleanup();
   }, []);
 
   const calculateTokens = useDebouncedCallback((text: string) => {
@@ -43,6 +42,7 @@ export function ContextLimitIndicator({
         contextSize: tokens,
         percentUsed: (tokens / maxContextSize) * 100,
       });
+      setError(undefined);
     } catch {
       setError("Token counting failed");
     }
@@ -63,8 +63,6 @@ export function ContextLimitIndicator({
 
   const isOverLimit = stats.contextSize > maxContextSize;
   const shouldWarn = stats.percentUsed > 80;
-
-  const [isTooltipOpen, setIsTooltipOpen] = React.useState(false);
 
   return (
     <div className="mt-2 space-y-2 flex">

@@ -4,23 +4,14 @@
  */
 const CHARS_PER_TOKEN = 4;
 
-let initialized = false;
-
 export function initializeTokenCounter(): Promise<void> {
-  initialized = true;
   return Promise.resolve();
 }
 
 export function getTokenCount(text: string): number {
-  if (!initialized) {
-    throw new Error(
-      "Token counter not initialized. Call initializeTokenCounter() first."
-    );
-  }
   if (!text) return 0;
   return Math.ceil(text.length / CHARS_PER_TOKEN);
 }
 
-export function cleanup(): void {
-  initialized = false;
-}
+/** No-op: counting is a pure heuristic (no WASM to unload). Kept for callers. */
+export function cleanup(): void {}
