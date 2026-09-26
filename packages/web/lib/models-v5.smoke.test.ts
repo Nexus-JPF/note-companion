@@ -9,8 +9,13 @@ import { getModelV5, getResponsesModelV5 } from './models-v5';
  */
 describe('chat v5 model specification', () => {
   it('getModelV5 and getResponsesModelV5 are LanguageModelV2', () => {
-    expect(getModelV5().specificationVersion).toBe('v2');
-    expect(getResponsesModelV5().specificationVersion).toBe('v2');
+    const chatModel = getModelV5();
+    const responsesModel = getResponsesModelV5();
+    if (typeof chatModel === 'string' || typeof responsesModel === 'string') {
+      throw new Error('expected LanguageModelV2 instances');
+    }
+    expect(chatModel.specificationVersion).toBe('v2');
+    expect(responsesModel.specificationVersion).toBe('v2');
   });
 
   it('catalog getModel stays LanguageModelV1 for /api/chat', () => {

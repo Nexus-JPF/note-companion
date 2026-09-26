@@ -1,4 +1,5 @@
 import { openai, createOpenAI } from '@ai-sdk/openai-v5';
+import type { LanguageModel } from 'ai-v5';
 
 const MODEL_PROVIDER = (process.env.MODEL_PROVIDER || 'openai').toLowerCase();
 const MODEL_NAME = process.env.MODEL_NAME || 'gpt-4.1-mini';
@@ -11,7 +12,7 @@ const RESPONSES_MODEL_NAME = process.env.RESPONSES_MODEL_NAME || MODEL_NAME;
  * Cloud chat is OpenAI. Other MODEL_PROVIDER values still go through the OpenAI-compatible
  * v2 client (custom baseURL / OpenAI). Do not wire catalog v1 providers here.
  */
-function createModelV5(modelName: string) {
+function createModelV5(modelName: string): LanguageModel {
   if (process.env.OPENAI_API_BASE) {
     const customProvider = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY || '',
@@ -29,8 +30,8 @@ const DEFAULT_RESPONSES_MODEL =
     ? openai.responses(RESPONSES_MODEL_NAME)
     : createModelV5(RESPONSES_MODEL_NAME);
 
-export const getModelV5 = (_name?: string) => DEFAULT_MODEL;
+export const getModelV5 = (_name?: string): LanguageModel => DEFAULT_MODEL;
 
-export const getResponsesModelV5 = () => DEFAULT_RESPONSES_MODEL;
+export const getResponsesModelV5 = (): LanguageModel => DEFAULT_RESPONSES_MODEL;
 
 export { openai as openaiV5 };
