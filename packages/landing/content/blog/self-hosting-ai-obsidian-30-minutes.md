@@ -14,7 +14,7 @@ image: '/blog/images/self-hosting-ai-obsidian-30-minutes.png'
 
 AI is transforming how we work with notes, but sending your private thoughts and research to a third-party cloud service isn’t always appealing. Many Obsidian users want AI-powered workflows—summaries, auto-tagging, smart suggestions—but hesitate due to privacy, cost, or wanting more control.
 
-What if you could get the best of both worlds? Self-hosting AI in Obsidian is more accessible than you might think. With the right approach, you can have a functional, private setup running in under 30 minutes—no server rack or advanced coding skills required.
+What if you could get the best of both worlds? Self-hosting AI in Obsidian is more accessible than you might think. With the right approach, you can have a functional, private setup running in under 30 minutes—no server rack or advanced coding skills required. If you are still weighing local vs cloud, see [choosing between cloud and self-hosted AI for your vault](/blog/choosing-between-cloud-and-self-hosted-ai-for-your-vault) and [why your second brain should be local-first](/blog/why-your-second-brain-should-be-local-first).
 
 ## What Does Self-Hosting AI Actually Give You?
 
@@ -48,7 +48,7 @@ You need a way for Obsidian to talk to your AI. Use a simple HTTP API wrapper:
 
 Most AI plugins for Obsidian allow you to specify a custom API endpoint:
 
-- In your plugin’s settings, set the endpoint to something like `http://localhost:8000/api/v1/generate`.
+- In your plugin’s settings, point at your local server’s base URL (often `http://localhost:8000`). The full path—such as `/api/v1/generate`—depends on your wrapper; use whatever URL your API docs or plugin examples specify.
 - Adjust model parameters (temperature, context window) as needed for your workflow.
 
 ### 4. Run a Test Prompt
@@ -76,7 +76,7 @@ Here’s how Maria gets started:
 
 1. Downloads and installs `llama.cpp` with a compact LLaMA model.
 2. Launches a Python FastAPI wrapper that creates a simple local API.
-3. In Obsidian, she configures her AI plugin to use `http://localhost:8000` as the endpoint.
+3. In Obsidian, she configures her AI plugin to use `http://localhost:8000/api/v1/generate`—the path her FastAPI wrapper exposes.
 4. With her `inbox/paper-notes.md` open, she asks the AI to summarize key points.
 5. She enables AI-suggested tags, like `#research` or `#methodology`, which are added automatically.
 
@@ -102,10 +102,10 @@ But for most solo Obsidian users, this lean setup covers 80% of AI workflows—s
 
 ## Blending Local and Cloud: Using Note Companion
 
-If you want to combine the strengths of local and cloud AI, consider layering Note Companion into your setup:
+If you want to combine the strengths of local and cloud AI, consider layering [Note Companion](https://www.notecompanion.ai) into your setup:
 
 - Use Note Companion’s AI organization suggestions to get folder and tag ideas beyond your local model’s training data.
-- Rely on their Inbox auto-organization for initial capture, then refine with your private AI.
+- Rely on Note Companion’s Inbox auto-organization for initial capture, then refine with your private AI.
 
 This hybrid approach gives you maximum privacy for sensitive notes while still tapping into broader AI context or suggestions when you choose.
 
@@ -113,4 +113,4 @@ This hybrid approach gives you maximum privacy for sensitive notes while still t
 
 You don’t need to be an engineer to self-host AI for Obsidian. With a lightweight model, a simple API, and a quick plugin config, you’ll have real AI-powered workflows—summaries, tags, organization—in under 30 minutes.
 
-It’s a simple route to privacy, savings, and control, all while staying deeply integrated with Obsidian. Try it out this week and see how much easier it is to keep your vault organized, insightful, and secure.
+It’s a simple route to privacy, savings, and control, all while staying deeply integrated with Obsidian. Try it out this week and see how much easier it is to keep your vault organized, insightful, and secure—and when you want cloud help on your own terms, [Note Companion](https://www.notecompanion.ai) can sit alongside your local stack.
