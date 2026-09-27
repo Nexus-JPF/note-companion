@@ -64,11 +64,40 @@ Commit it into the vault at a staging path **outside** the inbox folder --
 
 1. The inbox processes whatever lands in it, immediately. If the photo is
    already there when you hit record, the interesting part has already
-   happened.
+   happened. Worse, the plugin enqueues the *entire* inbox folder on load
+   (`processBacklog()`, `packages/plugin/index.ts:1715`), so a photo sitting
+   there gets eaten the moment you open the vault, before the recorder is even
+   running.
 2. `git checkout demo-vault/` only restores tracked files. The pipeline moves
    and renames the photo during processing, so if it is untracked you have to
    copy it back by hand before every take. Committed, the ordinary reset puts
    it back.
 
-Then the drag from `Attachments/` into `Inbox/` happens on camera, inside
-Obsidian, without a Finder window entering frame.
+## Which folder is the inbox
+
+Not `demo-vault/Unsorted/`. That folder holds three human notes for the
+organizer demo and is deliberately *not* the inbox — see `docs/demo-vault.md`.
+
+The inbox is whatever `pathToWatch` says in Settings -> Note Companion -> File
+config, and the default is `_NoteCompanion/Inbox`. Leave it there. It is
+gitignored, it starts every take empty, and it is the same path a viewer will
+have after installing the plugin, so the footage matches their screen.
+
+So on camera the drag is `Attachments/IMG_4821.jpeg` ->
+`_NoteCompanion/Inbox/`, inside Obsidian, without a Finder window entering
+frame. Expand `_NoteCompanion/` in the file tree *before* you start recording
+so the drop target is already visible and the drag is one clean movement.
+
+## Resetting between takes
+
+`git checkout demo-vault/` restores the tracked notes and puts the photo back at
+its staging path, but it will not touch `_NoteCompanion/` -- that whole tree is
+gitignored, so the processed note, the moved attachment, the logs and the
+backups all survive into the next take. Clear them explicitly:
+
+```sh
+git checkout demo-vault/
+rm -rf demo-vault/_NoteCompanion
+```
+
+Then reopen the vault. The plugin recreates the folders it needs on load.
