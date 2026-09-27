@@ -23,7 +23,6 @@ const hasClerkConfig =
 const soloApiKeyMiddleware = (req: NextRequest) => {
   if (isApiRoute(req)) {
     const header = req.headers.get('authorization');
-    console.log('header', header);
     if (!header) {
       return jsonApiError(
         'unauthorized',

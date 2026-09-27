@@ -1,3 +1,5 @@
+import blogSlugs from './blog-slugs.generated.json';
+
 const KNOWN_PAGE_PATHS = new Set([
   '/',
   '/mobile',
@@ -6,16 +8,37 @@ const KNOWN_PAGE_PATHS = new Set([
   '/blog',
   '/docs',
   '/developers',
+  '/demo',
 ]);
 
+const BLOG_SLUGS = new Set(blogSlugs as string[]);
+
+function normalizePathname(pathname: string): string {
+  if (pathname.length > 1 && pathname.endsWith('/')) {
+    return pathname.slice(0, -1);
+  }
+  return pathname;
+}
+
+function isKnownBlogPostPath(pathname: string): boolean {
+  const normalized = normalizePathname(pathname);
+  const prefix = '/blog/';
+  if (!normalized.startsWith(prefix)) {
+    return false;
+  }
+  const slug = normalized.slice(prefix.length);
+  if (!slug || slug.includes('/')) {
+    return false;
+  }
+  return BLOG_SLUGS.has(slug);
+}
+
 export function isKnownPagePath(pathname: string): boolean {
-  if (KNOWN_PAGE_PATHS.has(pathname)) {
+  const normalized = normalizePathname(pathname);
+  if (KNOWN_PAGE_PATHS.has(normalized)) {
     return true;
   }
-  if (pathname.startsWith('/blog/') && pathname.length > '/blog/'.length) {
-    return true;
-  }
-  return false;
+  return isKnownBlogPostPath(normalized);
 }
 
 export function shouldSkipMiddleware(pathname: string): boolean {

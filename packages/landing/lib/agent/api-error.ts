@@ -4,6 +4,7 @@ export type ApiErrorCode =
   | 'not_found'
   | 'method_not_allowed'
   | 'unauthorized'
+  | 'forbidden'
   | 'internal_error';
 
 export interface ApiErrorBody {

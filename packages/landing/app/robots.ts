@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
     process.env.NEXT_PUBLIC_SITE_URL ||
     (process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
-      : 'https://www.notecompanion.ai');
+      : 'https://notecompanion.ai');
 
   // Ensure URL doesn't have trailing slash
   baseUrl = baseUrl.replace(/\/$/, '');

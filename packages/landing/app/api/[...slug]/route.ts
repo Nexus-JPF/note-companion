@@ -1,10 +1,12 @@
 import { jsonApiError } from '@/lib/agent/api-error';
+import { getSiteBaseUrl } from '@/lib/agent/markdown-response';
 
 function notFoundResponse() {
+  const base = getSiteBaseUrl();
   return jsonApiError(
     'not_found',
     'API route not found',
-    'See /openapi.json on notecompanion.ai for Note Companion API operations (server: https://app.notecompanion.ai).',
+    `See ${base}/openapi.json for Note Companion API operations (server: https://app.notecompanion.ai).`,
     404
   );
 }

@@ -1,11 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { prefersMarkdown } from '@/lib/agent/accept';
-import {
-  buildHomeMarkdown,
-  buildNotFoundMarkdown,
-} from '@/lib/agent/markdown-content';
+import { resolveAgentMarkdownRoute } from '@/lib/agent/markdown-routing';
 import { markdownResponse } from '@/lib/agent/markdown-response';
-import { isKnownPagePath, shouldSkipMiddleware } from '@/lib/agent/routes';
+import { shouldSkipMiddleware } from '@/lib/agent/routes';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -18,16 +14,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const wantsMarkdown = prefersMarkdown(request.headers.get('accept'));
+  const route = resolveAgentMarkdownRoute(
+    pathname,
+    request.headers.get('accept')
+  );
 
-  if (wantsMarkdown) {
-    if (pathname === '/') {
-      return markdownResponse(buildHomeMarkdown());
-    }
-
-    if (!isKnownPagePath(pathname)) {
-      return markdownResponse(buildNotFoundMarkdown(pathname), 404);
-    }
+  if (route.action === 'respond') {
+    return markdownResponse(route.body, route.status);
   }
 
   const response = NextResponse.next();

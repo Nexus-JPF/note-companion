@@ -29,6 +29,11 @@ export function jsonApiError(
         resolution,
       },
     },
-    { status }
+    {
+      status,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+    }
   );
 }

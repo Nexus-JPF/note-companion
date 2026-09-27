@@ -23,6 +23,21 @@ export function buildHomeMarkdown(): string {
 `;
 }
 
+export function buildDevelopersMarkdown(): string {
+  const base = getSiteBaseUrl();
+  return `# Note Companion developer resources
+
+Integrate with Note Companion's cloud API (Obsidian plugin and mobile apps).
+
+- **API base URL:** \`https://app.notecompanion.ai\`
+- **Auth:** \`Authorization: Bearer <api_key>\`
+- [OpenAPI specification](${base}/openapi.json)
+- [llms.txt agent index](${base}/llms.txt)
+- [Health check](https://app.notecompanion.ai/api/health)
+- [Source code](https://github.com/Nexus-JPF/note-companion)
+`;
+}
+
 export function buildNotFoundMarkdown(pathname: string): string {
   const base = getSiteBaseUrl();
   return `# Page not found

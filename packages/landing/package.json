@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "PORT=3011 next dev",
     "ts:check": "tsc --noEmit",
+    "prebuild": "node scripts/generate-blog-slugs.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
