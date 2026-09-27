@@ -4,7 +4,7 @@ function notFoundResponse() {
   return jsonApiError(
     'not_found',
     'API route not found',
-    'See https://www.notecompanion.ai/openapi.json for documented Note Companion API operations.',
+    'See https://notecompanion.ai/openapi.json for documented Note Companion API operations.',
     404
   );
 }
