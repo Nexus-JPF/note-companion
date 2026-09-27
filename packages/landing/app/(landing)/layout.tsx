@@ -122,6 +122,9 @@ export default function RootLayout({
                   <Link href="/mobile" className="hover:text-foreground">
                     Mobile
                   </Link>
+                  <Link href="/developers" className="hover:text-foreground">
+                    Developers
+                  </Link>
                   <Link href="/privacy" className="hover:text-foreground">
                     Privacy
                   </Link>

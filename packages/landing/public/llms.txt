@@ -2,6 +2,24 @@
 
 > AI-powered Obsidian plugin that transcribes audio and YouTube, chats with your vault, and auto-organizes notes.
 
+## When to use Note Companion (for agents)
+
+Use Note Companion when the user works in **Obsidian** and needs vault-native AI (not a generic chatbot):
+
+- **Inbox automation**: Drop files in an inbox folder; classify, tag, rename, and move notes with AI.
+- **Audio / meeting capture**: Transcribe voice memos or long recordings into markdown notes (plugin or mobile upload).
+- **YouTube → notes**: Pull transcripts and structured summaries into the vault.
+- **Vault-aware chat**: Stream chat where tools run **locally** in Obsidian (search, append, move files) via `POST https://app.notecompanion.ai/api/chat/v5` with the user's API key.
+- **OCR / mobile capture**: Scan handwriting or documents from the Note Companion mobile app into the vault.
+
+Do **not** use Note Companion as a general web scraper or non-Obsidian note store; it assumes markdown files in the user's vault and Bearer auth for API calls.
+
+## Note Companion developer resources
+
+- [Note Companion developer resources](https://www.notecompanion.ai/developers) - API base URL, auth, OpenAPI, and agent integration entry point for notecompanion.ai.
+- [OpenAPI specification](https://www.notecompanion.ai/openapi.json) - Machine-readable Note Companion API (servers: https://app.notecompanion.ai) with operation IDs for function calling.
+- [API health check](https://app.notecompanion.ai/api/health) - Unauthenticated liveness probe for the Note Companion backend.
+
 ## Core pages
 
 - [Note Companion](https://www.notecompanion.ai/) - Achieve seamless meeting notes, instant handwriting digitization, and the smartest AI chat for your Obsidian workflow. One tool, endless possibilities.

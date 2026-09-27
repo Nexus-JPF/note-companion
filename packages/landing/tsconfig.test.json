@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "types": ["jest", "node"],
+    "typeRoots": [
+      "../../node_modules/@types",
+      "./node_modules/@types",
+      "./types"
+    ]
+  },
+  "include": ["lib/**/*.test.ts", "app/**/*.test.ts"]
+}

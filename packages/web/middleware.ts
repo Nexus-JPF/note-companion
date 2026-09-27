@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { jsonApiError } from '@/lib/api-error-response';
 
 const isApiRoute = createRouteMatcher(['/api(.*)']);
 
@@ -24,11 +25,21 @@ const soloApiKeyMiddleware = (req: NextRequest) => {
     const header = req.headers.get('authorization');
     console.log('header', header);
     if (!header) {
-      return new NextResponse('No Authorization header', { status: 401 });
+      return jsonApiError(
+        'unauthorized',
+        'Missing Authorization header',
+        'Send Authorization: Bearer <api_key> from your Note Companion account.',
+        401
+      );
     }
     const token = header.replace('Bearer ', '');
     if (token !== process.env.SOLO_API_KEY) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return jsonApiError(
+        'unauthorized',
+        'Invalid API key',
+        'Verify your Note Companion API key in Obsidian plugin settings or the web dashboard.',
+        401
+      );
     }
   }
   return NextResponse.next();
