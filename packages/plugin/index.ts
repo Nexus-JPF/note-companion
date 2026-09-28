@@ -58,6 +58,8 @@ import {
 import { initializeInboxQueue, Inbox } from "./inbox";
 import { migrateInboxNotificationLevel } from "./inbox/notification-level";
 import { migrateUseInbox } from "./inbox/use-inbox-migration";
+import { migrateImageOcrSettings } from "./inbox/migrate-image-instructions";
+import { renderPdfPageToPng } from "./lib/pdf-page-to-image";
 import { logger } from "./services/logger";
 import { layoutPdfTextItems } from "./lib/pdf-text-layout";
 import { obsidianFetch } from "./lib/obsidian-fetch";
@@ -121,6 +123,11 @@ type PresignedUrlErrorBody = ApiErrorBody & { details?: string };
 type PdfTextContent = { items: unknown[] };
 type PdfPage = {
   getTextContent: () => Promise<PdfTextContent>;
+  getViewport: (opts: { scale: number }) => { width: number; height: number };
+  render: (opts: {
+    canvasContext: CanvasRenderingContext2D;
+    viewport: { width: number; height: number };
+  }) => { promise: Promise<void> };
 };
 type PdfDocument = {
   numPages: number;
@@ -196,6 +203,10 @@ export default class FileOrganizer extends Plugin {
     if (useInboxMigration) {
       this.settings.useInbox = useInboxMigration.useInbox;
       this.settings.useInboxMigrated = useInboxMigration.useInboxMigrated;
+    }
+
+    if (migrateImageOcrSettings(this.settings)) {
+      await this.saveSettings();
     }
   }
 
@@ -676,18 +687,47 @@ export default class FileOrganizer extends Plugin {
       const doc = await pdfjsLib.getDocument({ data: bytes }).promise;
       const pageTexts: string[] = [];
 
-      // Use pdfPageLimit to cap the maximum pages read.
       const pageLimit = Math.min(doc.numPages, this.settings.pdfPageLimit);
       for (let pageNum = 1; pageNum <= pageLimit; pageNum++) {
         const page = await doc.getPage(pageNum);
         const textContent = await page.getTextContent();
         pageTexts.push(layoutPdfTextItems(textContent.items));
       }
-      return pageTexts.join("\n\n");
+      const textLayer = pageTexts.join("\n\n");
+      const significantChars = textLayer.replace(/\s/g, "").length;
+      if (significantChars >= 40) {
+        return textLayer;
+      }
+
+      return await this.extractTextFromPdfViaVision(doc, pageLimit);
     } catch (error) {
       logger.error(`Error extracting text from PDF: ${error}`);
       return "";
     }
+  }
+
+  async extractTextFromPdfViaVision(
+    doc: PdfDocument,
+    pageLimit: number
+  ): Promise<string> {
+    const parts: string[] = [];
+    for (let pageNum = 1; pageNum <= pageLimit; pageNum++) {
+      try {
+        const page = await doc.getPage(pageNum);
+        const png = await renderPdfPageToPng(page, 2);
+        if (!png) {
+          continue;
+        }
+        const processed = await this.compressImage(png);
+        const pageText = await this.extractTextFromImage(processed);
+        if (pageText.trim()) {
+          parts.push(pageText.trim());
+        }
+      } catch (error) {
+        logger.error(`PDF page ${pageNum} OCR failed: ${error}`);
+      }
+    }
+    return parts.join("\n\n---\n\n");
   }
   getApiKey(): string {
     return this.settings.API_KEY;

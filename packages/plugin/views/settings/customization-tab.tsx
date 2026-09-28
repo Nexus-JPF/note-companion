@@ -67,8 +67,8 @@ export const CustomizationTab: React.FC<CustomizationTabProps> = ({ plugin }) =>
           {enableAttachmentProcessing && (
             <div className="ml-4 pl-4 border-l border-[--background-modifier-border] space-y-4">
               <ToggleSetting
-                name="Generate AI Description for Images"
-                description="When disabled, images are still organized with an embed link but no AI description is generated."
+                name="Extract text from images (OCR)"
+                description="When disabled, images are still organized with an embed link but no OCR text is extracted."
                 value={enableImageDescription}
                 onChange={(value) => { void handleToggleChange(value, setEnableImageDescription, 'enableImageDescription'); }}
               />
