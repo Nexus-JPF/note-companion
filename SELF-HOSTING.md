@@ -402,6 +402,7 @@ Self-hosting does **not** require a paid Vercel plan. Docker and local setup are
   OPENAI_API_KEY=sk-or-v1-...
   MODEL_PROVIDER=openai
   MODEL_NAME=openai/gpt-4o
+  VISION_MODEL=openai/gpt-4o
   ```
 
 - **`MODEL_PROVIDER=anthropic` does not support OCR/vision** in Note Companion

@@ -10,6 +10,8 @@ import { LanguageModel } from 'ai';
 // Defaults to OpenAI for backward compatibility with cloud environment
 const MODEL_PROVIDER = (process.env.MODEL_PROVIDER || 'openai').toLowerCase();
 const MODEL_NAME = process.env.MODEL_NAME || 'gpt-4.1-mini';
+const VISION_MODEL_NAME =
+  process.env.VISION_MODEL || process.env.VISION_MODEL_NAME || 'gpt-4o';
 const RESPONSES_MODEL_NAME = process.env.RESPONSES_MODEL_NAME || MODEL_NAME;
 
 /**
@@ -48,6 +50,7 @@ function createModel(provider: string, modelName: string): LanguageModel {
 
 // Create model instances based on environment variables
 const DEFAULT_MODEL = createModel(MODEL_PROVIDER, MODEL_NAME);
+const DEFAULT_VISION_MODEL = createModel(MODEL_PROVIDER, VISION_MODEL_NAME);
 
 // Responses API is OpenAI-specific, so only use it for OpenAI
 // For other providers, fall back to regular model
@@ -64,6 +67,11 @@ const DEFAULT_RESPONSES_MODEL =
  */
 export const getModel = (_name?: string): LanguageModel => {
   return DEFAULT_MODEL;
+};
+
+/** Vision / OCR model (defaults to gpt-4o; override with VISION_MODEL). */
+export const getVisionModel = (): LanguageModel => {
+  return DEFAULT_VISION_MODEL;
 };
 
 /**

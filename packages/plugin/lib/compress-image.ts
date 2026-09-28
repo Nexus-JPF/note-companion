@@ -1,4 +1,5 @@
-const MAX_IMAGE_EDGE = 1000;
+const MAX_IMAGE_EDGE = 2048;
+const JPEG_QUALITY = 0.88;
 
 export function isWebP(data: ArrayBuffer | Uint8Array): boolean {
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
@@ -6,6 +7,20 @@ export function isWebP(data: ArrayBuffer | Uint8Array): boolean {
   const riff = String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]);
   const webp = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]);
   return riff === "RIFF" && webp === "WEBP";
+}
+
+function isJpeg(data: Uint8Array): boolean {
+  return data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
+}
+
+function isPng(data: Uint8Array): boolean {
+  return (
+    data.length >= 4 &&
+    data[0] === 0x89 &&
+    data[1] === 0x50 &&
+    data[2] === 0x4e &&
+    data[3] === 0x47
+  );
 }
 
 /**
@@ -49,12 +64,27 @@ export async function compressImageForVision(
 
     ctx.drawImage(bitmap, 0, 0, width, height);
 
-    const pngBlob = await new Promise<Blob | null>(resolve => {
-      canvas.toBlob(resolve, "image/png");
-    });
-    if (!pngBlob) return data;
+    const bytes = new Uint8Array(data);
+    const mimeType = isJpeg(bytes)
+      ? "image/jpeg"
+      : isPng(bytes)
+        ? "image/png"
+        : isWebP(bytes)
+          ? "image/webp"
+          : "image/jpeg";
 
-    return await pngBlob.arrayBuffer();
+    const blob = await new Promise<Blob | null>(resolve => {
+      if (mimeType === "image/jpeg") {
+        canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY);
+      } else if (mimeType === "image/webp") {
+        canvas.toBlob(resolve, "image/webp", JPEG_QUALITY);
+      } else {
+        canvas.toBlob(resolve, "image/png");
+      }
+    });
+    if (!blob) return data;
+
+    return await blob.arrayBuffer();
   } finally {
     bitmap.close();
   }

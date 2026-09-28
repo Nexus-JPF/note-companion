@@ -53,7 +53,7 @@ export class FileOrganizerSettings {
   /** @internal One-time migration flag; see loadSettings() in index.ts. */
   useInboxMigrated = false;
   imageInstructions =
-    "Analyze the image and provide a clear, detailed description focusing on the main elements, context, and any text visible in the image. Include relevant details that would be useful for searching and organizing the image later.";
+    "For handwriting and whiteboards, preserve line breaks and list structure.";
   debugMode = false;
   enableTitleSuggestions = false;
   /**

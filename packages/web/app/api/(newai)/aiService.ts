@@ -203,49 +203,21 @@ export async function generateDocumentTitle(
   return response;
 }
 
-// Function to extract text from image
+/** @deprecated Use extractTextFromVisionImage from @/lib/ocr-extract */
 export async function extractTextFromImage(
   image: ArrayBuffer,
   model: LanguageModel
 ): Promise<string> {
-  const modelName = model.modelId;
-
-  const messages = [
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: "Extract all text from the image comprehensively, preserving formatting. Focus only on extracting readable text, not describing visual elements. Respond with only the extracted text.",
-        },
-        {
-          type: "image",
-          image: image,
-        },
-      ],
-    },
-  ];
-
-  switch (modelName) {
-    case "gpt-4o": {
-      const response = await generateText({
-        model: model as any, // Type cast for AI SDK v2 compatibility
-        //@ts-ignore
-        messages,
-      });
-
-      return response.text.trim() + "\n\n";
-    }
-    default: {
-      const defaultResponse = await generateText({
-        model,
-        //@ts-ignore
-        messages,
-      });
-      // add empty line to the end of the response for better readability
-      return defaultResponse.text.trim() + "\n\n";
-    }
+  const { extractTextFromVisionImage } = await import("@/lib/ocr-extract");
+  const result = await extractTextFromVisionImage({
+    image: { kind: "buffer", buffer: Buffer.from(image) },
+    model,
+    retryOnEmpty: false,
+  });
+  if (result.error) {
+    throw new Error(result.error);
   }
+  return result.text.trim() + "\n\n";
 }
 
 // Function to classify document type
