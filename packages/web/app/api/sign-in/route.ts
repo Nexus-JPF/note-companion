@@ -3,6 +3,7 @@ import { clerkClient, auth } from "@clerk/nextjs/server";
 import { createLicenseKeyFromUserId } from "@/app/actions";
 import { createEmptyUserUsage } from "@/drizzle/schema";
 import { isRateLimited } from "@/lib/auth-rate-limit";
+import { captureServerEvent } from "@/lib/server-analytics";
 
 const DASHBOARD_URL = "https://app.notecompanion.ai/dashboard";
 
@@ -19,6 +20,14 @@ function invalidCredentials() {
     { success: false, error: INVALID_CREDENTIALS_ERROR },
     { status: 400 }
   );
+}
+
+// Failures are counted anonymously (no email, no person profile) with an
+// internal-only reason, so social-login attempts show up without being
+// revealed to the caller.
+async function failedSignIn(reason: string) {
+  await captureServerEvent("plugin_signin_failed", { reason });
+  return invalidCredentials();
 }
 
 export async function POST(req: NextRequest) {
@@ -68,6 +77,7 @@ export async function POST(req: NextRequest) {
       isRateLimited(`sign-in:ip:${ip}`, MAX_ATTEMPTS_PER_IP, WINDOW_MS) ||
       isRateLimited(`sign-in:email:${email}`, MAX_ATTEMPTS_PER_EMAIL, WINDOW_MS)
     ) {
+      await captureServerEvent("plugin_signin_failed", { reason: "rate_limited" });
       return NextResponse.json(
         {
           success: false,
@@ -85,8 +95,11 @@ export async function POST(req: NextRequest) {
 
     // Passwordless (social-login) users cannot be verified here and get the
     // same generic error; they are pointed at the web dashboard instead.
-    if (!user || !user.passwordEnabled) {
-      return invalidCredentials();
+    if (!user) {
+      return failedSignIn("no_account");
+    }
+    if (!user.passwordEnabled) {
+      return failedSignIn("social_account");
     }
 
     try {
@@ -94,12 +107,12 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         password,
       });
-      if (!result?.verified) return invalidCredentials();
+      if (!result?.verified) return failedSignIn("wrong_password");
     } catch (error: any) {
       // Clerk rejects wrong passwords with a 4xx; treat anything else as a server error.
       const status = error?.status;
       if (status && status >= 400 && status < 500 && status !== 429) {
-        return invalidCredentials();
+        return failedSignIn("wrong_password");
       }
       throw error;
     }
@@ -113,6 +126,7 @@ export async function POST(req: NextRequest) {
     }
 
     await createEmptyUserUsage(user.id);
+    await captureServerEvent("plugin_signin_succeeded", {}, user.id);
 
     return NextResponse.json({
       success: true,

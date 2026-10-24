@@ -3,6 +3,7 @@ import { clerkClient, auth } from "@clerk/nextjs/server";
 import { createLicenseKeyFromUserId } from "@/app/actions";
 import { createEmptyUserUsage, initializeTierConfig } from "@/drizzle/schema";
 import { isRateLimited } from "@/lib/auth-rate-limit";
+import { captureServerEvent } from "@/lib/server-analytics";
 
 export async function POST(req: NextRequest) {
   try {
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
 
     // Create empty usage for this user
     await createEmptyUserUsage(user.id);
+    await captureServerEvent("plugin_account_created", {}, user.id);
 
     return NextResponse.json({
       success: true,

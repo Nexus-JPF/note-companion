@@ -7,6 +7,8 @@ import { handleInvoicePaid } from "./handlers/invoice-paid";
 import { handlePaymentIntentSucceeded } from "./handlers/payment-intent-succeeded";
 import { handleInvoicePaymentFailed } from "./handlers/invoice-payment-failed";
 import { validateWebhookMetadata } from "@/srm.config";
+import { captureServerEvent } from "@/lib/server-analytics";
+import { stripeEventToFunnelEvent } from "@/lib/stripe-funnel-events";
 
 const HANDLERS = {
   "checkout.session.completed": handleCheckoutComplete,
@@ -51,6 +53,16 @@ export async function POST(req: NextRequest) {
         duration: Date.now() - startTime,
       });
       return NextResponse.json({ error: result.message }, { status: 400 });
+    }
+
+    // Funnel analytics: only after the event was processed successfully
+    const funnelEvent = stripeEventToFunnelEvent(event);
+    if (funnelEvent) {
+      await captureServerEvent(
+        funnelEvent.event,
+        funnelEvent.properties,
+        funnelEvent.userId
+      );
     }
 
     return NextResponse.json({
