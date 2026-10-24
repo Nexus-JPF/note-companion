@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { Toaster } from '@/components/ui/use-toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Metadata } from 'next';
-import { Button } from '@/components/ui/button';
+import { HeaderStartButton } from '@/components/header-start-button';
 import { GitHubStarCount } from '@/components/github-star-count';
 import { defaultOpenGraph } from '@/lib/og';
 import { getSiteBaseUrl } from '@/lib/site-url';
@@ -99,11 +99,7 @@ export default function RootLayout({
                     </Link>
 
                     <GitHubStarCount />
-                    <Link href="https://accounts.notecompanion.ai/sign-up">
-                      <Button variant="default" size="sm">
-                        Start
-                      </Button>
-                    </Link>
+                    <HeaderStartButton />
                   </div>
                 </div>
               </div>
