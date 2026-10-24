@@ -16,7 +16,14 @@ export const LicenseValidator: React.FC<LicenseValidatorProps> = ({
 }) => {
   const [licenseError, setLicenseError] = React.useState<string | null>(null);
 
+  const hasKey = !!apiKey;
+
   const validateLicense = React.useCallback(async () => {
+    if (!hasKey && !plugin.settings.enableSelfHosting) {
+      // First run: nothing to validate yet, the setup prompt below handles it
+      return;
+    }
+
     // Skip validation if self-hosting is enabled
     // The server will accept any key when ENABLE_USER_MANAGEMENT=false
     if (plugin.settings.enableSelfHosting) {
@@ -36,13 +43,39 @@ export const LicenseValidator: React.FC<LicenseValidatorProps> = ({
     } catch {
       setLicenseError("Failed to validate license key");
     }
-  }, [apiKey, onValidationComplete, plugin]);
+  }, [apiKey, hasKey, onValidationComplete, plugin]);
 
   React.useEffect(() => {
     void validateLicense();
   }, [validateLicense]);
 
 
+
+  if (!hasKey && !plugin.settings.enableSelfHosting) {
+    return (
+      <div className="flex flex-col gap-2 py-3">
+        <div className="text-[--font-ui-smaller] font-semibold text-[--text-muted] uppercase">
+          Set up Note Companion
+        </div>
+        <p className="m-0 text-[--text-normal]">
+          Create a free account to start organizing your notes. It includes
+          free AI usage.
+        </p>
+        <div>
+          <button
+            onClick={() => {
+              plugin.settings.hasRunOnboarding = false;
+              void plugin.saveSettings();
+              void plugin.activateDashboard();
+            }}
+            className="mod-cta"
+          >
+            Get started
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (licenseError) {
     return (

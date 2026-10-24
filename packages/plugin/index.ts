@@ -33,6 +33,7 @@ import { FileOrganizerSettings, DEFAULT_SETTINGS } from "./settings";
 
 import { extractSelectionToNewNote } from "./commands/extract-selection-to-note";
 import { registerEventHandlers } from "./handlers/eventHandlers";
+import { shouldAutoOpenOnboarding } from "./onboarding-gate";
 import {
   initializeOrganizer,
   initializeFileOrganizationCommands,
@@ -1811,29 +1812,28 @@ export default class FileOrganizer extends Plugin {
   }
 
   async ensureAssistantView(): Promise<AssistantViewWrapper | null> {
-    // Try to find existing view
-    let view = this.app.workspace.getLeavesOfType(ORGANIZER_VIEW_TYPE)[0]
-      ?.view as AssistantViewWrapper;
+    const { workspace } = this.app;
 
-    // If view doesn't exist, create it
-    if (!view) {
-      const leaf = this.app.workspace.getRightLeaf(false);
-      if (leaf) {
-        await leaf.setViewState({
-          type: ORGANIZER_VIEW_TYPE,
-          active: true,
-        });
-
-        // Get the newly created view
-        view = this.app.workspace.getLeavesOfType(ORGANIZER_VIEW_TYPE)[0]
-          ?.view as AssistantViewWrapper;
-      }
+    // Reuse an existing leaf, or create one in the right sidebar
+    let leaf = workspace.getLeavesOfType(ORGANIZER_VIEW_TYPE)[0] ?? null;
+    if (!leaf) {
+      leaf = workspace.getRightLeaf(false);
+      if (!leaf) return null;
+      await leaf.setViewState({
+        type: ORGANIZER_VIEW_TYPE,
+        active: true,
+      });
     }
+
+    // A leaf restored from the saved workspace can still be a deferred view
+    // without our methods (such as activateTab) until it is loaded.
+    await leaf.loadIfDeferred();
+
+    const view = leaf.view as AssistantViewWrapper;
+    if (!view || typeof view.activateTab !== "function") return null;
 
     // Reveal and focus the leaf
-    if (view) {
-      void this.app.workspace.revealLeaf(view.leaf);
-    }
+    void workspace.revealLeaf(leaf);
 
     return view;
   }
@@ -1852,7 +1852,10 @@ export default class FileOrganizer extends Plugin {
     initializeOrganizer(this);
     initializeFileOrganizationCommands(this);
 
-    this.app.workspace.onLayoutReady(() => registerEventHandlers(this));
+    this.app.workspace.onLayoutReady(() => {
+      registerEventHandlers(this);
+      void this.maybeShowOnboarding();
+    });
     if (this.settings.useInbox) {
       void this.processBacklog();
     }
@@ -2123,12 +2126,14 @@ export default class FileOrganizer extends Plugin {
       leaf => new DashboardView(leaf, this)
     );
 
-    // Add command to open dashboard
+    // Re-run the first-run setup wizard (kept under the old command id so hotkeys still work)
     this.addCommand({
       id: "open-fo2k-dashboard",
-      name: "Open dashboard",
-      callback: () => {
-        void this.activateDashboard();
+      name: "Run setup wizard",
+      callback: async () => {
+        this.settings.hasRunOnboarding = false;
+        await this.saveSettings();
+        await this.activateDashboard();
       },
     });
 
@@ -2361,6 +2366,24 @@ export default class FileOrganizer extends Plugin {
 
     const { titles } = await readResponseJson<TitlesResponse>(response);
     return titles;
+  }
+
+  /**
+   * Opens the onboarding wizard once for a brand-new install: no license key,
+   * not self-hosting, and the wizard has never been shown. Existing users and
+   * anyone who closed it are never interrupted again.
+   */
+  private async maybeShowOnboarding(): Promise<void> {
+    if (!shouldAutoOpenOnboarding(this.settings)) {
+      return;
+    }
+    this.settings.hasShownOnboarding = true;
+    await this.saveSettings();
+    await this.activateDashboard();
+  }
+
+  closeDashboard(): void {
+    this.app.workspace.detachLeavesOfType(DASHBOARD_VIEW_TYPE);
   }
 
   async activateDashboard(): Promise<DashboardView | null> {

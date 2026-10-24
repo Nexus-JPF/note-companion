@@ -71,6 +71,8 @@ export class FileOrganizerSettings {
     "Generate tags that capture the main topics, themes, and type of content in the document. Focus on specific, meaningful tags that will help with organization and retrieval.";
   hasCatalystAccess = null;
   hasRunOnboarding = false;
+  /** Set once the onboarding wizard has been auto-opened, so it is never forced on the user twice. */
+  hasShownOnboarding = false;
   pdfPageLimit = 10; // default to 10 pages
   /** @deprecated Use inboxNotificationLevel. Kept for settings migration only. */
   enableProcessingNotifications = true;
