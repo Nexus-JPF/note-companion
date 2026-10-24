@@ -14,7 +14,6 @@ const COMMUNITY_PAGE = `https://obsidian.md/plugins?id=${PLUGIN_ID}`;
 export const metadata: Metadata = {
   title: 'Organize your Obsidian vault automatically',
   description,
-  alternates: { canonical: '/' },
   robots: { index: false, follow: true },
 };
 
@@ -60,10 +59,14 @@ export default function ObsidianLandingPage() {
             </HeroShimmerCta>
             <a
               href={COMMUNITY_PAGE}
-              className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              className="rounded-md border border-border px-4 py-2 text-sm text-foreground hover:bg-muted sm:border-0 sm:px-0 sm:py-0 sm:text-muted-foreground sm:underline sm:underline-offset-2 sm:hover:bg-transparent sm:hover:text-foreground"
             >
               Or view it on obsidian.md
             </a>
+            <p className="max-w-xs text-xs text-muted-foreground sm:hidden">
+              Note Companion runs in Obsidian on desktop. Open this page on your
+              computer to install.
+            </p>
           </div>
         </div>
       </section>

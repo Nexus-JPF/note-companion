@@ -8,8 +8,11 @@ import { Button } from '@/components/ui/button';
 const HIDDEN_ON = ['/obsidian'];
 
 export function HeaderStartButton() {
-  const pathname = usePathname();
-  if (HIDDEN_ON.includes(pathname)) return null;
+  const pathname = usePathname() ?? '';
+  // Match the page and anything under it, including a trailing slash
+  if (HIDDEN_ON.some(path => pathname === path || pathname.startsWith(`${path}/`))) {
+    return null;
+  }
 
   return (
     <Link href="https://accounts.notecompanion.ai/sign-up">
