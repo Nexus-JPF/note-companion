@@ -48,7 +48,7 @@ describe('stripeEventToFunnelEvent', () => {
     });
 
     const charge = stripeEventToFunnelEvent(
-      ev('invoice.payment_succeeded', {
+      ev('invoice.paid', {
         amount_paid: 1500,
         billing_reason: 'subscription_cycle',
         metadata: { userId: 'u1' },
@@ -59,6 +59,17 @@ describe('stripeEventToFunnelEvent', () => {
       event: 'invoice_paid',
       properties: { paid: true, amount_paid: 1500 },
     });
+  });
+
+  it('counts a payment once: invoice.payment_succeeded is not mapped', () => {
+    expect(
+      stripeEventToFunnelEvent(
+        ev('invoice.payment_succeeded', {
+          amount_paid: 1500,
+          metadata: { userId: 'u1' },
+        })
+      )
+    ).toBeNull();
   });
 
   it('maps failed payments with the attempt count', () => {

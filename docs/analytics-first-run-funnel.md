@@ -15,11 +15,11 @@ Events carry user ids, counts and categories only. No emails, no vault content.
 | First plugin API use | first `call-api` per user | `lib/handleAuthorization.ts` (existing) |
 | Activated (used AI tokens) | first `token_usage` per user | `lib/incrementAndLogTokenUsage.ts` (existing) |
 | Checkout finished (trial or paid start) | `subscription_started` | Stripe `checkout.session.completed` (subscription mode only) |
-| Trial invoice / real charge | `invoice_paid` with `paid` false (a $0 trial invoice) or true (money collected) | Stripe `invoice.paid` |
+| Trial invoice / real charge | `invoice_paid` with `paid` false (a $0 trial invoice) or true (money collected) | Stripe `invoice.paid` (not `invoice.payment_succeeded`, which Stripe also sends for the same payment) |
 | Charge declined | `invoice_payment_failed` | Stripe `invoice.payment_failed` |
 | Cancelled | `subscription_canceled` with `reason`, `feedback`, `during_trial`, `interval` | Stripe `customer.subscription.deleted` |
 
-Stripe events are captured only after the existing webhook handler succeeds, and only when the user id can be read from the event metadata.
+Stripe events are captured only after the existing webhook handler succeeds, and only when the user id can be read from the event payload metadata. Unlike the invoice handler, the mapper does not fetch the subscription to find the user, so an invoice without user metadata in its payload is skipped.
 
 Notes:
 - `plugin_signin_failed` is recorded without a person profile, so it counts attempts only. `social_account` is the number of Google or other social-login users who tried a password.

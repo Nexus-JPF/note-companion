@@ -48,8 +48,10 @@ export function stripeEventToFunnelEvent(event: {
       };
     }
 
-    case 'invoice.paid':
-    case 'invoice.payment_succeeded': {
+    // Stripe also sends invoice.payment_succeeded for the same payment (the
+    // webhook route handles both). Only map invoice.paid so a payment is
+    // counted once.
+    case 'invoice.paid': {
       const invoice = event.data.object as Stripe.Invoice & {
         parent?: {
           subscription_details?: { metadata?: Record<string, string> };
