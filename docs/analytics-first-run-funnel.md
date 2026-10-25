@@ -23,7 +23,7 @@ Stripe events are captured only after the existing webhook handler succeeds, and
 
 Notes:
 - `plugin_signin_failed` is recorded without a person profile, so it counts attempts only. `social_account` is the number of Google or other social-login users who tried a password.
-- `call-api` already includes the user's email as a property. That predates this work; consider removing it.
+- `call-api` carries the endpoint only (no email). Earlier events, before this was removed, include an `email` property.
 - Accounts created on the web (not through the plugin) are not counted in `plugin_account_created`.
 
 ## Queries (PostHog SQL)

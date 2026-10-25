@@ -1,4 +1,4 @@
-import { clerkClient, auth } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { NextRequest } from 'next/server';
 import {
   extractUserId,
@@ -16,16 +16,12 @@ import PostHogClient from './posthog';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
-async function handleLoggingV2(req: NextRequest, userId: string) {
-  // Skip logging if Clerk is not configured
-  if (!process.env.CLERK_SECRET_KEY) {
-    return;
-  }
-
+/**
+ * Records one `call-api` analytics event per authenticated API call. Carries
+ * the endpoint only: no email or other personal data, and no Clerk lookup.
+ */
+export async function handleLoggingV2(req: NextRequest, userId: string) {
   try {
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    console.log('user', user.emailAddresses[0]?.emailAddress);
     const posthogClient = PostHogClient();
     if (posthogClient) {
       posthogClient.capture({
@@ -33,7 +29,6 @@ async function handleLoggingV2(req: NextRequest, userId: string) {
         event: 'call-api',
         properties: {
           endpoint: req.nextUrl.pathname.replace('/api/', ''),
-          email: user?.emailAddresses[0]?.emailAddress,
         },
       });
     }
