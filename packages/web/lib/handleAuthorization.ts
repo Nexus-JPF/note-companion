@@ -1,5 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
-import { NextRequest } from 'next/server';
+import { NextRequest, after } from 'next/server';
 import {
   extractUserId,
   verifyUnkeyApiKey,
@@ -31,6 +31,22 @@ export async function handleLoggingV2(req: NextRequest, userId: string) {
           endpoint: req.nextUrl.pathname.replace('/api/', ''),
         },
       });
+
+      // Serverless functions can freeze once the response is sent, which drops
+      // queued events. Flush after the response so API calls don't wait on PostHog.
+      const flush = async () => {
+        try {
+          await posthogClient.shutdown();
+        } catch (error) {
+          console.error('Failed to flush call-api event:', error);
+        }
+      };
+      try {
+        after(flush);
+      } catch {
+        // Outside a request scope (for example in tests): flush in the background
+        void flush();
+      }
     }
   } catch (error) {
     // Log error but don't fail authorization if logging fails
@@ -63,10 +79,8 @@ export const getToken = (req: NextRequest) => {
 
   console.log('[getToken] Header check:', {
     hasAuthHeader: !!header,
-    headerPrefix: header ? header.substring(0, 20) : 'none',
     headerLength: header.length,
     extractedTokenLength: token?.length || 0,
-    extractedTokenPrefix: token ? token.substring(0, 10) + '...' : 'none',
     // Log if token still contains "Bearer" (indicates extraction issue)
     tokenStillHasBearer: token?.toLowerCase().includes('bearer'),
   });
@@ -164,12 +178,7 @@ async function handleApiKeyAuth(
   // Log at the VERY start of the function
   console.log('[handleApiKeyAuth] FUNCTION CALLED', {
     tokenLength: token?.length || 0,
-    tokenPrefix: token ? token.substring(0, 10) + '...' : 'NO TOKEN',
-    tokenValue: token
-      ? token.length <= 20
-        ? token
-        : token.substring(0, 20) + '...'
-      : 'NO TOKEN',
+    hasToken: !!token,
   });
 
   // Basic key format validation - Unkey keys are typically alphanumeric
@@ -184,10 +193,6 @@ async function handleApiKeyAuth(
   if (trimmedToken.length < 10) {
     logger.error('Token too short to be valid', null, {
       tokenLength: trimmedToken.length,
-      tokenPreview:
-        trimmedToken.length <= 20
-          ? trimmedToken
-          : trimmedToken.substring(0, 20) + '...',
       // Check if token might be malformed (contains "Bearer" or other issues)
       containsBearer: trimmedToken.toLowerCase().includes('bearer'),
       suggestion:
@@ -198,7 +203,6 @@ async function handleApiKeyAuth(
 
   try {
     console.log('[handleApiKeyAuth] Starting verification', {
-      tokenPrefix: token.substring(0, 10) + '...',
       tokenLength: token.length,
       hasRootKey: !!process.env.UNKEY_ROOT_KEY,
       hasApiId: !!process.env.UNKEY_API_ID,
@@ -233,7 +237,6 @@ async function handleApiKeyAuth(
       if (errorCode === 'NOT_FOUND') {
         console.error('[handleApiKeyAuth] API key NOT_FOUND in Unkey', {
           code: errorCode,
-          tokenPrefix: token.substring(0, 10) + '...',
           tokenLength: token.length,
           apiId: process.env.UNKEY_API_ID,
           possibleReasons: [
@@ -400,13 +403,10 @@ export async function handleAuthorizationV2(req: NextRequest) {
     const token = getToken(req);
     logger.info('Token extraction', {
       hasToken: !!token,
-      tokenPrefix: token ? token.substring(0, 10) + '...' : 'none',
     });
 
     if (token) {
-      console.log('[handleAuthorizationV2] About to call handleApiKeyAuth', {
-        tokenPrefix: token.substring(0, 10) + '...',
-      });
+      console.log('[handleAuthorizationV2] About to call handleApiKeyAuth');
       let userId: string | null = null;
       try {
         userId = await handleApiKeyAuth(token, logger);

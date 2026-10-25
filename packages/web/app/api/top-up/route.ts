@@ -89,9 +89,6 @@ async function ensureAuthorizedUser(req: NextRequest) {
       error: errorMessage,
       status: errorStatus,
       hadLicenseKey: !!initialLicenseKey,
-      licenseKeyPrefix: initialLicenseKey
-        ? initialLicenseKey.substring(0, 10) + '...'
-        : 'none',
       path: req.nextUrl.pathname,
     });
 
@@ -100,7 +97,6 @@ async function ensureAuthorizedUser(req: NextRequest) {
       console.warn(
         'License key provided but authentication failed - creating anonymous user as fallback',
         {
-          keyPrefix: initialLicenseKey.substring(0, 10) + '...',
           error: errorMessage,
         }
       );
