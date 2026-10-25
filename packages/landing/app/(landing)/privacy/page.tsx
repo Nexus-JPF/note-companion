@@ -32,7 +32,10 @@ export default function PrivacyPolicyPage() {
           <strong>Account Information:</strong> When you create an account, we collect your email address and basic profile information.
         </p>
         <p className="mb-4">
-          <strong>Usage Data:</strong> We collect information about how you use our service, including features accessed and token usage.
+          <strong>Usage Data:</strong> We collect information about how you use our service, including features accessed, token usage, and key account and subscription events such as signing in, starting a trial, or cancelling. These events are recorded by our servers and website using product analytics. They are linked to an account ID, not your email address, and never include the contents of your notes. The Note Companion plugin for Obsidian does not send analytics itself.
+        </p>
+        <p className="mb-4">
+          <strong>Website Analytics:</strong> Our website and web app use PostHog in your browser to measure page views, clicks and page performance. This uses cookies or similar browser storage. We do not record your sessions.
         </p>
         <p className="mb-4">
           <strong>Your Content:</strong> We process the notes, documents, and files you upload or create to provide our service.
@@ -62,6 +65,11 @@ export default function PrivacyPolicyPage() {
           <li>Clerk for authentication</li>
           <li>Vercel for hosting</li>
           <li>OpenAI for AI processing</li>
+          <li>PostHog for product analytics</li>
+          <li>Stripe for payments and billing</li>
+          <li>Loops for account and product emails</li>
+          <li>Cloudflare R2 for storing files you upload for processing</li>
+          <li>Unkey for verifying license keys</li>
         </ul>
         <p className="mb-4">
           These services have their own privacy policies that govern how they process your data.
@@ -86,7 +94,7 @@ export default function PrivacyPolicyPage() {
         </p>
 
         <div className="text-sm text-gray-600 mt-8 border-t pt-4">
-          Last updated: 2026-01-11
+          Last updated: 2026-10-24
         </div>
       </div>
     </div>
