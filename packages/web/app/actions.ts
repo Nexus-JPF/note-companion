@@ -65,13 +65,12 @@ export async function createLicenseKeyFromUserId(
       apiId,
     });
 
-    // Log the full response structure for debugging
+    // Log the response shape only: the response contains the license key itself
     console.log('Unkey create response:', {
       hasResponse: !!response,
       responseKeys: response ? Object.keys(response) : [],
       hasData: response ? 'data' in response : false,
       hasError: response ? 'error' in response : false,
-      fullResponse: JSON.stringify(response, null, 2),
     });
 
     // Check for error in response (using type assertion since SDK types may not include error)
@@ -94,7 +93,7 @@ export async function createLicenseKeyFromUserId(
     if (!keyResult) {
       console.error('Failed to create license key - no data in response', {
         hasKeyResult: !!keyResult,
-        response,
+        responseKeys: response ? Object.keys(response) : [],
       });
       return {
         error: 'Failed to create license key: No data in response',
@@ -108,7 +107,6 @@ export async function createLicenseKeyFromUserId(
 
     if (!actualKey || typeof actualKey !== 'string') {
       console.error('Key not found in response', {
-        keyResult,
         keyResultType: typeof keyResult,
         keyResultKeys:
           typeof keyResult === 'object' ? Object.keys(keyResult) : [],
@@ -118,10 +116,10 @@ export async function createLicenseKeyFromUserId(
       };
     }
 
+    // Never log the key or any part of it
     console.log('License key created successfully', {
-      keyResult,
-      actualKey: actualKey ? actualKey.substring(0, 10) + '...' : 'missing',
-      fullActualKey: typeof actualKey === 'string' ? actualKey : 'not a string',
+      keyId: keyResult.keyId,
+      keyLength: actualKey.length,
       keyResultType: typeof keyResult,
       keyResultKeys:
         typeof keyResult === 'object' ? Object.keys(keyResult) : [],

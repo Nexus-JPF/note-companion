@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 
 const mockCapture = jest.fn();
+const mockShutdown = jest.fn().mockResolvedValue(undefined);
 const mockClerkClient = jest.fn();
 
 jest.mock('@clerk/nextjs/server', () => ({
@@ -11,7 +12,10 @@ jest.mock('../drizzle/schema', () => ({}));
 jest.mock('./unkey-client', () => ({}));
 jest.mock('./posthog', () => ({
   __esModule: true,
-  default: () => ({ capture: (...a: any[]) => mockCapture(...a) }),
+  default: () => ({
+    capture: (...a: any[]) => mockCapture(...a),
+    shutdown: () => mockShutdown(),
+  }),
 }));
 
 import { handleLoggingV2 } from './handleAuthorization';
@@ -29,6 +33,12 @@ describe('handleLoggingV2 (call-api event)', () => {
       properties: { endpoint: 'process-file' },
     });
     expect(JSON.stringify(mockCapture.mock.calls)).not.toContain('@');
+  });
+
+  it('flushes the event so serverless functions do not drop it', async () => {
+    await handleLoggingV2(new NextRequest('http://localhost/api/usage'), 'user_1');
+    await new Promise(resolve => setImmediate(resolve));
+    expect(mockShutdown).toHaveBeenCalledTimes(1);
   });
 
   it('does not look the user up in Clerk', async () => {

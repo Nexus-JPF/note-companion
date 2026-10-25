@@ -36,7 +36,6 @@ async function ensureAuthorizedUser(req: NextRequest) {
   if (initialLicenseKey && initialLicenseKey.trim().length < 10) {
     console.warn('Invalid API key format detected - too short', {
       keyLength: initialLicenseKey.trim().length,
-      keyPrefix: initialLicenseKey.substring(0, 10) + '...',
     });
     // Still create fallback user for top-up flow, but log the issue
     // Frontend validation should prevent this, but handle gracefully on server
@@ -62,9 +61,6 @@ async function ensureAuthorizedUser(req: NextRequest) {
       error: errorMessage,
       status: errorStatus,
       hadLicenseKey: !!initialLicenseKey,
-      licenseKeyPrefix: initialLicenseKey
-        ? initialLicenseKey.substring(0, 10) + '...'
-        : 'none',
       keyLength: initialLicenseKey?.trim().length || 0,
       path: req.nextUrl.pathname,
     });
@@ -75,7 +71,6 @@ async function ensureAuthorizedUser(req: NextRequest) {
       console.warn(
         'License key provided but authentication failed - creating anonymous user as fallback',
         {
-          keyPrefix: initialLicenseKey.substring(0, 10) + '...',
           keyLength: initialLicenseKey.trim().length,
           isInvalidFormat,
           error: errorMessage,

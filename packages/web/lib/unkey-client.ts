@@ -233,7 +233,7 @@ export async function verifyUnkeyApiKeyWithFallbacks(token: string): Promise<{
         console.log(
           'Calling verifyKey WITH apiId (v2 requires this or special permissions):',
           {
-            key: token.substring(0, 10) + '...',
+            tokenLength: token.length,
             apiId: verifyParams.apiId,
           }
         );
@@ -241,7 +241,7 @@ export async function verifyUnkeyApiKeyWithFallbacks(token: string): Promise<{
         console.log(
           'Calling verifyKey WITHOUT apiId (requires root key with api.*.verify_key permissions):',
           {
-            key: token.substring(0, 10) + '...',
+            tokenLength: token.length,
           }
         );
       }
