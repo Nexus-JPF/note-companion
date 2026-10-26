@@ -105,7 +105,13 @@ export function UsageStatus({ compact = false }: UsageStatusProps) {
       case 'monthly':
         return 'Monthly Subscription';
       case 'yearly':
+      case 'subscription_yearly':
         return 'Yearly Subscription';
+      case 'lifetime_license':
+        return 'Lifetime License';
+      case 'top_up':
+      case 'top_up_minutes':
+        return 'Top-up';
       default:
         return plan || 'Basic Plan';
     }
