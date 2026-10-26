@@ -117,6 +117,28 @@ export function UsageStatus({ compact = false }: UsageStatusProps) {
     }
   };
 
+  // Show the real subscription status instead of guessing "Free Usage" for any
+  // non-active value (a paid plan with e.g. past_due is not free usage).
+  const getStatusDisplay = (status?: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active':
+        return 'Active Account';
+      case 'trialing':
+        return 'Trial';
+      case 'past_due':
+        return 'Payment past due';
+      case 'canceled':
+      case 'cancelled':
+        return 'Canceled';
+      case 'inactive':
+      case undefined:
+      case '':
+        return 'Inactive';
+      default:
+        return status;
+    }
+  };
+
   return (
     <ThemedView
       variant="elevated"
@@ -129,9 +151,7 @@ export function UsageStatus({ compact = false }: UsageStatusProps) {
             {getPlanDisplay(usageData?.currentPlan || usageData?.tier || 'free')}
           </ThemedText>
           <ThemedText colorName="textSecondary" type="caption">
-            {usageData?.subscriptionStatus === 'active'
-              ? 'Active Account'
-              : 'Free Usage'}
+            {getStatusDisplay(usageData?.subscriptionStatus)}
           </ThemedText>
         </View>
       </View>
