@@ -22,7 +22,9 @@ type UsageData = {
   tokenUsage: number;
   maxTokenUsage: number;
   subscriptionStatus: string;
-  tier: string;
+  // /api/usage returns `currentPlan`; `tier` is a legacy field the app used to read
+  currentPlan?: string;
+  tier?: string;
   // Note: audioTranscriptionMinutes and maxAudioTranscriptionMinutes are intentionally
   // excluded from the mobile app display for now, even if present in the API response
 };
@@ -118,7 +120,7 @@ export function UsageStatus({ compact = false }: UsageStatusProps) {
         <MaterialIcons name="star" size={24} color={primaryColor} />
         <View style={styles.planDetails}>
           <ThemedText type="defaultSemiBold">
-            {getPlanDisplay(usageData?.tier || 'free')}
+            {getPlanDisplay(usageData?.currentPlan || usageData?.tier || 'free')}
           </ThemedText>
           <ThemedText colorName="textSecondary" type="caption">
             {usageData?.subscriptionStatus === 'active'
