@@ -60,7 +60,6 @@ config.resolver = {
     "@clerk/clerk-js": clerkJsBrowserEntry
       ? packageRootFromEntry(clerkJsBrowserEntry)
       : path.join(repoRoot, "node_modules", "@clerk", "clerk-js"),
-    "@clerk/shared": resolvePackageRoot("@clerk/shared", ["node_modules", "@clerk", "shared"]),
     "@clerk/backend": resolvePackageRoot("@clerk/backend", ["node_modules", "@clerk", "backend"]),
     "@clerk/localizations": resolvePackageRoot("@clerk/localizations", [
       "node_modules",
@@ -109,8 +108,16 @@ const bareReactFamily = new Set([
  * Do NOT require.resolve("@clerk/clerk-js") on native — Node picks dist/clerk.js (DOM).
  * That throws "undefined is not a function" as soon as ClerkProvider constructs Clerk.
  */
+// @clerk/shared must NOT be forced: the repo root has 3.x (from the web app's
+// @clerk/nextjs) while @clerk/react / expo / clerk-js need 4.x from their own
+// nested node_modules. Forcing the root copy made @clerk/react call
+// setClerkJSLoadingErrorPackageName() on a 3.x module -> "undefined is not a
+// function" at boot (build 41). Let Metro resolve it relative to the importer.
+const forcedClerkPackages = new Set(["react", "expo", "clerk-js"]);
+
 function tryForceClerk(moduleName, platform) {
   if (!moduleName.startsWith("@clerk/")) return null;
+  if (!forcedClerkPackages.has(moduleName.split("/")[1])) return null;
   try {
     // Metro sometimes resolves with platform null / "native". Only web wants DOM clerk.js.
     if (moduleName === "@clerk/clerk-js" && platform !== "web" && clerkJsNativeEntry) {

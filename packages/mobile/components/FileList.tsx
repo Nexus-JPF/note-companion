@@ -72,40 +72,24 @@ export function FileList({
     }
   };
 
+  // FileCard already asks for confirmation before calling this.
   const handleDelete = async (id: number) => {
     try {
-      Alert.alert(
-        'Delete File',
-        'Are you sure you want to delete this file?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              const token = await getToken();
-              if (!token) {
-                throw new Error('Please sign in to delete files');
-              }
-              
-              const result = await deleteFile(id, token);
-              
-              if (!result.success) {
-                throw new Error(result.error || 'Failed to delete file');
-              }
-              
-              // Notify parent component about deletion
-              if (onFileDeleted) {
-                onFileDeleted();
-              }
-            },
-          },
-        ],
-        { cancelable: true }
-      );
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Please sign in to delete files');
+      }
+
+      const result = await deleteFile(id, token);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete file');
+      }
+
+      // Notify parent component about deletion
+      if (onFileDeleted) {
+        onFileDeleted();
+      }
     } catch (err) {
       console.error('Error deleting file:', err);
       Alert.alert('Error', 'Failed to delete file. Please try again.');
