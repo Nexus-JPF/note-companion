@@ -53,7 +53,7 @@ By batch-processing your inbox, you can transform a messy import into a vault wi
 
 ### Keeping Tagging Consistent as You Scale
 
-Even if you start tidy, every growing vault risks [tag drift](/blog/tagging-vs-maps-of-content-small-habit-shifts-research-obsidian): variants like `#research`, `#studies`, and `#study` all appear, fragmenting your organization. AI tagging can surface these inconsistencies, highlighting opportunities to merge or standardize tags.
+Even if you start tidy, every growing vault risks [tag drift](/blog/tagging-vs-maps-of-content-small-habit-shifts-research-obsidian): variants like `#research`, `#studies`, and `#study` all appear, fragmenting your organization. AI tagging can reduce new drift by reusing tags you already have, but cleaning up existing duplicates is up to you.
 
 An AI tagger that reads your existing tags helps here: Note Companion's Organizer lists tags already in your vault separately from new ones, so you can reuse `#literature-review` instead of creating `#litreview`. Merging duplicates that already exist is still manual. Rename them across the vault with search-and-replace or a tag-management plugin such as Tag Wrangler.
 
