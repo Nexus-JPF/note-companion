@@ -231,7 +231,10 @@ export default function HomeScreen() {
         setUploadResults([
           {
             status: "error",
-            error: "Gallery permission denied",
+            error:
+              Platform.OS === "ios"
+                ? "Photo access is turned off. Enable it for Note Companion in Settings > Privacy & Security > Photos, or use Upload Files."
+                : "Photo access is turned off. Enable it for Note Companion in your phone's app settings, or use Upload Files.",
             fileName: undefined,
             mimeType: undefined,
             text: undefined,
@@ -344,7 +347,7 @@ export default function HomeScreen() {
         type="label"
         style={styles.headerSubtitle}
       >
-        Extract text from your images
+        Extract text or redraw sketches
       </ThemedText>
     </ThemedView>
   );
@@ -415,10 +418,14 @@ export default function HomeScreen() {
           <View style={styles.uploadButtonContent}>
             <MaterialIcons name="auto-awesome" size={32} color={primaryColor} />
             <Text style={styles.uploadButtonText}>Magic Diagram</Text>
-            <Text style={styles.uploadButtonSubtext}>Convert Sketches</Text>
+            <Text style={styles.uploadButtonSubtext}>Sketch → clean diagram</Text>
           </View>
         </TouchableOpacity>
       </View>
+      <Text style={styles.magicDiagramHint}>
+        Magic Diagram: photograph a hand-drawn diagram and get a clean version
+        back as an image.
+      </Text>
     </View>
   );
 
@@ -564,6 +571,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#1a1a1a",
+    textAlign: "center",
+  },
+  magicDiagramHint: {
+    marginTop: -4,
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#666",
     textAlign: "center",
   },
   uploadButtonSubtext: {
