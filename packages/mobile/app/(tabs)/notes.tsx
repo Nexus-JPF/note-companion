@@ -22,6 +22,7 @@ import { useSemanticColor } from "@/hooks/useThemeColor";
 import * as FileSystem from "expo-file-system/legacy";
 import * as DocumentPicker from "expo-document-picker";
 import { Asset } from "expo-asset";
+import { handleFileProcess } from "@/utils/file-handler";
 
 export default function NotesScreen() {
   const { getToken } = useAuth();
@@ -118,8 +119,42 @@ export default function NotesScreen() {
     </ThemedView>
   );
 
+  const handleTryDemo = async () => {
+    if (uploading) return;
+    setUploading(true);
+    try {
+      const token = await getToken();
+      if (!token) {
+        Alert.alert("Sign in required", "Please sign in to try the sample.");
+        return;
+      }
+      const asset = Asset.fromModule(
+        require("../../assets/einstein-document.jpg")
+      );
+      await asset.downloadAsync();
+      const uri = asset.localUri || asset.uri;
+      const result = await handleFileProcess(
+        { uri, mimeType: "image/jpeg", name: "einstein-document.jpg" },
+        token
+      );
+      if (result.status === "error") {
+        Alert.alert("Could not process the sample", result.error || "Please try again.");
+      }
+      await loadFiles(false);
+    } catch (err) {
+      console.error("Error processing demo document:", err);
+      Alert.alert("Could not process the sample", "Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const renderOnboarding = () => (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      // Leave room for the tab bar so the sample button is not cut off.
+      contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+    >
       <View style={styles.onboardingContainer}>
         <ThemedText type="heading" style={styles.onboardingTitle}>
           Welcome to Note Companion
@@ -134,6 +169,29 @@ export default function NotesScreen() {
           Try our OCR capabilities with this historical document from Albert
           Einstein's archives:
         </ThemedText>
+
+        <View style={styles.demoImageContainer}>
+          <Image
+            source={require("../../assets/einstein-document.jpg")}
+            style={styles.demoImage}
+            resizeMode="cover"
+          />
+          {uploading && (
+            <View style={styles.uploadingOverlay}>
+              <ActivityIndicator size="large" color="#fff" />
+              <Text style={styles.uploadingText}>Extracting text...</Text>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={styles.demoButton}
+          onPress={handleTryDemo}
+          disabled={uploading}
+        >
+          <MaterialIcons name="auto-awesome" size={20} color="#fff" />
+          <Text style={styles.demoButtonText}>Try it with this document</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
