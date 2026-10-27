@@ -23,6 +23,7 @@ import {
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
 import { useSemanticColor } from "@/hooks/useThemeColor";
+import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
@@ -38,6 +39,7 @@ export default function HomeScreen() {
   }>();
   const primaryColor = useSemanticColor("primary");
   const insets = useSafeAreaInsets();
+  const tabBarPadding = useTabBarPadding();
 
   useEffect(() => {
     // Handle shared file if present
@@ -432,7 +434,7 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       {renderHeader()}
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: tabBarPadding }}>
         <View style={styles.mainSection}>
           {/* if not processing show explanation card  if not show processing status*/}
           {status === "uploading" ? (

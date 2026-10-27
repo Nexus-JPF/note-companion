@@ -14,6 +14,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { FileCard } from './FileCard';
 import { fetchFiles, deleteFile, UploadedFile, PaginationData } from '@/utils/api';
 import { useAuth } from '@clerk/react';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 interface FileListProps {
   files: UploadedFile[];
@@ -35,6 +36,7 @@ export function FileList({
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const { getToken } = useAuth();
+  const tabBarPadding = useTabBarPadding();
 
   const handleLoadMore = () => {
     // If pagination is handled by parent, this becomes a no-op
@@ -138,7 +140,8 @@ export function FileList({
           onView={handleView}
         />
       )}
-      contentContainerStyle={styles.listContent}
+      // Leave room for the tab bar so the last card's button is reachable.
+      contentContainerStyle={[styles.listContent, { paddingBottom: tabBarPadding }]}
       refreshControl={
         <RefreshControl 
           refreshing={refreshing} 
