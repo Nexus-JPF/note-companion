@@ -35,10 +35,10 @@
   "expo": {
     "autolinking": {
       "ios": {
-        "exclude": ["@clerk/expo", "expo-secure-store"]
+        "exclude": ["@clerk/expo"]
       },
       "apple": {
-        "exclude": ["@clerk/expo", "expo-secure-store"]
+        "exclude": ["@clerk/expo"]
       }
     },
     "doctor": {

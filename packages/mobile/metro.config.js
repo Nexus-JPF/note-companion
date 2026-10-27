@@ -177,7 +177,6 @@ function tryForceModule(moduleName) {
 }
 
 const previousResolveRequest = config.resolver.resolveRequest;
-const secureStoreShim = path.join(mobileRoot, "shims/expo-secure-store.js");
 const urlPolyfillAutoShim = path.join(
   mobileRoot,
   "shims/react-native-url-polyfill-auto.js",
@@ -280,14 +279,6 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 
   if (platform !== "web" && isExpoGlassEffect(moduleName)) {
     return { type: "sourceFile", filePath: expoGlassEffectShim };
-  }
-
-  if (
-    platform === "ios" &&
-    (moduleName === "expo-secure-store" ||
-      moduleName.startsWith("expo-secure-store/"))
-  ) {
-    return { type: "sourceFile", filePath: secureStoreShim };
   }
 
   const forcedClerk = tryForceClerk(moduleName, platform);
