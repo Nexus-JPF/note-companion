@@ -115,6 +115,17 @@ describe("extractTextFromVisionImage refusals", () => {
     expect(r.text).toBe("recovered");
   });
 
+  it("skips the fallback on empty text when fallbackOnEmpty is false", async () => {
+    mockGenerate.mockResolvedValue(reply(""));
+    const r = await extractTextFromVisionImage({
+      image,
+      fallbackModel: "fallback-model" as any,
+      fallbackOnEmpty: false,
+    });
+    expect(mockGenerate).toHaveBeenCalledTimes(2);
+    expect(r.text).toBe("");
+  });
+
   it("errors when the fallback also refuses", async () => {
     mockGenerate.mockResolvedValue(reply("I cannot assist with that."));
     const r = await extractTextFromVisionImage({

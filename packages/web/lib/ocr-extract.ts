@@ -77,6 +77,8 @@ export async function extractTextFromVisionImage(options: {
   fallbackModel?: LanguageModel | null;
   /** One retry when the model returns empty text (handwriting / low contrast). */
   retryOnEmpty?: boolean;
+  /** Try the fallback model on empty text too (default true). PDF pages turn this off: blank pages are normal. */
+  fallbackOnEmpty?: boolean;
 }): Promise<OcrExtractResult> {
   const dataUrl = toDataUrl(options.image);
   if (!dataUrl) {
@@ -134,7 +136,7 @@ export async function extractTextFromVisionImage(options: {
 
     // Vision models occasionally refuse (or return nothing for) a legible personal
     // photo; a different model usually reads it.
-    const failed = isRefusalText(text) || (!text && options.retryOnEmpty !== false);
+    const failed = isRefusalText(text) || (!text && options.retryOnEmpty !== false && options.fallbackOnEmpty !== false);
     const fallback =
       options.fallbackModel === undefined
         ? getVisionFallbackModel()

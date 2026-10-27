@@ -76,7 +76,7 @@ export const getVisionModel = (): LanguageModel => {
 
 const VISION_FALLBACK_MODEL_NAME =
   process.env.VISION_FALLBACK_MODEL ||
-  (MODEL_PROVIDER === 'openai' ? 'gpt-4.1' : '');
+  (MODEL_PROVIDER === 'openai' && !process.env.OPENAI_API_BASE ? 'gpt-4.1' : '');
 
 /** Second vision model tried when the primary refuses or returns nothing (null if unset or identical). */
 export const getVisionFallbackModel = (): LanguageModel | null => {

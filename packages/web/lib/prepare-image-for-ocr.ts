@@ -13,7 +13,7 @@ export async function prepareImageBufferForOcr(
 
   let input = buffer;
   if (lower.includes("heic") || lower.includes("heif")) {
-    input = await sharp(buffer).jpeg({ quality: 90 }).toBuffer();
+    input = await sharp(buffer).rotate().jpeg({ quality: 90 }).toBuffer();
   }
 
   // Apply the EXIF orientation (iPhone photos) before the metadata is dropped.

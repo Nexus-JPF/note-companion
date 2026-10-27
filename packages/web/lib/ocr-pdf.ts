@@ -46,6 +46,7 @@ export async function ocrPdfFromBuffer(
       image: { kind: "buffer", buffer: png },
       customInstructions: options.customInstructions,
       retryOnEmpty: true,
+      fallbackOnEmpty: false,
     });
     if (result.refused) {
       // Keep pages already read; only fail if no page yields text.
