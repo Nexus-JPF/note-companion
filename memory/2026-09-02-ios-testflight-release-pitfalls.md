@@ -16,6 +16,19 @@
 | **Could not start** / `undefined is not a function` on white | Module eval. **33** Toast. **34–35** glass at require time. **38** copied fork still ran NativeWind (JSX → css-interop; `interopRequireWildcard`). **39** re-export + resolver stub worked locally, not EAS (`isLiquidGlassAvailable` undefined). Babel `overrides` **merge** with parent presets — a shim-only override does not turn NativeWind off. | Copy fork in `shims/create-native-stack-navigator.js` with `GLASS = false` and **no JSX** (`createElement`). Move `nativewind/babel` off parent presets (exclude-override). `pnpm verify:ios-bundle:refresh` inspects the whole Metro factory. |
 | **Build 6, 7, 9, 10** crash ~22–33s after launch after submit. Same phone. 6+7 Aug 9 “login / pwd submit”; 9+10 Aug 11 “after submit” (iOS 26.6) | Same class: TurboModule abort on a worker after submit. 6+7 Thread 0 = `RNSScreen setViewToSnapshot`. 9+10 Thread 0 idle (9 also launching a view service). App UUID `fc516b11…` for 6–9; build 10 is `65381518…` (binary changed, React/Hermes UUIDs unchanged). Predates handoff/keyboard workarounds | `navigateToSessionHandoff` before `setActive`; do not `Keyboard.dismiss` on iOS 26. Still waiting behind the build 24 boot crash |
 
+## Real root cause of the "Could not start" loop (builds 33-43, fixed in #518)
+
+The shims and NativeWind/glass work above were mostly chasing symptoms. The boot crashes were **duplicate package versions resolving to the wrong copy**, and each only appeared after the previous one was fixed (the app dies at the first error):
+
+| Build | Error text | Real cause | Fix |
+|---|---|---|---|
+| 40 | `undefined is not a function [shims/create-native-stack-navigator.js]` | `packages/mobile` pinned `@react-navigation/native` 7.1.5 (core 7.8.4) while expo-router 55 needs >=7.1.33; `@react-navigation/native-stack` called `createScreenFactory`, missing in the old copy | bump `@react-navigation/native` / `bottom-tabs` in `packages/mobile/package.json`, regenerate lockfile |
+| 41 | `undefined is not a function [@clerk/react/dist/index.cjs]` | `metro.config.js` forced every `@clerk/*` import to the repo-root `@clerk/shared` 3.x (from web's nextjs) while `@clerk/react`/`expo`/`clerk-js` need 4.x nested; `setClerkJSLoadingErrorPackageName` missing | only force `react`, `expo`, `clerk-js`; let `@clerk/shared` resolve from the importer |
+
+**How it was found:** the local `verify:ios-bundle` only reads the JS graph and passed every time. The device error stack has `main.jsbundle:LINE:COL`. Download the EAS `.ipa`, unzip `Payload/*.app/main.jsbundle` (Hermes bytecode), disassemble it with `hermes-dec` (`hbc-disassembler`, `hbc-file-parser`), map LINE:COL to a function, and read the bytecode around that call (it names the missing export, e.g. `createScreenFactory`).
+
+**Rule:** keep one copy of every package Metro or the router touches. After any dependency change, check for duplicate versions in the bundle's source map (only harmless `react-is` and `react-native-is-edge-to-edge` should be duplicated).
+
 ## Release checklist (run in order)
 
 1. **Env / deps**
