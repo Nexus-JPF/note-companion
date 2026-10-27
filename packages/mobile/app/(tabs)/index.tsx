@@ -432,7 +432,7 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       {renderHeader()}
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}>
         <View style={styles.mainSection}>
           {/* if not processing show explanation card  if not show processing status*/}
           {status === "uploading" ? (

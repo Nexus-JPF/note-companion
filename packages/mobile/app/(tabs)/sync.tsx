@@ -68,7 +68,7 @@ export default function SyncScreen() {
         </ThemedText>
       </ThemedView>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 120 }]}>
         <View style={styles.mainSection}>
           <View style={styles.explanationCard}>
             <MaterialIcons name="update" size={24} color={primaryColor} />
