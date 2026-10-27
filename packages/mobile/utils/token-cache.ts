@@ -64,6 +64,7 @@ function createResilientTokenCache(): TokenCache {
     async getToken(key) {
       if (memory.has(key)) return memory.get(key) ?? null;
       const stored = await useStore((cache) => cache.getToken(key));
+      // On timeout we report no token, so a slow keychain looks signed out for this launch only.
       if (stored === TIMED_OUT) return null;
       if (stored) memory.set(key, stored);
       return stored ?? null;
@@ -74,7 +75,11 @@ function createResilientTokenCache(): TokenCache {
     },
     async clearToken(key) {
       memory.delete(key);
-      await useStore((cache) => cache.clearToken?.(key) ?? Promise.resolve());
+      // Always attempt the keychain delete (even if the store was disabled or is slow) so a
+      // sign-out cannot resurface the session on the next launch. Not awaited: never blocks UI.
+      void getSecureStoreCache()
+        .then((cache) => cache.clearToken?.(key))
+        .catch((err) => console.warn("[TokenCache] keychain clear failed", err));
     },
   };
 }
