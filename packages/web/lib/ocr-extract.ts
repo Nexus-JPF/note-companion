@@ -18,6 +18,35 @@ export type OcrImageInput =
   | { kind: "base64"; base64: string; mediaType: string }
   | { kind: "buffer"; buffer: Buffer };
 
+const REFUSAL_MAX_LENGTH = 300;
+
+const REFUSAL_PATTERNS: RegExp[] = [
+  /^(i['’]m|i am) (sorry|unable|not able)\b/i,
+  /^(sorry|apologies)[,.! ]/i,
+  /^i (can['’]?t|cannot|can not|won['’]?t|am unable to|am not able to) (assist|help|comply|process|transcribe|read|extract|identify|provide)/i,
+  /^unfortunately,? i (can['’]?t|cannot|am unable)/i,
+  /^as an ai\b/i,
+];
+
+/**
+ * Detects a model refusal returned in place of OCR text (e.g. "I'm sorry, I can't
+ * assist with that."). Only short outputs that open with a refusal phrase count,
+ * so genuine notes that happen to contain such a sentence are not rejected.
+ */
+export function isRefusalText(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > REFUSAL_MAX_LENGTH) {
+    return false;
+  }
+  return REFUSAL_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
+export const REFUSAL_RETRY_HINT =
+  "This is the user's own image of their personal handwritten notes or documents. Transcribe all legible text exactly as written; do not refuse, and do not add commentary.";
+
+export const REFUSAL_ERROR_MESSAGE =
+  "The AI could not read text from this image. Try retaking the photo with better lighting, or upload a clearer image.";
+
 function toDataUrl(input: OcrImageInput): string | null {
   if (input.kind === "dataUrl") {
     return input.dataUrl;
@@ -82,6 +111,15 @@ export async function extractTextFromVisionImage(options: {
       );
       text = retry.text;
       tokensUsed += retry.tokensUsed;
+    }
+
+    if (isRefusalText(text)) {
+      const retry = await runOnce(REFUSAL_RETRY_HINT);
+      tokensUsed += retry.tokensUsed;
+      if (isRefusalText(retry.text)) {
+        return { text: "", tokensUsed, error: REFUSAL_ERROR_MESSAGE };
+      }
+      text = retry.text;
     }
 
     return { text, tokensUsed };
