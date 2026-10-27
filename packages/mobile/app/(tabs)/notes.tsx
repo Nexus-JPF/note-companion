@@ -150,7 +150,11 @@ export default function NotesScreen() {
   };
 
   const renderOnboarding = () => (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      // Leave room for the tab bar so the sample button is not cut off.
+      contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+    >
       <View style={styles.onboardingContainer}>
         <ThemedText type="heading" style={styles.onboardingTitle}>
           Welcome to Note Companion

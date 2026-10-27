@@ -343,6 +343,11 @@ export function FileCard({ file, onDelete, onView }: FileCardProps) {
                   <MaterialIcons name="check-circle" size={14} color="#fff" />
                   <ThemedText style={styles.statusBadgeText}>Ready</ThemedText>
                 </View>
+              ) : file.processingStatus === 'error' ? (
+                <View style={[styles.statusBadge, styles.errorBadge]}>
+                  <MaterialIcons name="error-outline" size={14} color="#fff" />
+                  <ThemedText style={styles.statusBadgeText}>Failed</ThemedText>
+                </View>
               ) : (
                 <View style={[styles.statusBadge, styles.processingBadge]}>
                   <MaterialIcons name="pending" size={14} color="#fff" />
@@ -608,6 +613,9 @@ const styles = StyleSheet.create({
   },
   processingBadge: {
     backgroundColor: '#F6E05E',
+  },
+  errorBadge: {
+    backgroundColor: '#E53E3E',
   },
   metadataItem: {
     flexDirection: 'row',
