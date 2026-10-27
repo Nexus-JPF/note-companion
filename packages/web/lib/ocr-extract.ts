@@ -1,6 +1,6 @@
 import { generateText } from "ai";
 import type { LanguageModel } from "ai";
-import { getVisionModel } from "@/lib/models";
+import { getVisionFallbackModel, getVisionModel } from "@/lib/models";
 import { buildOcrPrompt } from "@/lib/ocr-prompt";
 import {
   detectImageMediaTypeFromBase64,
@@ -48,6 +48,12 @@ export const REFUSAL_RETRY_HINT =
 export const REFUSAL_ERROR_MESSAGE =
   "The AI could not read text from this image. Try retaking the photo with better lighting, or upload a clearer image.";
 
+/** Models often wrap transcriptions in a ``` fence; the note should not contain it. */
+export function stripCodeFence(text: string): string {
+  const match = text.match(/^```[a-z]*\n([\s\S]*?)\n?```$/i);
+  return match ? match[1].trim() : text;
+}
+
 function toDataUrl(input: OcrImageInput): string | null {
   if (input.kind === "dataUrl") {
     return input.dataUrl;
@@ -67,6 +73,8 @@ export async function extractTextFromVisionImage(options: {
   image: OcrImageInput;
   customInstructions?: string | null;
   model?: LanguageModel;
+  /** Tried once when the primary model refuses or returns nothing. Defaults to the configured fallback. */
+  fallbackModel?: LanguageModel | null;
   /** One retry when the model returns empty text (handwriting / low contrast). */
   retryOnEmpty?: boolean;
 }): Promise<OcrExtractResult> {
@@ -82,23 +90,27 @@ export async function extractTextFromVisionImage(options: {
   const model = options.model ?? getVisionModel();
   const promptText = buildOcrPrompt(options.customInstructions);
 
-  const runOnce = async (extraHint?: string) => {
+  const runOnce = async (extraHint?: string, useModel: LanguageModel = model) => {
     const textPrompt = extraHint
       ? `${promptText} ${extraHint}`
       : promptText;
     const response = await generateText({
-      model: model as any,
+      model: useModel as any,
       messages: [
         {
           role: "user",
           content: [
             { type: "text", text: textPrompt },
-            { type: "image", image: dataUrl },
+            {
+              type: "image",
+              image: dataUrl,
+              providerOptions: { openai: { imageDetail: "high" } },
+            },
           ],
         },
       ],
     });
-    const text = (response.text ?? "").trim();
+    const text = stripCodeFence((response.text ?? "").trim());
     const tokensUsed =
       response.usage?.totalTokens ?? Math.ceil(text.length / 4);
     return { text, tokensUsed };
@@ -117,15 +129,35 @@ export async function extractTextFromVisionImage(options: {
     if (isRefusalText(text)) {
       const retry = await runOnce(REFUSAL_RETRY_HINT);
       tokensUsed += retry.tokensUsed;
-      if (isRefusalText(retry.text)) {
-        return {
-          text: "",
-          tokensUsed,
-          error: REFUSAL_ERROR_MESSAGE,
-          refused: true,
-        };
-      }
       text = retry.text;
+    }
+
+    // Vision models occasionally refuse (or return nothing for) a legible personal
+    // photo; a different model usually reads it.
+    const failed = isRefusalText(text) || (!text && options.retryOnEmpty !== false);
+    const fallback =
+      options.fallbackModel === undefined
+        ? getVisionFallbackModel()
+        : options.fallbackModel;
+    if (failed && fallback) {
+      try {
+        const alt = await runOnce(REFUSAL_RETRY_HINT, fallback);
+        tokensUsed += alt.tokensUsed;
+        if (alt.text) {
+          text = alt.text;
+        }
+      } catch {
+        // keep the primary result
+      }
+    }
+
+    if (isRefusalText(text)) {
+      return {
+        text: "",
+        tokensUsed,
+        error: REFUSAL_ERROR_MESSAGE,
+        refused: true,
+      };
     }
 
     return { text, tokensUsed };

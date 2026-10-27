@@ -7,7 +7,7 @@ import {
 describe("buildOcrPrompt", () => {
   it("uses OCR-only prompt when instructions are empty", () => {
     const prompt = buildOcrPrompt("");
-    expect(prompt).toContain("Extract all text from the image");
+    expect(prompt).toContain("Transcribe all text in the image");
     expect(prompt).toContain("Respond with only the extracted text");
     expect(prompt).not.toContain("detailed description");
   });

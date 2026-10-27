@@ -16,7 +16,8 @@ export async function prepareImageBufferForOcr(
     input = await sharp(buffer).jpeg({ quality: 90 }).toBuffer();
   }
 
-  const image = sharp(input);
+  // Apply the EXIF orientation (iPhone photos) before the metadata is dropped.
+  const image = sharp(input).rotate();
   const meta = await image.metadata();
   let pipeline = image;
   if (
