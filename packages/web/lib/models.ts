@@ -74,6 +74,18 @@ export const getVisionModel = (): LanguageModel => {
   return DEFAULT_VISION_MODEL;
 };
 
+const VISION_FALLBACK_MODEL_NAME =
+  process.env.VISION_FALLBACK_MODEL ||
+  (MODEL_PROVIDER === 'openai' && !process.env.OPENAI_API_BASE ? 'gpt-4.1' : '');
+
+/** Second vision model tried when the primary refuses or returns nothing (null if unset or identical). */
+export const getVisionFallbackModel = (): LanguageModel | null => {
+  if (!VISION_FALLBACK_MODEL_NAME || VISION_FALLBACK_MODEL_NAME === VISION_MODEL_NAME) {
+    return null;
+  }
+  return createModel(MODEL_PROVIDER, VISION_FALLBACK_MODEL_NAME);
+};
+
 /**
  * Get the default model with Responses API (supports web search)
  * Note: Responses API is only available for OpenAI models

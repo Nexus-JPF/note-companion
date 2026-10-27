@@ -1,7 +1,7 @@
 export const OCR_BASE_INSTRUCTION =
-  "Extract all text from the image comprehensively, preserving formatting. Focus only on extracting readable text, not describing visual elements.";
+  "This is a photo or scan of the user's own document or handwritten notes, and they want it transcribed into their notes app. Transcribe all text in the image (printed or handwritten, in any language, e.g. French or English) comprehensively, preserving line breaks and formatting. Ignore page edges, shadows and ruled lines. Focus only on extracting readable text, not describing visual elements.";
 
-export const OCR_RESPONSE_INSTRUCTION = "Respond with only the extracted text.";
+export const OCR_RESPONSE_INSTRUCTION = "Respond with only the extracted text, without code fences or commentary.";
 
 /** Legacy plugin default — replaced on settings migration. */
 export const LEGACY_IMAGE_DESCRIPTION_INSTRUCTION =
