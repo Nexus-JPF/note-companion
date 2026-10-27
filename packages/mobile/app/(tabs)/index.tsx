@@ -232,7 +232,9 @@ export default function HomeScreen() {
           {
             status: "error",
             error:
-              "Photo access is turned off. Enable it for Note Companion in Settings > Privacy & Security > Photos, or use Upload Files.",
+              Platform.OS === "ios"
+                ? "Photo access is turned off. Enable it for Note Companion in Settings > Privacy & Security > Photos, or use Upload Files."
+                : "Photo access is turned off. Enable it for Note Companion in your phone's app settings, or use Upload Files.",
             fileName: undefined,
             mimeType: undefined,
             text: undefined,
