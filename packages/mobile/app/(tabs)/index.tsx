@@ -231,7 +231,8 @@ export default function HomeScreen() {
         setUploadResults([
           {
             status: "error",
-            error: "Gallery permission denied",
+            error:
+              "Photo access is turned off. Enable it for Note Companion in Settings > Privacy & Security > Photos, or use Upload Files.",
             fileName: undefined,
             mimeType: undefined,
             text: undefined,
