@@ -1,5 +1,8 @@
 import sharp from "sharp";
-import { extractTextFromVisionImage } from "@/lib/ocr-extract";
+import {
+  extractTextFromVisionImage,
+  REFUSAL_ERROR_MESSAGE,
+} from "@/lib/ocr-extract";
 
 export const PDF_OCR_PAGE_LIMIT = Number.parseInt(
   process.env.PDF_OCR_PAGE_LIMIT || "10",
@@ -24,6 +27,8 @@ export async function ocrPdfFromBuffer(
 
   const parts: string[] = [];
   let tokensUsed = 0;
+  let refusedPages = 0;
+  let readablePages = 0;
 
   for (let page = 0; page < pageCount; page++) {
     let png: Buffer;
@@ -42,13 +47,25 @@ export async function ocrPdfFromBuffer(
       customInstructions: options.customInstructions,
       retryOnEmpty: true,
     });
+    if (result.refused) {
+      // Keep pages already read; only fail if no page yields text.
+      tokensUsed += result.tokensUsed;
+      refusedPages++;
+      parts.push(`[Page ${page + 1} could not be read]`);
+      continue;
+    }
     if (result.error) {
       return { textContent: "", tokensUsed, error: result.error };
     }
     tokensUsed += result.tokensUsed;
+    readablePages += result.text ? 1 : 0;
     if (result.text) {
       parts.push(result.text);
     }
+  }
+
+  if (refusedPages > 0 && readablePages === 0) {
+    return { textContent: "", tokensUsed, error: REFUSAL_ERROR_MESSAGE };
   }
 
   const textContent = parts.join("\n\n---\n\n");

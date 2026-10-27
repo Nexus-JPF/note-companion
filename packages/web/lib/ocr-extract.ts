@@ -11,12 +11,42 @@ export type OcrExtractResult = {
   text: string;
   tokensUsed: number;
   error?: string;
+  /** True when `error` is the model refusing the image (not a transport failure). */
+  refused?: boolean;
 };
 
 export type OcrImageInput =
   | { kind: "dataUrl"; dataUrl: string }
   | { kind: "base64"; base64: string; mediaType: string }
   | { kind: "buffer"; buffer: Buffer };
+
+const REFUSAL_MAX_LENGTH = 300;
+
+// A refusal needs refusal wording (cannot/unable + assist/help/transcribe...) aimed at
+// the request, not just an apologetic opener, so short real notes like
+// "Sorry, I'll be late Friday" are never flagged.
+const REFUSAL_PATTERNS: RegExp[] = [
+  /^(?:(?:i['’]m|i am) sorry|sorry|unfortunately|apologies)?[,.!]?\s*(?:but\s+)?(?:i (?:can['’]?t|cannot|can not|won['’]?t)|(?:i['’]m|i am) (?:unable|not able) to|i (?:am|['’]m) unable to)\s+(?:assist|help|comply|process|transcribe|read|extract|identify|provide)\b[^.\n]{0,60}\b(?:that|this|request|image|photo|picture|content)\b/i,
+];
+
+/**
+ * Detects a model refusal returned in place of OCR text (e.g. "I'm sorry, I can't
+ * assist with that."). Only short outputs that open with a refusal phrase count,
+ * so genuine notes that happen to contain such a sentence are not rejected.
+ */
+export function isRefusalText(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > REFUSAL_MAX_LENGTH) {
+    return false;
+  }
+  return REFUSAL_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
+export const REFUSAL_RETRY_HINT =
+  "This is the user's own image of their personal handwritten notes or documents. Transcribe all legible text exactly as written; do not refuse, and do not add commentary.";
+
+export const REFUSAL_ERROR_MESSAGE =
+  "The AI could not read text from this image. Try retaking the photo with better lighting, or upload a clearer image.";
 
 function toDataUrl(input: OcrImageInput): string | null {
   if (input.kind === "dataUrl") {
@@ -82,6 +112,20 @@ export async function extractTextFromVisionImage(options: {
       );
       text = retry.text;
       tokensUsed += retry.tokensUsed;
+    }
+
+    if (isRefusalText(text)) {
+      const retry = await runOnce(REFUSAL_RETRY_HINT);
+      tokensUsed += retry.tokensUsed;
+      if (isRefusalText(retry.text)) {
+        return {
+          text: "",
+          tokensUsed,
+          error: REFUSAL_ERROR_MESSAGE,
+          refused: true,
+        };
+      }
+      text = retry.text;
     }
 
     return { text, tokensUsed };
