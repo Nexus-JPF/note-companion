@@ -77,11 +77,11 @@ SECURE_MODULES="$(
     expo-modules-autolinking resolve --platform ios --json \
     | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);console.log((j.modules||[]).map(m=>m.packageName).filter(n=>n==='expo-secure-store').join(','));});"
 )"
-if [[ -n "$SECURE_MODULES" ]]; then
-  echo "FAIL: expo-secure-store is still autolinked on iOS: $SECURE_MODULES"
+if [[ -z "$SECURE_MODULES" ]]; then
+  echo "FAIL: expo-secure-store is not autolinked on iOS (Clerk session would not persist)"
   exit 1
 fi
-echo "OK: expo-secure-store excluded from iOS autolinking"
+echo "OK: expo-secure-store autolinked on iOS"
 
 if [[ "$QUICK" == "1" ]]; then
   echo ""
