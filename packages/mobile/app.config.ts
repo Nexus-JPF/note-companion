@@ -115,10 +115,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         image: "./assets/splash.png",
         resizeMode: "contain",
+        // The plugin defaults to a 100pt-wide image, which made the wordmark tiny.
+        imageWidth: 400,
         backgroundColor: "#ffffff",
         dark: {
           image: "./assets/splash-white.png",
           resizeMode: "contain",
+          imageWidth: 400,
           backgroundColor: "#ffffff",
         },
       },
