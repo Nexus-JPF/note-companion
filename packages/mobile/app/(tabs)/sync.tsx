@@ -12,6 +12,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useSemanticColor } from '@/hooks/useThemeColor';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 interface IntegrationOption {
   id: string;
@@ -55,6 +56,7 @@ const integrations: IntegrationOption[] = [
 export default function SyncScreen() {
   const primaryColor = useSemanticColor('primary');
   const insets = useSafeAreaInsets();
+  const tabBarPadding = useTabBarPadding();
 
   return (
     <ThemedView style={styles.wrapper}>
@@ -68,7 +70,7 @@ export default function SyncScreen() {
         </ThemedText>
       </ThemedView>
 
-      <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 120 }]}>
+      <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarPadding }]}>
         <View style={styles.mainSection}>
           <View style={styles.explanationCard}>
             <MaterialIcons name="update" size={24} color={primaryColor} />

@@ -15,6 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { fetchFiles, UploadedFile } from "@/utils/api";
 import { useAuth } from "@clerk/react";
 import { FileList } from "@/components/FileList";
+import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -33,6 +34,7 @@ export default function NotesScreen() {
   const [uploading, setUploading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const insets = useSafeAreaInsets();
+  const tabBarPadding = useTabBarPadding();
   const primaryColor = useSemanticColor("primary");
 
   const loadFiles = useCallback(
@@ -153,7 +155,7 @@ export default function NotesScreen() {
     <ScrollView
       style={styles.container}
       // Leave room for the tab bar so the sample button is not cut off.
-      contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+      contentContainerStyle={{ paddingBottom: tabBarPadding }}
     >
       <View style={styles.onboardingContainer}>
         <ThemedText type="heading" style={styles.onboardingTitle}>
