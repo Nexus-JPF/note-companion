@@ -32,6 +32,10 @@ describe("isRefusalText", () => {
     "Meeting notes\n- buy milk\n- call Sam",
     "Dear Sam, I'm sorry I missed your birthday. " + "x".repeat(400),
     "Todo: I can't forget to email Anna",
+    "Sorry, I'll be late Friday",
+    "Apologies to Sam. Call back.",
+    "I'm sorry, Dad",
+    "I can't help but think about Monday",
   ])("ignores %j", (t) => expect(isRefusalText(t)).toBe(false));
 });
 
@@ -62,6 +66,15 @@ describe("extractTextFromVisionImage refusals", () => {
     expect(mockGenerate).toHaveBeenCalledTimes(2);
     expect(r.text).toBe("");
     expect(r.error).toBe(REFUSAL_ERROR_MESSAGE);
+  });
+
+  it("returns empty text without error when the hinted retry is empty", async () => {
+    mockGenerate
+      .mockResolvedValueOnce(reply("I cannot assist with that."))
+      .mockResolvedValueOnce(reply(""));
+    const r = await extractTextFromVisionImage({ image });
+    expect(r.error).toBeUndefined();
+    expect(r.text).toBe("");
   });
 
   it("retries on refusal even when retryOnEmpty is false", async () => {

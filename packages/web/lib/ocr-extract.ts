@@ -11,6 +11,8 @@ export type OcrExtractResult = {
   text: string;
   tokensUsed: number;
   error?: string;
+  /** True when `error` is the model refusing the image (not a transport failure). */
+  refused?: boolean;
 };
 
 export type OcrImageInput =
@@ -20,12 +22,11 @@ export type OcrImageInput =
 
 const REFUSAL_MAX_LENGTH = 300;
 
+// A refusal needs refusal wording (cannot/unable + assist/help/transcribe...) aimed at
+// the request, not just an apologetic opener, so short real notes like
+// "Sorry, I'll be late Friday" are never flagged.
 const REFUSAL_PATTERNS: RegExp[] = [
-  /^(i['’]m|i am) (sorry|unable|not able)\b/i,
-  /^(sorry|apologies)[,.! ]/i,
-  /^i (can['’]?t|cannot|can not|won['’]?t|am unable to|am not able to) (assist|help|comply|process|transcribe|read|extract|identify|provide)/i,
-  /^unfortunately,? i (can['’]?t|cannot|am unable)/i,
-  /^as an ai\b/i,
+  /^(?:(?:i['’]m|i am) sorry|sorry|unfortunately|apologies)?[,.!]?\s*(?:but\s+)?(?:i (?:can['’]?t|cannot|can not|won['’]?t)|(?:i['’]m|i am) (?:unable|not able) to|i (?:am|['’]m) unable to)\s+(?:assist|help|comply|process|transcribe|read|extract|identify|provide)\b[^.\n]{0,60}\b(?:that|this|request|image|photo|picture|content)\b/i,
 ];
 
 /**
@@ -117,7 +118,12 @@ export async function extractTextFromVisionImage(options: {
       const retry = await runOnce(REFUSAL_RETRY_HINT);
       tokensUsed += retry.tokensUsed;
       if (isRefusalText(retry.text)) {
-        return { text: "", tokensUsed, error: REFUSAL_ERROR_MESSAGE };
+        return {
+          text: "",
+          tokensUsed,
+          error: REFUSAL_ERROR_MESSAGE,
+          refused: true,
+        };
       }
       text = retry.text;
     }
