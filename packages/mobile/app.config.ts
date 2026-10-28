@@ -13,7 +13,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   backgroundColor: "#ffffff",
   assetBundlePatterns: ["**/*"],
   ios: {
-    supportsTablet: true,
+    supportsTablet: false,
     bundleIdentifier: "ai.notecompanion.app",
     privacyManifests: {
       NSPrivacyAccessedAPITypes: [
