@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { ArrowRight, FolderTree, Inbox, Tags } from 'lucide-react';
 import { HeroShimmerCta } from '../components/hero-shimmer-cta';
+import { defaultOpenGraph } from '@/lib/og';
 import { SendToDesktop } from '@/components/send-to-desktop';
 import { YouTubeEmbed } from '@/components/youtube-embed';
 
@@ -12,10 +13,20 @@ const OPEN_IN_OBSIDIAN = `obsidian://show-plugin?id=${PLUGIN_ID}`;
 const COMMUNITY_PAGE = `https://obsidian.md/plugins?id=${PLUGIN_ID}`;
 
 // Campaign landing page: kept out of search results so it never competes with the homepage.
+const pageTitle = 'Organize your Obsidian vault automatically';
+
 export const metadata: Metadata = {
-  title: 'Organize your Obsidian vault automatically',
+  title: pageTitle,
   description,
   robots: { index: false, follow: true },
+  // A page-level openGraph replaces the parent's, so spread the shared fields
+  // (image, site name) and set this page's own url, title and description.
+  openGraph: {
+    ...defaultOpenGraph,
+    url: '/obsidian',
+    title: pageTitle,
+    description,
+  },
 };
 
 const steps = [

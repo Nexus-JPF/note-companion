@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { Mail, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CANONICAL_SITE_URL } from '@/lib/site-url';
 
-const SITE = 'https://www.notecompanion.ai';
-const PATH = '/obsidian?utm_source=mobile_handoff&utm_medium=share&utm_campaign=obsidian_page';
+// One link for every way of sharing, always on the canonical host so previews,
+// dev servers and the apex domain all hand off the same URL.
+const HANDOFF_URL = `${CANONICAL_SITE_URL}/obsidian?utm_source=mobile_handoff&utm_medium=share&utm_campaign=obsidian_page`;
 const TITLE = 'Note Companion for Obsidian';
 const TEXT = 'Install Note Companion in Obsidian on your computer:';
 
@@ -22,8 +24,6 @@ export function SendToDesktop() {
     setCanShare(typeof navigator !== 'undefined' && typeof navigator.share === 'function');
   }, []);
 
-  const url = () => `${typeof window !== 'undefined' ? window.location.origin : SITE}${PATH}`;
-
   if (canShare) {
     return (
       <Button
@@ -34,7 +34,7 @@ export function SendToDesktop() {
         data-attr="send-to-desktop-share"
         onClick={() => {
           // The share sheet can be dismissed; that rejects and is not an error
-          navigator.share({ title: TITLE, text: TEXT, url: url() }).catch(() => {});
+          navigator.share({ title: TITLE, text: TEXT, url: HANDOFF_URL }).catch(() => {});
         }}
       >
         <Share2 className="h-4 w-4" aria-hidden />
@@ -44,7 +44,7 @@ export function SendToDesktop() {
   }
 
   const mailto = `mailto:?subject=${encodeURIComponent(TITLE)}&body=${encodeURIComponent(
-    `${TEXT}\n\n${SITE}${PATH}`
+    `${TEXT}\n\n${HANDOFF_URL}`
   )}`;
 
   return (
