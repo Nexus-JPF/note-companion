@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { ArrowRight, FolderTree, Inbox, Tags } from 'lucide-react';
 import { HeroShimmerCta } from '../components/hero-shimmer-cta';
+import { SendToDesktop } from '@/components/send-to-desktop';
 import { YouTubeEmbed } from '@/components/youtube-embed';
 
 const description =
@@ -63,10 +64,13 @@ export default function ObsidianLandingPage() {
             >
               Or view it on obsidian.md
             </a>
-            <p className="max-w-xs text-xs text-muted-foreground sm:hidden">
-              Note Companion runs in Obsidian on desktop. Open this page on your
-              computer to install.
-            </p>
+            <div className="flex max-w-xs flex-col items-center gap-2 sm:hidden">
+              <p className="text-xs text-muted-foreground">
+                Note Companion runs in Obsidian on desktop. Send this page to
+                your computer to install.
+              </p>
+              <SendToDesktop />
+            </div>
           </div>
         </div>
       </section>
