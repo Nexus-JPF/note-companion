@@ -70,6 +70,21 @@ export async function uploadToR2(
   await client.send(command);
 }
 
+/**
+ * True when `key` is an upload this user created: `uploads/<userId>/<name>`.
+ * Use it before reading or recording any client-supplied R2 key, so one user
+ * can never point the server at another user's file.
+ */
+export function isOwnedUploadKey(key: unknown, userId: string): key is string {
+  if (typeof key !== "string" || !userId) return false;
+  const prefix = `uploads/${userId}/`;
+  if (!key.startsWith(prefix) || key.length <= prefix.length || key.length > 1024) {
+    return false;
+  }
+  // No path tricks
+  return !key.split("/").some((segment) => segment === ".." || segment === ".");
+}
+
 export function deriveR2KeyFromBlobUrl(blobUrl: string): string | null {
   const urlParts = blobUrl.split("/");
   const uploadSegmentIndex = urlParts.findIndex((part) => part === "uploads");

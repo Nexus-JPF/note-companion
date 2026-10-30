@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 import { db, uploadedFiles } from "@/drizzle/schema";
+import { isOwnedUploadKey } from "@/lib/r2-client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,20 +12,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { key, publicUrl, originalName, fileType, processType } = (await request.json()) as {
+    // `publicUrl` is still sent by existing clients but is not trusted or stored:
+    // the URL is rebuilt from the key below.
+    const { key, originalName, fileType, processType } = (await request.json()) as {
       key: string;
-      publicUrl: string;
+      publicUrl?: string;
       originalName: string;
       fileType: string;
       processType?: string;
     };
 
-    if (!key || !publicUrl || !originalName || !fileType) {
+    if (!key || !originalName || !fileType) {
       return NextResponse.json(
-        { error: "Missing required fields (key, publicUrl, originalName, fileType)" },
+        { error: "Missing required fields (key, originalName, fileType)" },
         { status: 400 }
       );
     }
+
+    // The key must be one of this user's uploads, so nobody can attach (and have
+    // the server process) another user's file.
+    if (!isOwnedUploadKey(key, userId)) {
+      return NextResponse.json({ error: "Invalid file key" }, { status: 403 });
+    }
+
+    const publicBase = process.env.R2_PUBLIC_URL?.replace(/\/$/, "");
+    if (!publicBase) {
+      return NextResponse.json(
+        { error: "R2_PUBLIC_URL environment variable is not configured" },
+        { status: 500 }
+      );
+    }
+    const blobUrl = `${publicBase}/${key}`;
 
     // Insert record into the database
     const [newRecord] = await db
@@ -32,7 +50,7 @@ export async function POST(request: NextRequest) {
       .values({
         userId: userId,
         r2Key: key, // Store the R2 object key
-        blobUrl: publicUrl, // Store the accessible URL
+        blobUrl, // Built server-side from the verified key
         originalName: originalName,
         fileType: fileType,
         status: "pending", // Initial status, waiting for background processing

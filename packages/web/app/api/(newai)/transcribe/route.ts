@@ -9,6 +9,7 @@ import {
   checkAudioTranscriptionQuota,
   incrementAudioTranscriptionUsage,
 } from '@/drizzle/schema';
+import { downloadFromR2, isOwnedUploadKey } from '@/lib/r2-client';
 import {
   normalizeAudioForWhisper,
   splitAudioFileBySizeHeuristic,
@@ -204,10 +205,18 @@ export async function POST(request: Request) {
     } else if (contentType.includes('application/json')) {
       const body = await request.json();
 
-      // Handle pre-signed URL flow (larger files > 4MB)
-      if (body.fileUrl && body.key) {
+      // Handle pre-signed URL flow (larger files > 4MB). The file is already in R2:
+      // read it by key with our own credentials, and only if it is the caller's.
+      // Older clients also send `fileUrl`; it is accepted but never fetched.
+      if (body.key || body.fileUrl) {
+        if (!isOwnedUploadKey(body.key, userId)) {
+          return NextResponse.json(
+            { error: 'Invalid file key' },
+            { status: 403 }
+          );
+        }
         return handlePresignedUrlTranscription(
-          body.fileUrl,
+          body.key,
           body.extension || 'webm',
           userId
         );
@@ -431,7 +440,7 @@ export async function POST(request: Request) {
 }
 
 async function handlePresignedUrlTranscription(
-  fileUrl: string,
+  r2Key: string,
   extension: string,
   userId: string
 ): Promise<NextResponse> {
@@ -439,15 +448,13 @@ async function handlePresignedUrlTranscription(
   let chunkPaths: string[] = [];
 
   try {
-    const fileResponse = await fetch(fileUrl);
-    if (!fileResponse.ok) {
-      throw new Error(
-        `Failed to download file from R2: ${fileResponse.status}`
-      );
+    let buffer: Buffer;
+    try {
+      buffer = await downloadFromR2(r2Key);
+    } catch (error) {
+      console.error('Failed to download file from R2:', error);
+      throw new Error('Failed to download file from R2');
     }
-
-    const arrayBuffer = await fileResponse.arrayBuffer();
-    const buffer = new Uint8Array(arrayBuffer);
 
     tempFilePath = join(tmpdir(), `r2_audio_${Date.now()}.${extension}`);
     await fsPromises.writeFile(tempFilePath, buffer);
