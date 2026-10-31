@@ -36,15 +36,16 @@ async function hasExistingActiveOrTrialingSubscription(userId: string): Promise<
 
 // Internal helper to create Stripe Session without redirecting
 export async function _createStripeCheckoutSession(userId: string, plan: keyof typeof PRODUCTS) {
+  // Authenticate first, before looking at anything the caller supplied
+  const authResult = await auth(); // Get the full auth object
+  if (!authResult.userId || authResult.userId !== userId) throw new Error("User mismatch or not authenticated");
+
   const { success, cancel } = getUrls();
   const productConfig = PRODUCTS[plan];
 
   if (!productConfig) {
     throw new Error(`Invalid plan specified: ${plan}`);
   }
-
-  const authResult = await auth(); // Get the full auth object
-  if (!authResult.userId || authResult.userId !== userId) throw new Error("User mismatch or not authenticated");
 
   // Fetch user details using clerkClient for email prefill
   const clerk = await clerkClient();

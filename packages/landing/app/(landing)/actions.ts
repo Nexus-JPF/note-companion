@@ -66,7 +66,8 @@ export async function submitProWaitlist(
   email: string,
   billing: 'monthly' | 'yearly',
   featureRequest?: string,
-  userId?: string
+  // The visitor's PostHog id (not an account id): lets Loops link the signup to analytics
+  analyticsId?: string
 ): Promise<SubmitBetaRequestResult> {
   if (!email || !email.includes('@')) {
     return {
@@ -98,7 +99,7 @@ export async function submitProWaitlist(
         source: 'pro_waitlist_pricing',
         proWaitlistBilling: billing,
         ...(featureRequest ? { proWaitlistFeatureRequest: featureRequest } : {}),
-        ...(userId ? { proWaitlistUserId: userId } : {}),
+        ...(analyticsId ? { proWaitlistUserId: analyticsId } : {}),
         mailingLists: {
           "cmuddxgi61q9l0j0wdf7d65mn": true
         }

@@ -4,6 +4,7 @@ import { db, uploadedFiles } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 import { clientErrorStatus } from "@/lib/auth-error-status";
+import { authenticateUser } from "@/lib/authenticate-user";
 
 export async function GET(
   request: NextRequest,
@@ -80,8 +81,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Same authorization as GET: an API key (mobile) or the Clerk session (web)
-    const { userId } = await handleAuthorizationV2(request);
+    // An API key (mobile) or the Clerk session (web). Identity only: people can
+    // always delete their own files, whatever their plan or token balance.
+    const userId = await authenticateUser(request);
     if (!userId) {
       console.error("Unauthorized file deletion attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

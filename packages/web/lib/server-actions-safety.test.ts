@@ -10,12 +10,20 @@ import path from 'node:path';
  */
 
 const ROOT = path.resolve(__dirname, '..');
-const SCAN_DIRS = ['app', 'lib', 'components'];
+const PACKAGES = path.resolve(ROOT, '..');
+// Scanned directories: the web app and the marketing site
+const SCAN_DIRS = [
+  path.join(ROOT, 'app'),
+  path.join(ROOT, 'lib'),
+  path.join(ROOT, 'components'),
+  path.join(PACKAGES, 'landing', 'app'),
+  path.join(PACKAGES, 'landing', 'components'),
+];
 
 // Exports that take a user id but verify it against the session first.
 const ALLOWED = new Set([
   // Throws unless auth().userId === userId (used by app/upgrade-from-mobile).
-  'app/dashboard/pricing/actions.ts#_createStripeCheckoutSession',
+  'web/app/dashboard/pricing/actions.ts#_createStripeCheckoutSession',
 ]);
 
 function* walk(dir: string): Generator<string> {
@@ -38,11 +46,12 @@ describe('Server Actions never take a caller-supplied user id', () => {
   let scanned = 0;
 
   for (const dir of SCAN_DIRS) {
-    for (const file of walk(path.join(ROOT, dir))) {
+    if (!fs.existsSync(dir)) continue;
+    for (const file of walk(dir)) {
       const source = fs.readFileSync(file, 'utf8');
       if (!isUseServerFile(source)) continue;
       scanned += 1;
-      const rel = path.relative(ROOT, file);
+      const rel = path.relative(PACKAGES, file);
       const exportRe = /export\s+(?:async\s+function\s+(\w+)|const\s+(\w+)\s*=\s*async)\s*\(([^)]*)\)/g;
       let match: RegExpExecArray | null;
       while ((match = exportRe.exec(source))) {

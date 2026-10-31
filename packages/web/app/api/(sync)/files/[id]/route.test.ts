@@ -5,9 +5,13 @@ const mockAuthorize = jest.fn();
 const mockWhere = jest.fn();
 const mockLimit = jest.fn();
 const mockDeleteForUser = jest.fn();
+const mockAuthenticate = jest.fn();
 
 jest.mock('@/lib/handleAuthorization', () => ({
   handleAuthorizationV2: (...a: any[]) => mockAuthorize(...a),
+}));
+jest.mock('@/lib/authenticate-user', () => ({
+  authenticateUser: (...a: any[]) => mockAuthenticate(...a),
 }));
 jest.mock('@/lib/files-server', () => ({
   deleteFileForUser: (...a: any[]) => mockDeleteForUser(...a),
@@ -104,14 +108,14 @@ describe('GET /api/files/[id]', () => {
       });
 
     it('rejects a request that fails authorization without deleting', async () => {
-      mockAuthorize.mockRejectedValue(Object.assign(new Error('Invalid key'), { status: 401 }));
+      mockAuthenticate.mockResolvedValue(null);
       const res = await del('7', { authorization: 'Bearer anything-at-all' });
       expect(res.status).toBe(401);
       expect(mockDeleteForUser).not.toHaveBeenCalled();
     });
 
     it('deletes through the server-only helper as the authenticated user (API key or session)', async () => {
-      mockAuthorize.mockResolvedValue({ userId: 'user_1' });
+      mockAuthenticate.mockResolvedValue('user_1');
       mockDeleteForUser.mockResolvedValue({ success: true });
       const res = await del('7');
       expect(res.status).toBe(200);
@@ -119,7 +123,7 @@ describe('GET /api/files/[id]', () => {
     });
 
     it("answers 404 for someone else's file, exactly like a missing file", async () => {
-      mockAuthorize.mockResolvedValue({ userId: 'user_1' });
+      mockAuthenticate.mockResolvedValue('user_1');
       mockDeleteForUser.mockResolvedValueOnce({ success: false, error: 'Unauthorized' });
       const theirs = await del('7');
       mockDeleteForUser.mockResolvedValueOnce({ success: false, error: 'File not found' });
@@ -130,7 +134,7 @@ describe('GET /api/files/[id]', () => {
     });
 
     it('rejects a non-numeric id', async () => {
-      mockAuthorize.mockResolvedValue({ userId: 'user_1' });
+      mockAuthenticate.mockResolvedValue('user_1');
       const res = await del('abc');
       expect(res.status).toBe(400);
       expect(mockDeleteForUser).not.toHaveBeenCalled();
