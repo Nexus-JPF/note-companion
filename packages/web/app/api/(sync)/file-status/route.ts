@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFileStatus } from "@/app/dashboard/sync/actions";
-import { auth } from "@clerk/nextjs/server";
+import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 
 // Define the response type locally
 type FileStatusResponse = {
@@ -11,28 +11,10 @@ type FileStatusResponse = {
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication using Clerk
-    const { userId } = await auth();
-    const authHeader = request.headers.get("authorization");
-    
-    // Handle API key auth from mobile app
-    if (!userId && authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      
-      if (!token) {
-        console.log("Unauthorized file access attempt - invalid token");
-        return NextResponse.json(
-          { error: "Unauthorized" },
-          { status: 401 }
-        );
-      }
-      
-      // For mobile requests with a token, we would validate the token here
-      // This is a simplified version assuming the token is valid
-    } 
-    // If no userId and no valid token, user is not authenticated
-    else if (!userId) {
-      console.error("Unauthorized status check attempt - no userId");
+    // Validates the API key (mobile) or the Clerk session (web). A bare
+    // Authorization header is never trusted on its own.
+    const { userId } = await handleAuthorizationV2(request);
+    if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized - authentication required" },
         { status: 401 }
@@ -51,9 +33,8 @@ export async function GET(request: NextRequest) {
 
     console.log(`Processing file status request for fileId: ${fileId}`);
     
-    // For the mobile app, we need to allow access even without a specific userId
-    // This is a simplified approach - in production, validate the token properly
-    const result = userId ? await getFileStatus(fileId, userId) : await getFileStatus(fileId, "mobile-user");
+    // getFileStatus only returns the file when it belongs to this user
+    const result = await getFileStatus(fileId, userId);
     
     if (!result) {
       console.error(`Unexpected null result from getFileStatus for fileId: ${fileId}`);
@@ -80,6 +61,14 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(response);
   } catch (error) {
+    if (error && typeof error === "object" && "status" in error) {
+      const status = (error as { status?: unknown }).status;
+      if (status === 401 || status === 403) {
+        const message =
+          "message" in error ? String((error as { message?: unknown }).message) : "Unauthorized";
+        return NextResponse.json({ error: message }, { status });
+      }
+    }
     console.error("Status check error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(

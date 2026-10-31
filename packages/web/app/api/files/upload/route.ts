@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { mkdir } from "fs/promises";
+import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 
 // Function to ensure directory exists
 async function ensureDir(dirPath: string) {
@@ -15,8 +16,17 @@ async function ensureDir(dirPath: string) {
   }
 }
 
+/** Keep only a plain file name: no directories, no path tricks. */
+function safeFileName(name: unknown): string {
+  const base = path.basename(String(name ?? '')).replace(/[^\w.\- ]/g, '_').slice(0, 200);
+  return base && base !== '.' && base !== '..' ? base : 'file';
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Only signed-in users (API key or Clerk session) may upload
+    await handleAuthorizationV2(request);
+
     // Get upload directory from environment or use default
     const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
     
@@ -30,7 +40,7 @@ export async function POST(request: NextRequest) {
     // Process each file
     const uploadedFiles = await Promise.all(
       files.map(async (file: any) => {
-        const fileName = file.name;
+        const fileName = safeFileName(file.name);
         const fileType = fileName.split('.').pop() || 'unknown';
         const uniqueFileName = `${uuidv4()}-${fileName}`;
         const filePath = path.join(uploadDir, uniqueFileName);
@@ -60,6 +70,15 @@ export async function POST(request: NextRequest) {
       files: uploadedFiles
     });
   } catch (error) {
+    if (error && typeof error === 'object' && 'status' in error) {
+      const status = (error as { status?: unknown }).status;
+      if (status === 401 || status === 403) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status }
+        );
+      }
+    }
     console.error('Error uploading files:', error);
     return NextResponse.json(
       { 
