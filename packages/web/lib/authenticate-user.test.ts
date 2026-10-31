@@ -34,6 +34,17 @@ describe('authenticateUser', () => {
     expect(await authenticateUser(req({ authorization: 'Bearer clerk-jwt' }))).toBe('user_3');
   });
 
+  it('falls through to Clerk when the key service errors', async () => {
+    mockVerify.mockResolvedValue({ result: null, error: new Error('unkey down') });
+    mockAuth.mockResolvedValue({ userId: 'user_4' });
+    expect(await authenticateUser(req({ authorization: 'Bearer clerk-jwt' }))).toBe('user_4');
+  });
+
+  it('returns null instead of throwing when Clerk is not available', async () => {
+    mockAuth.mockRejectedValue(new Error('clerkMiddleware not detected'));
+    expect(await authenticateUser(req())).toBeNull();
+  });
+
   it('rejects a made-up token that Clerk does not recognise either', async () => {
     mockVerify.mockResolvedValue({ result: { valid: false }, error: null });
     mockAuth.mockResolvedValue({ userId: null });
