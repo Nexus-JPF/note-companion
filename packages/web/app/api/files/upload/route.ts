@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { mkdir } from "fs/promises";
+import { auth } from "@clerk/nextjs/server";
 
 // Function to ensure directory exists
 async function ensureDir(dirPath: string) {
@@ -15,8 +16,24 @@ async function ensureDir(dirPath: string) {
   }
 }
 
+/** Keep only a plain file name: no directories, no path tricks. */
+function safeFileName(name: unknown): string {
+  const base = path.basename(String(name ?? '')).replace(/[^\w.\- ]/g, '_').slice(0, 200);
+  return base && base !== '.' && base !== '..' ? base : 'file';
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Only signed-in dashboard users may upload. A Clerk session is enough:
+    // unlike the API routes, this does not depend on plan or token balance.
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Get upload directory from environment or use default
     const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
     
@@ -30,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Process each file
     const uploadedFiles = await Promise.all(
       files.map(async (file: any) => {
-        const fileName = file.name;
+        const fileName = safeFileName(file.name);
         const fileType = fileName.split('.').pop() || 'unknown';
         const uniqueFileName = `${uuidv4()}-${fileName}`;
         const filePath = path.join(uploadDir, uniqueFileName);

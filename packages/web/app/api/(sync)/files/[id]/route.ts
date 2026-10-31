@@ -1,24 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteFileForUser } from "@/lib/files-server";
-import {
-  handleAuthorizationV2,
-  AuthorizationError,
-} from "@/lib/handleAuthorization";
 import { db, uploadedFiles } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
+import { clientErrorStatus } from "@/lib/auth-error-status";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await handleAuthorizationV2(request);
+    const { id } = await params;
 
+    // Validates the API key (mobile) or the Clerk session (web). Never trust a
+    // bare Authorization header: that would let anyone read anyone's file.
+    const { userId } = await handleAuthorizationV2(request);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
+    // Parse the file ID
     const fileId = parseInt(id, 10);
     if (isNaN(fileId)) {
       return NextResponse.json(
@@ -27,44 +28,51 @@ export async function GET(
       );
     }
 
+    // Only the owner's file. A file that belongs to someone else looks exactly
+    // like a file that does not exist, so ids cannot be probed.
     const [file] = await db
       .select()
       .from(uploadedFiles)
-      .where(eq(uploadedFiles.id, fileId))
+      .where(and(eq(uploadedFiles.id, fileId), eq(uploadedFiles.userId, userId)))
       .limit(1);
 
     if (!file) {
-      return NextResponse.json({ error: "File not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      status: file.status || "processing",
-      fileId: file.id,
-      url: file.blobUrl,
-      text: file.textContent || "",
-      error: file.error || undefined,
-    });
-  } catch (error) {
-    if (error instanceof AuthorizationError) {
       return NextResponse.json(
-        { error: error.message || "Authorization failed" },
-        { status: error.status || 403 }
+        { error: "File not found" },
+        { status: 404 }
       );
     }
 
+    // Return the file data with appropriate format for the mobile app
+    return NextResponse.json({
+      status: file.status || 'processing',
+      fileId: file.id,
+      url: file.blobUrl,
+      text: file.textContent || '',
+      error: file.error || undefined
+    });
+  } catch (error) {
+    const clientStatus = clientErrorStatus(error);
+    if (clientStatus) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Request failed" },
+        { status: clientStatus }
+      );
+    }
     console.error("Error retrieving file:", error);
     return NextResponse.json(
-      { error: (error as Error).message || "Failed to retrieve file" },
+      { error: "Failed to retrieve file" },
       { status: 500 }
     );
   }
 }
 
+// Also implement POST to handle the same requests (for compatibility with the mobile app)
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  return GET(request, context);
+  return GET(request, { params });
 }
 
 export async function DELETE(
@@ -72,6 +80,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Same authorization as GET: an API key (mobile) or the Clerk session (web)
     const { userId } = await handleAuthorizationV2(request);
     if (!userId) {
       console.error("Unauthorized file deletion attempt");
@@ -87,28 +96,24 @@ export async function DELETE(
     const result = await deleteFileForUser(fileId, userId);
 
     if (!result.success) {
+      // Someone else's file looks exactly like a missing one
+      const notFound =
+        result.error === "Unauthorized" || result.error === "File not found";
       return NextResponse.json(
-        { error: result.error || "Failed to delete file" },
-        {
-          status:
-            result.error === "Unauthorized"
-              ? 401
-              : result.error === "File not found"
-                ? 404
-                : 500,
-        }
+        { error: notFound ? "File not found" : result.error || "Failed to delete file" },
+        { status: notFound ? 404 : 500 }
       );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthorizationError) {
+    const clientStatus = clientErrorStatus(error);
+    if (clientStatus) {
       return NextResponse.json(
-        { error: error.message || "Authorization failed" },
-        { status: error.status || 403 }
+        { error: error instanceof Error ? error.message : "Request failed" },
+        { status: clientStatus }
       );
     }
-
     console.error("Delete file error:", error);
     return NextResponse.json(
       { error: "Failed to delete file" },
