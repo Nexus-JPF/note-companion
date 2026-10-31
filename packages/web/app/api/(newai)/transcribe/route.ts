@@ -26,6 +26,17 @@ const WHISPER_MAX_MB = 25;
 const WHISPER_CONCURRENCY = 2;
 
 /**
+ * Client-supplied extensions end up in temp file paths. Allow only plain
+ * alphanumerics so something like "../../x" cannot escape the temp directory;
+ * anything else falls back to webm.
+ */
+function safeExtension(extension: unknown, fallback = 'webm'): string {
+  const value =
+    typeof extension === 'string' ? extension.trim().toLowerCase() : '';
+  return /^[a-z0-9]{1,8}$/.test(value) ? value : fallback;
+}
+
+/**
  * Gets the duration of an audio file in minutes
  * Estimates duration from file size since get-audio-duration doesn't work in serverless environments
  * @param filePath Path to the audio file
@@ -197,7 +208,7 @@ export async function POST(request: Request) {
         );
       }
 
-      extension = audioFile.name.split('.').pop()?.toLowerCase() || 'webm';
+      extension = safeExtension(audioFile.name.split('.').pop());
       const arrayBuffer = await audioFile.arrayBuffer();
       const buffer = new Uint8Array(arrayBuffer);
       tempFilePath = join(tmpdir(), `upload_${Date.now()}.${extension}`);
@@ -209,7 +220,11 @@ export async function POST(request: Request) {
       // read it by key with our own credentials, and only if it is the caller's.
       // Older clients also send `fileUrl`; it is accepted but never fetched.
       if (body.key || body.fileUrl) {
-        if (!isOwnedUploadKey(body.key, userId)) {
+        // Keys are created under the same id (create-upload-url): the shared
+        // default 'user' when user management is off (self-hosting)
+        const uploadOwnerId =
+          process.env.ENABLE_USER_MANAGEMENT === 'true' ? userId : 'user';
+        if (!isOwnedUploadKey(body.key, uploadOwnerId)) {
           return NextResponse.json(
             { error: 'Invalid file key' },
             { status: 403 }
@@ -217,14 +232,14 @@ export async function POST(request: Request) {
         }
         return handlePresignedUrlTranscription(
           body.key,
-          body.extension || 'webm',
+          safeExtension(body.extension),
           userId
         );
       }
 
       // Handle base64 upload (from audio recorder)
       if (body.audio && body.extension) {
-        extension = body.extension;
+        extension = safeExtension(body.extension);
         const base64Data = body.audio.split(';base64,').pop();
         if (!base64Data) {
           return NextResponse.json(

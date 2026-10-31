@@ -110,6 +110,7 @@ describe('POST /api/(newai)/transcribe', () => {
     jest.clearAllMocks();
     process.env.UNKEY_ROOT_KEY = 'test-root-key';
     process.env.OPENAI_API_KEY = 'test-openai-key';
+    process.env.ENABLE_USER_MANAGEMENT = 'true'; // production setup: uploads/<userId>/
     tempFilePath = join(tmpdir(), `test_${Date.now()}.mp3`);
 
     // Default mocks
@@ -328,6 +329,30 @@ describe('POST /api/(newai)/transcribe', () => {
       expect(data.text).toBeDefined();
     });
 
+    it('should keep a traversal-style extension inside the temp directory', async () => {
+      const base64Data = Buffer.from('audio data').toString('base64');
+      (fsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+      await POST(
+        new Request('http://localhost:3000/api/transcribe', {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer valid-key',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            audio: `data:audio/mp3;base64,${base64Data}`,
+            extension: '../../../app/evil',
+          }),
+        })
+      );
+
+      const written = (fsPromises.writeFile as jest.Mock).mock.calls[0][0] as string;
+      expect(written).not.toContain('..');
+      expect(written.startsWith(tmpdir())).toBe(true);
+      expect(written).toMatch(/upload_\d+\.webm$/);
+    });
+
     it('should return 400 when base64 data is invalid', async () => {
       // Reset mocks
       jest.clearAllMocks();
@@ -429,6 +454,41 @@ describe('POST /api/(newai)/transcribe', () => {
       expect(response.status).toBe(403);
       expect(mockDownloadFromR2).not.toHaveBeenCalled();
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should keep a traversal-style extension inside the temp directory', async () => {
+      mockDownloadFromR2.mockResolvedValueOnce(Buffer.from('audio file data'));
+      (fsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+      await post({
+        key: 'uploads/test-user-id/abc-audio.mp3',
+        extension: '../../etc/cron.d/x',
+      });
+
+      const written = (fsPromises.writeFile as jest.Mock).mock.calls[0][0] as string;
+      expect(written).not.toContain('..');
+      expect(written.startsWith(tmpdir())).toBe(true);
+      expect(written).toMatch(/r2_audio_\d+\.webm$/);
+    });
+
+    it('should read keys under the shared default user when user management is off', async () => {
+      const previous = process.env.ENABLE_USER_MANAGEMENT;
+      delete process.env.ENABLE_USER_MANAGEMENT;
+      try {
+        mockDownloadFromR2.mockResolvedValueOnce(Buffer.from('audio file data'));
+        (fsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+        await post({ key: 'uploads/user/abc-audio.mp3', extension: 'mp3' });
+        expect(mockDownloadFromR2).toHaveBeenCalledWith('uploads/user/abc-audio.mp3');
+
+        mockDownloadFromR2.mockClear();
+        const other = await post({ key: 'uploads/someone-else/abc-audio.mp3', extension: 'mp3' });
+        expect(other.status).toBe(403);
+        expect(mockDownloadFromR2).not.toHaveBeenCalled();
+      } finally {
+        if (previous === undefined) delete process.env.ENABLE_USER_MANAGEMENT;
+        else process.env.ENABLE_USER_MANAGEMENT = previous;
+      }
     });
 
     it('should refuse a URL with no key instead of fetching it', async () => {
