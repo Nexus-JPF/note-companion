@@ -8,8 +8,9 @@ import { extractUserId, verifyUnkeyApiKey } from '@/lib/unkey-client';
  * plan and remaining tokens, so use it for things people must always be able
  * to do with their own data, such as deleting a file.
  *
- * A request that sends an Authorization header is judged by that key alone:
- * an invalid key never falls back to the session.
+ * A Bearer token is tried as an API key first. The mobile app sends a Clerk
+ * session token instead, so a token that is not a valid key falls through to
+ * Clerk, which verifies it (as it does a cookie) and never trusts it blindly.
  */
 export async function authenticateUser(req: NextRequest): Promise<string | null> {
   // Same behavior as handleAuthorizationV2 when user management is off (self-hosting)
@@ -22,8 +23,7 @@ export async function authenticateUser(req: NextRequest): Promise<string | null>
 
   if (token) {
     const { result, error } = await verifyUnkeyApiKey(token);
-    if (error || !result?.valid) return null;
-    return extractUserId(result) ?? null;
+    if (!error && result?.valid) return extractUserId(result) ?? null;
   }
 
   const { userId } = await auth();

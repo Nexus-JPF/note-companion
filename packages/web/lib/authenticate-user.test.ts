@@ -28,11 +28,16 @@ describe('authenticateUser', () => {
     expect(mockVerify).toHaveBeenCalledWith('good-key');
   });
 
-  it('rejects an invalid API key and never falls back to the session', async () => {
+  it('accepts a Clerk session token (mobile) when it is not an API key', async () => {
     mockVerify.mockResolvedValue({ result: { valid: false }, error: null });
-    mockAuth.mockResolvedValue({ userId: 'someone' });
+    mockAuth.mockResolvedValue({ userId: 'user_3' });
+    expect(await authenticateUser(req({ authorization: 'Bearer clerk-jwt' }))).toBe('user_3');
+  });
+
+  it('rejects a made-up token that Clerk does not recognise either', async () => {
+    mockVerify.mockResolvedValue({ result: { valid: false }, error: null });
+    mockAuth.mockResolvedValue({ userId: null });
     expect(await authenticateUser(req({ authorization: 'Bearer made-up' }))).toBeNull();
-    expect(mockAuth).not.toHaveBeenCalled();
   });
 
   it('uses the Clerk session when there is no Authorization header', async () => {
