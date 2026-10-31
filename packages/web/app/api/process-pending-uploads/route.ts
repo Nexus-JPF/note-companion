@@ -65,8 +65,11 @@ async function processMagicDiagram(
       { type: mimeType }
     );
 
+    const imageModel =
+      process.env.IMAGE_MODEL?.trim() || "gpt-image-2.5-flare";
+
     const response = await getOpenAIImageClient().images.edit({
-      model: "gpt-image-1",
+      model: imageModel,
       image: preparedImage,
       prompt: generationPrompt,
       n: 1,
@@ -89,7 +92,14 @@ async function processMagicDiagram(
     await uploadToR2(generatedR2Key, generatedImageBuffer, "image/png");
     const generatedPublicUrl = `${R2_PUBLIC_URL}/${generatedR2Key}`;
 
-    return { generatedImageUrl: generatedPublicUrl, tokensUsed: 5000 };
+    let tokensUsed = 5000;
+    if (response.usage?.total_tokens != null) {
+      tokensUsed = response.usage.total_tokens;
+    } else {
+      // TODO: use API usage for billing when this image model returns usage metadata
+    }
+
+    return { generatedImageUrl: generatedPublicUrl, tokensUsed };
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error generating diagram";
