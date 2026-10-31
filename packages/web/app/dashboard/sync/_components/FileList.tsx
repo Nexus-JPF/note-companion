@@ -37,6 +37,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { StatusBadge } from './StatusBadge';
+import { isMagicDiagram, openInNewTab } from './magic-diagram';
 
 interface FileListProps {
   pageSize?: number;
@@ -199,7 +200,7 @@ export function FileList({ pageSize = 12 }: FileListProps) {
 
   const handleExternalView = (file: UploadedFile) => {
     // Open file preview or download in a new tab
-    window.open(file.blobUrl, '_blank');
+    openInNewTab(file.blobUrl);
   };
 
   const handleRefresh = () => {
@@ -408,8 +409,7 @@ export function FileList({ pageSize = 12 }: FileListProps) {
           </DialogHeader>
 
           <div className="flex-1 overflow-auto p-4 bg-slate-50 rounded-md">
-            {selectedFile.processType === 'magic-diagram' &&
-            selectedFile.generatedImageUrl ? (
+            {isMagicDiagram(selectedFile) ? (
               <div className="flex flex-col items-center gap-3 h-full bg-white p-4 rounded-lg">
                 <a
                   href={selectedFile.generatedImageUrl}
@@ -545,9 +545,8 @@ export function FileList({ pageSize = 12 }: FileListProps) {
               <Button
                 variant="outline"
                 onClick={() =>
-                  selectedFile.processType === 'magic-diagram' &&
-                  selectedFile.generatedImageUrl
-                    ? window.open(selectedFile.generatedImageUrl, '_blank')
+                  isMagicDiagram(selectedFile)
+                    ? openInNewTab(selectedFile.generatedImageUrl)
                     : handleExternalView(selectedFile)
                 }
               >
