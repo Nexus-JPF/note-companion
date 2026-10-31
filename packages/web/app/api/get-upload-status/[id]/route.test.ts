@@ -8,8 +8,8 @@ jest.mock('@/lib/handleAuthorization', () => ({
   handleAuthorizationV2: (...a: any[]) => mockAuthorize(...a),
 }));
 jest.mock('@/lib/r2-client', () => ({
-  signR2Url: async (url: string) => `signed:${url}`,
-  signR2UrlsInText: async (text: string | null) => (text ? `signed-text:${text}` : text),
+  signR2Url: async (url: string, owner: string) => `signed:${owner}:${url}`,
+  signR2UrlsInText: async (text: string | null, owner: string) => (text ? `signed-text:${owner}:${text}` : text),
 }));
 jest.mock('drizzle-orm', () => ({ eq: () => 'eq', is: () => 'is' }));
 jest.mock('@/drizzle/schema', () => {
@@ -52,8 +52,8 @@ describe('GET /api/get-upload-status/[id]', () => {
     const res = await call();
     const body = await res.json();
     expect(res.status).toBe(200);
-    expect(body.url).toBe('signed:https://pub.example/uploads/user_1/x-a.png');
-    expect(body.text).toBe('signed-text:hello');
+    expect(body.url).toBe('signed:user_1:https://pub.example/uploads/user_1/x-a.png');
+    expect(body.text).toBe('signed-text:user_1:hello');
     expect(body.fileId).toBe(7);
   });
 

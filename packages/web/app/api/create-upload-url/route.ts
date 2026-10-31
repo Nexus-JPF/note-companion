@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { signR2Key } from '@/lib/r2-client';
+import { signedOrPublicR2Url } from '@/lib/r2-client';
 import { handleAuthorizationV2 } from '@/lib/handleAuthorization'; // Assuming this handles auth
 import { v4 as uuidv4 } from 'uuid'; // For unique filenames
 
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     console.log('R2_PUBLIC_URL from env:', process.env.R2_PUBLIC_URL);
     // Kept under the old name for existing clients; it is now a short-lived signed
     // download link, so it keeps working when the bucket is private.
-    const publicUrl = await signR2Key(key);
+    const publicUrl = await signedOrPublicR2Url(key);
 
     return NextResponse.json({ uploadUrl, key, publicUrl });
   } catch (error: unknown) {

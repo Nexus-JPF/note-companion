@@ -2,8 +2,8 @@ const queue: unknown[] = [];
 
 jest.mock('server-only', () => ({}), { virtual: true });
 jest.mock('@/lib/r2-client', () => ({
-  signR2Url: async (url: string) => `signed:${url}`,
-  signR2UrlsInText: async (text: string | null) => (text ? text.replace(/https:\/\/pub\.example\/\S+/g, m => `signed:${m}`) : text),
+  signR2Url: async (url: string, owner: string) => `signed:${owner}:${url}`,
+  signR2UrlsInText: async (text: string | null, owner: string) => (text ? text.replace(/https:\/\/pub\.example\/\S+/g, m => `signed:${owner}:${m}`) : text),
 }));
 jest.mock('drizzle-orm', () => ({
   eq: (a: unknown, b: unknown) => ({ eq: [a, b] }),
@@ -57,8 +57,8 @@ describe('files-server signs stored links on the way out', () => {
       [{ count: 1 }]
     );
     const result = (await getFilesForUser({ page: 1, limit: 10 }, 'user_1')) as any;
-    expect(result.files[0].blobUrl).toBe('signed:https://pub.example/uploads/u/x-a.png');
-    expect(result.files[0].textContent).toContain('signed:https://pub.example/generated/u/1-a.png');
+    expect(result.files[0].blobUrl).toBe('signed:user_1:https://pub.example/uploads/u/x-a.png');
+    expect(result.files[0].textContent).toContain('signed:user_1:https://pub.example/generated/u/1-a.png');
     expect(result.pagination.total).toBe(1);
   });
 
@@ -72,7 +72,7 @@ describe('files-server signs stored links on the way out', () => {
       },
     ]);
     const result = (await getFileStatusForUser(1, 'user_1')) as any;
-    expect(result.text).toBe('diagram: signed:https://pub.example/generated/u/1-a.png');
+    expect(result.text).toBe('diagram: signed:user_1:https://pub.example/generated/u/1-a.png');
   });
 
   it('still refuses someone else\'s file', async () => {

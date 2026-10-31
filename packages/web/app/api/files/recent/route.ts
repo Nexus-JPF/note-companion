@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
         type: file.type === 'pdf' ? 'file' : (file.type === 'image' ? 'image' : 'markdown'),
         date: file.date ? new Date(file.date).toISOString() : new Date().toISOString(),
         // Links to stored files are signed on the way out (they expire)
-        path: file.path ? await signR2Url(file.path) : '',
+        path: file.path ? await signR2Url(file.path, userId) : '',
       }))
     );
 

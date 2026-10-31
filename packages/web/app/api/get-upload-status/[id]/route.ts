@@ -65,10 +65,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Return the relevant status information
     return NextResponse.json({
       status: fileRecord.status,
-      text: await signR2UrlsInText(fileRecord.textContent), // Mobile app expects 'text' field
+      text: await signR2UrlsInText(fileRecord.textContent, fileRecord.userId), // Mobile app expects 'text' field
       error: fileRecord.error,
       fileId: fileRecord.id, // Include fileId for confirmation
-      url: await signR2Url(fileRecord.blobUrl),
+      url: await signR2Url(fileRecord.blobUrl, fileRecord.userId),
       mimeType: fileRecord.fileType,
       fileName: fileRecord.originalName,
       updatedAt: fileRecord.updatedAt,

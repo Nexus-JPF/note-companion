@@ -86,8 +86,8 @@ export async function getFilesForUser(
     const signedFiles = await Promise.all(
       files.map(async (file) => ({
         ...file,
-        blobUrl: await signR2Url(file.blobUrl),
-        textContent: await signR2UrlsInText(file.textContent),
+        blobUrl: await signR2Url(file.blobUrl, userId),
+        textContent: await signR2UrlsInText(file.textContent, userId),
       }))
     );
 
@@ -132,7 +132,7 @@ export async function getFileStatusForUser(
 
     return {
       status: file.status,
-      text: await signR2UrlsInText(file.textContent),
+      text: await signR2UrlsInText(file.textContent, userId),
       error: file.error,
     };
   } catch (error) {

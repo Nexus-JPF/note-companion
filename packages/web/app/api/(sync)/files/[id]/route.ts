@@ -49,8 +49,8 @@ export async function GET(
     return NextResponse.json({
       status: file.status || 'processing',
       fileId: file.id,
-      url: await signR2Url(file.blobUrl),
-      text: (await signR2UrlsInText(file.textContent)) || '',
+      url: await signR2Url(file.blobUrl, userId),
+      text: (await signR2UrlsInText(file.textContent, userId)) || '',
       error: file.error || undefined
     });
   } catch (error) {

@@ -8,7 +8,7 @@ jest.mock('@/lib/handleAuthorization', () => ({
   handleAuthorizationV2: (...a: any[]) => mockAuthorize(...a),
 }));
 jest.mock('@/lib/r2-client', () => ({
-  signR2Url: async (url: string) => `signed:${url}`,
+  signR2Url: async (url: string, owner: string) => `signed:${owner}:${url}`,
 }));
 jest.mock('drizzle-orm', () => ({ eq: () => 'eq', desc: () => 'desc' }));
 jest.mock('@/drizzle/schema', () => {
@@ -39,7 +39,7 @@ describe('GET /api/files/recent', () => {
     const res = await GET(new NextRequest('http://localhost/api/files/recent'));
     const files = await res.json();
     expect(res.status).toBe(200);
-    expect(files[0].path).toBe('signed:https://pub.example/uploads/user_1/x-a.png');
+    expect(files[0].path).toBe('signed:user_1:https://pub.example/uploads/user_1/x-a.png');
     expect(files[1].path).toBe('');
   });
 });
