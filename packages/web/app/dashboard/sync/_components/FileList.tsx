@@ -424,12 +424,12 @@ export function FileList({ pageSize = 12 }: FileListProps) {
                   />
                 </a>
                 <a
-                  href={selectedFile.generatedImageUrl}
+                  href={selectedFile.blobUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-muted-foreground underline"
                 >
-                  Open full size
+                  View original sketch
                 </a>
               </div>
             ) : selectedFile.fileType.includes('image') ? (
@@ -544,7 +544,12 @@ export function FileList({ pageSize = 12 }: FileListProps) {
             {selectedFile.fileType.includes('image') && (
               <Button
                 variant="outline"
-                onClick={() => handleExternalView(selectedFile)}
+                onClick={() =>
+                  selectedFile.processType === 'magic-diagram' &&
+                  selectedFile.generatedImageUrl
+                    ? window.open(selectedFile.generatedImageUrl, '_blank')
+                    : handleExternalView(selectedFile)
+                }
               >
                 Open in browser
               </Button>
