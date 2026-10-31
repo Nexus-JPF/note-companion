@@ -11,19 +11,19 @@ faq:
   - question: Is Obsidian good for a second brain?
     answer: Yes — it's arguably the best option. Its local-first storage and backlink system are purpose-built for connecting ideas over time, which is the core job of a second brain. Cloud-only note apps are fine for capture but weak at the linking that makes a second brain actually think with you.
   - question: Do I need plugins to build a second brain in Obsidian?
-    answer: No. You can build a solid second brain with core Obsidian alone — vault, folders, links, and frontmatter. Plugins and AI tools like Note Companion come in when you want to automate the upkeep — auto-tagging, suggested links, summaries, and resurfacing old notes.
+    answer: No. You can build a solid second brain with core Obsidian alone — vault, folders, links, and frontmatter. Plugins and AI tools like Note Companion come in when you want to automate the upkeep — auto-tagging, filing, renaming, and summaries in chat.
   - question: How is a second brain different from just taking notes?
     answer: Note-taking captures information. A second brain connects and resurfaces it. The difference is between "I wrote that down somewhere" and "my system brought that idea back exactly when I needed it."
   - question: Can AI build my second brain for me?
     answer: AI shouldn't build it for you — deciding what matters is human work. But AI is excellent at the maintenance — organizing, linking, summarizing, and reviewing. The best setup keeps capture human and delegates the friction to AI.
   - question: How long does it take to set up a second brain in Obsidian?
     answer: The foundation — vault, three folders, frontmatter, and the linking habit — takes about an hour to set up. The habit of writing atomic, linked notes is what compounds over the following weeks.
-  - question: What are the best tools for a second brain?
+  - question: What software is best for building a second brain?
     answer: A second brain needs a place where notes live, a way to link them, and low-friction capture. Obsidian covers the first two with local Markdown files and backlinks. Add a capture habit (daily notes or an Inbox folder) and, optionally, an AI plugin like Note Companion to handle tagging, filing, and summaries.
   - question: Can I use Notion or Airtable as a second brain?
     answer: You can, and they suit different jobs. Notion works well for team docs and wikis, and Airtable for structured records like reading lists or project trackers. For a personal second brain built on linked, long-lived notes, Obsidian's local Markdown files and backlinks are a better fit, and you keep full control of your data. Many people keep structured trackers in a database tool and their thinking in Obsidian.
   - question: How do I move my notes into Obsidian from another app?
-    answer: Use Obsidian's official Importer plugin, and bring everything into your Sources folder rather than your main Notes folder. Then process it through your Inbox in small batches instead of reorganizing it all at once.
+    answer: Use Obsidian's official Importer plugin, and bring everything into your Sources folder rather than your main Notes folder. Then process it through your Inbox in small batches instead of reorganizing it all at once. From Notion, use the HTML export or connect your account rather than Notion's Markdown export, which drops data.
 ---
 
 Your brain is great at thinking. It's terrible at remembering.
@@ -67,9 +67,9 @@ People often ask whether Notion or Airtable can do the same job. They can hold t
 | Where your notes live | Plain Markdown files on your own disk | The vendor's cloud | The vendor's cloud |
 | Built for | Linked, long-lived personal notes | Team docs, wikis, and project pages | Structured records and databases |
 | Best second-brain use | The core system: capture, link, resurface | Shared reference material and team wikis | Trackers such as reading lists, projects, and contacts |
-| AI access | You choose which tool can read your files | Typically the vendor's built-in AI features | Typically the vendor's built-in AI features |
+| AI access | Any plugin or app you allow can read the files, including local models | Notion AI built in; other tools connect through Notion's API | Airtable AI built in; other tools connect through Airtable's API |
 
-A common split is to keep structured trackers in a database tool and your thinking in Obsidian. If you're coming from another app, see the tip after the setup steps below.
+A common split is to keep structured trackers in a database tool and your thinking in Obsidian. For why local files matter long term, see [why your second brain should be local-first](/blog/why-your-second-brain-should-be-local-first). If you're coming from another app, see the tip after the setup steps below.
 
 ### How to Set Up a Second Brain in Obsidian (Step by Step)
 
@@ -95,7 +95,7 @@ One idea per note, in your own words. Atomic notes are reusable; sprawling ones 
 **5. Link as you write.**
 When a note relates to another, link it. Every link you add makes the next idea easier to find. This is the single habit that separates a second brain from a graveyard of notes.
 
-**Already have notes in another app?** Use Obsidian's official Importer plugin to bring them in, and send everything to your Sources folder first. Don't try to sort it all at once. Move notes into your Inbox in small batches and process them like any new capture.
+**Already have notes in another app?** Use Obsidian's official [Importer plugin](https://obsidian.md/help/plugins/importer) and send everything to your Sources folder first (from Notion, import the HTML export or connect your account rather than using Notion's Markdown export). Don't try to sort it all at once. Move notes into your Inbox in small batches and process them like any new capture. To keep imported fields consistent, see [Obsidian Properties and YAML frontmatter](/blog/consistent-metadata-foundation-yaml-front-matter-obsidian).
 
 Get these five things in place and you have a working second brain in Obsidian. Everything after this is about removing the friction so you actually keep using it — which is where AI comes in.
 
@@ -124,12 +124,12 @@ A fully automated second brain:
 
 ### See It in Action: An Inbox That Files Itself
 
-Here's what this looks like with Note Companion, using the Inbox folder from the setup above:
+Here's what this looks like with [Note Companion](https://www.notecompanion.ai). By default it watches `_NoteCompanion/Inbox`; to use the Inbox folder from the setup above, point **Settings → Vault Access → Inbox folder** at `Inbox`.
 
-1. **Drop in something raw.** A rough note, a web clipping, a voice memo, or a YouTube link goes into your Inbox. Audio and video are transcribed into text.
-2. **Get suggestions.** Note Companion proposes a title, folder, tags, and formatting based on what the note says.
-3. **Apply or automate.** Review and apply the suggestions yourself, or switch on Inbox automation so routine notes are filed without you.
-4. **Ask your vault.** In Chat, mention notes or folders with @ to find related ideas or pull a summary.
+1. **Drop in something raw.** A rough note, a web clipping, an audio recording, or a note with a YouTube link goes into your Inbox. Audio is transcribed; YouTube videos are turned into notes from their existing captions.
+2. **Let it file.** Note Companion tags, renames, and files each new Inbox note automatically.
+3. **Review or steer.** For any other note, open the Organizer to get tag and folder suggestions (your existing tags are listed separately from new ones). Nothing changes until you click.
+4. **Ask your vault.** In Chat, @-mention notes, folders, or tags to find related ideas or pull a summary.
 
 You still decide what matters. The tool handles the filing.
 
@@ -298,4 +298,4 @@ Once set up, it quietly works in the background—while you focus on what actual
 
 Want to build this system?
 
-Tools like [Note Companion](https://obsidian.md/plugins?id=fileorganizer2000) are designed to automate your Obsidian vault using AI that understands your notes, links, and thinking style. You can use Note Companion Cloud, or self-host and bring your own AI provider keys. Here's how to [self-host in about 30 minutes](/blog/self-hosting-ai-obsidian-30-minutes).
+[Note Companion](https://www.notecompanion.ai) is built to automate your Obsidian vault with AI that understands your notes, links, and structure. Use Note Companion Cloud with a license key, or [self-host the backend](https://github.com/Nexus-JPF/note-companion/blob/master/SELF-HOSTING.md) and bring your own OpenAI, Claude, Gemini, or Ollama keys. Prefer to keep everything on your machine? See [self-hosting AI in Obsidian](/blog/self-hosting-ai-obsidian-30-minutes).
