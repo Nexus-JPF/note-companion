@@ -493,6 +493,41 @@ export async function handleAuthorizationV2(req: NextRequest) {
   }
 }
 
+/**
+ * Resolves the caller's user id (API key first, then Clerk) without the
+ * subscription, token-limit, user-creation or call-api logging steps that
+ * handleAuthorizationV2 adds. For endpoints that only report account state.
+ */
+export async function authenticateRequest(req: NextRequest): Promise<string> {
+  if (process.env.ENABLE_USER_MANAGEMENT !== 'true') {
+    return 'user';
+  }
+
+  const logger = createLogger({
+    requestId: nanoid(),
+    path: req.nextUrl.pathname,
+    method: req.method,
+  });
+
+  const token = getToken(req);
+  if (token) {
+    try {
+      const userId = await handleApiKeyAuth(token, logger);
+      if (userId) return userId;
+    } catch (error) {
+      logger.error(
+        'handleApiKeyAuth error',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
+    }
+  }
+
+  const clerkUserId = await handleClerkAuth(logger);
+  if (clerkUserId) return clerkUserId;
+
+  throw new AuthorizationError('Unauthorized', 401);
+}
+
 async function ensureUserExists(userId: string): Promise<void> {
   try {
     // Make sure tier configuration exists first
