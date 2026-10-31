@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { deleteFile } from "@/app/dashboard/sync/actions";
 import { auth } from "@clerk/nextjs/server";
 import { db, uploadedFiles } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
+import { clientErrorStatus } from "@/lib/auth-error-status";
 
 export async function GET(
   request: NextRequest,
@@ -10,31 +12,14 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    // Check authentication first
-    const { userId } = await auth();
-    const authHeader = request.headers.get("authorization");
-    
-    // Handle API key auth from mobile app
-    if (!userId && authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      
-      if (!token) {
-        console.log("Unauthorized file access attempt - invalid token");
-        return NextResponse.json(
-          { error: "Unauthorized" },
-          { status: 401 }
-        );
-      }
-      
-      // For mobile requests with a token, we would validate the token here
-      // This is a simplified version assuming the token is valid
-    } else if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+
+    // Validates the API key (mobile) or the Clerk session (web). Never trust a
+    // bare Authorization header: that would let anyone read anyone's file.
+    const { userId } = await handleAuthorizationV2(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
+
     // Parse the file ID
     const fileId = parseInt(id, 10);
     if (isNaN(fileId)) {
@@ -43,21 +28,22 @@ export async function GET(
         { status: 400 }
       );
     }
-    
-    // Get the file record from the database
+
+    // Only the owner's file. A file that belongs to someone else looks exactly
+    // like a file that does not exist, so ids cannot be probed.
     const [file] = await db
       .select()
       .from(uploadedFiles)
-      .where(eq(uploadedFiles.id, fileId))
+      .where(and(eq(uploadedFiles.id, fileId), eq(uploadedFiles.userId, userId)))
       .limit(1);
-      
+
     if (!file) {
       return NextResponse.json(
         { error: "File not found" },
         { status: 404 }
       );
     }
-    
+
     // Return the file data with appropriate format for the mobile app
     return NextResponse.json({
       status: file.status || 'processing',
@@ -67,9 +53,16 @@ export async function GET(
       error: file.error || undefined
     });
   } catch (error) {
+    const clientStatus = clientErrorStatus(error);
+    if (clientStatus) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Request failed" },
+        { status: clientStatus }
+      );
+    }
     console.error("Error retrieving file:", error);
     return NextResponse.json(
-      { error: (error as Error).message || "Failed to retrieve file" },
+      { error: "Failed to retrieve file" },
       { status: 500 }
     );
   }

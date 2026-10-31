@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFileStatus } from "@/app/dashboard/sync/actions";
-import { auth } from "@clerk/nextjs/server";
+import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
+import { clientErrorStatus } from "@/lib/auth-error-status";
 
 // Define the response type locally
 type FileStatusResponse = {
@@ -11,28 +12,10 @@ type FileStatusResponse = {
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication using Clerk
-    const { userId } = await auth();
-    const authHeader = request.headers.get("authorization");
-    
-    // Handle API key auth from mobile app
-    if (!userId && authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      
-      if (!token) {
-        console.log("Unauthorized file access attempt - invalid token");
-        return NextResponse.json(
-          { error: "Unauthorized" },
-          { status: 401 }
-        );
-      }
-      
-      // For mobile requests with a token, we would validate the token here
-      // This is a simplified version assuming the token is valid
-    } 
-    // If no userId and no valid token, user is not authenticated
-    else if (!userId) {
-      console.error("Unauthorized status check attempt - no userId");
+    // Validates the API key (mobile) or the Clerk session (web). A bare
+    // Authorization header is never trusted on its own.
+    const { userId } = await handleAuthorizationV2(request);
+    if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized - authentication required" },
         { status: 401 }
@@ -51,9 +34,8 @@ export async function GET(request: NextRequest) {
 
     console.log(`Processing file status request for fileId: ${fileId}`);
     
-    // For the mobile app, we need to allow access even without a specific userId
-    // This is a simplified approach - in production, validate the token properly
-    const result = userId ? await getFileStatus(fileId, userId) : await getFileStatus(fileId, "mobile-user");
+    // getFileStatus only returns the file when it belongs to this user
+    const result = await getFileStatus(fileId, userId);
     
     if (!result) {
       console.error(`Unexpected null result from getFileStatus for fileId: ${fileId}`);
@@ -68,10 +50,13 @@ export async function GET(request: NextRequest) {
     // and not null
     if ('error' in result && result.error !== null) {
       console.log(`Error in getFileStatus: ${result.error}`);
+      // The caller is already authenticated here, so "Unauthorized" means the
+      // file is someone else's: answer exactly like a missing file.
+      const notFound =
+        result.error === "Unauthorized" || result.error === "File not found";
       return NextResponse.json(
-        { error: result.error },
-        { status: result.error === "Unauthorized" ? 401 : 
-                result.error === "File not found" ? 404 : 500 }
+        { error: notFound ? "File not found" : result.error },
+        { status: notFound ? 404 : 500 }
       );
     }
 
@@ -80,6 +65,13 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(response);
   } catch (error) {
+    const clientStatus = clientErrorStatus(error);
+    if (clientStatus) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Request failed" },
+        { status: clientStatus }
+      );
+    }
     console.error("Status check error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
