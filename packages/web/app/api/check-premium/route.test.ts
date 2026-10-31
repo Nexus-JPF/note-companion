@@ -1,8 +1,12 @@
 import { NextRequest } from 'next/server';
 import { GET } from './route';
-import { AuthorizationError, authenticateRequest } from '@/lib/handleAuthorization';
 
 const mockLimit = jest.fn();
+const mockAuthenticate = jest.fn();
+
+jest.mock('@/lib/authenticate-user', () => ({
+  authenticateUser: (...a: any[]) => mockAuthenticate(...a),
+}));
 
 jest.mock('@/drizzle/schema', () => ({
   UserUsageTable: { userId: 'userId', hasCatalystAccess: 'hasCatalystAccess' },
@@ -15,7 +19,6 @@ jest.mock('@/drizzle/schema', () => ({
   },
 }));
 
-const mockAuth = authenticateRequest as jest.Mock;
 const req = () => new NextRequest('http://localhost/api/check-premium');
 
 describe('GET /api/check-premium', () => {
@@ -24,7 +27,7 @@ describe('GET /api/check-premium', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.ENABLE_USER_MANAGEMENT = 'true';
-    mockAuth.mockResolvedValue('user_1');
+    mockAuthenticate.mockResolvedValue('user_1');
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -53,16 +56,18 @@ describe('GET /api/check-premium', () => {
 
   it('returns true without a database lookup when user management is off', async () => {
     process.env.ENABLE_USER_MANAGEMENT = 'false';
+    mockAuthenticate.mockResolvedValue('user');
     const res = await GET(req());
     expect(await res.json()).toEqual({ hasCatalystAccess: true });
     expect(mockLimit).not.toHaveBeenCalled();
   });
 
-  it('passes through the status of an authorization failure', async () => {
-    mockAuth.mockRejectedValue(new AuthorizationError('Unauthorized', 401));
+  it('returns 401 when the caller cannot be identified', async () => {
+    mockAuthenticate.mockResolvedValue(null);
     const res = await GET(req());
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: 'Unauthorized' });
+    expect(mockLimit).not.toHaveBeenCalled();
   });
 
   it('returns 500 when the lookup fails, so clients keep their last known value', async () => {

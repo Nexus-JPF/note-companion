@@ -13,5 +13,3 @@ export const handleAuthorizationV2 = jest.fn().mockResolvedValue({
   isAuthorized: true,
 });
 
-export const authenticateRequest = jest.fn().mockResolvedValue('test-user');
-
