@@ -48,6 +48,7 @@ export async function generateMetadata({
     openGraph: {
       title: post.title,
       description: post.excerpt,
+      url: `/blog/${slug}`,
       type: "article",
       publishedTime: post.date,
       ...(post.updated && { modifiedTime: post.updated }),
