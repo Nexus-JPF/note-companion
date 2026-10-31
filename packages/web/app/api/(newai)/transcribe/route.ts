@@ -14,6 +14,7 @@ import {
   normalizeAudioForWhisper,
   splitAudioFileBySizeHeuristic,
 } from '@/lib/audio/split-audio';
+import { getTranscriptionModel } from '@/lib/transcription-model';
 
 export const runtime = 'nodejs';
 export const maxDuration = 800; // Maximum allowed for Vercel Pro plan (13.3 minutes) for longer audio/video files
@@ -153,7 +154,7 @@ async function transcribeChunksInOrder(
       const path = chunkPaths[i];
       const transcription = await openai.audio.transcriptions.create({
         file: fs.createReadStream(path),
-        model: 'whisper-1',
+        model: getTranscriptionModel(),
       });
       results[i] = transcription.text ?? '';
     }
@@ -339,7 +340,7 @@ export async function POST(request: Request) {
         );
         const transcription = await openai.audio.transcriptions.create({
           file: fs.createReadStream(pathToUse),
-          model: 'whisper-1',
+          model: getTranscriptionModel(),
         });
         transcriptLength = transcription.text.length;
         formattedText = formatTranscript(transcription.text);
@@ -580,7 +581,7 @@ async function handlePresignedUrlTranscription(
         );
         const transcription = await openai.audio.transcriptions.create({
           file: fs.createReadStream(pathToUse),
-          model: 'whisper-1',
+          model: getTranscriptionModel(),
         });
         transcriptLength = transcription.text.length;
         formattedText = formatTranscript(transcription.text);

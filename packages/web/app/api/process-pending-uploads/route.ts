@@ -21,6 +21,9 @@ import {
 
 export const maxDuration = 800;
 
+/** Minimum tokens billed per Magic Diagram (the old flat rate). */
+const MAGIC_DIAGRAM_MIN_TOKENS = 5000;
+
 function getOpenAIImageClient() {
   return new OpenAI({
     apiKey: process.env.OPENAI_API_KEY || "",
@@ -65,8 +68,11 @@ async function processMagicDiagram(
       { type: mimeType }
     );
 
+    const imageModel =
+      process.env.IMAGE_MODEL?.trim() || "gpt-image-2.5-flare";
+
     const response = await getOpenAIImageClient().images.edit({
-      model: "gpt-image-1",
+      model: imageModel,
       image: preparedImage,
       prompt: generationPrompt,
       n: 1,
@@ -89,7 +95,13 @@ async function processMagicDiagram(
     await uploadToR2(generatedR2Key, generatedImageBuffer, "image/png");
     const generatedPublicUrl = `${R2_PUBLIC_URL}/${generatedR2Key}`;
 
-    return { generatedImageUrl: generatedPublicUrl, tokensUsed: 5000 };
+    // Bill actual usage, but never less than the previous flat rate.
+    const tokensUsed = Math.max(
+      MAGIC_DIAGRAM_MIN_TOKENS,
+      response.usage?.total_tokens ?? 0
+    );
+
+    return { generatedImageUrl: generatedPublicUrl, tokensUsed };
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error generating diagram";
