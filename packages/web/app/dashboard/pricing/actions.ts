@@ -143,13 +143,6 @@ export async function createYearlySubscriptionCheckout() {
   redirect(sessionUrl);
 }
 
-// This was returning session before, now aligns with others
-export async function createYearlySession(userId: string) {
-   console.warn("createYearlySession is deprecated, use server action createYearlySubscriptionCheckout");
-   const sessionUrl = await _createStripeCheckoutSession(userId, 'SubscriptionYearly');
-   return { url: sessionUrl }; // Maintain previous return shape if needed elsewhere, but redirect is standard
-}
-
 // Add action for Top Up if needed
 export async function createTopUpCheckout() {
     const { userId } = await auth();

@@ -15,7 +15,7 @@ jest.mock('@clerk/nextjs/server', () => ({
     },
   })),
 }));
-jest.mock('@/app/actions', () => ({
+jest.mock('@/lib/account-server', () => ({
   createLicenseKeyFromUserId: (...a: any[]) => mockCreateKey(...a),
 }));
 
