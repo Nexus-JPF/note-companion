@@ -92,12 +92,10 @@ async function processMagicDiagram(
     await uploadToR2(generatedR2Key, generatedImageBuffer, "image/png");
     const generatedPublicUrl = `${R2_PUBLIC_URL}/${generatedR2Key}`;
 
-    let tokensUsed = 5000;
-    if (response.usage?.total_tokens != null) {
-      tokensUsed = response.usage.total_tokens;
-    } else {
-      // TODO: use API usage for billing when this image model returns usage metadata
-    }
+    const tokensUsed =
+      response.usage?.total_tokens != null
+        ? response.usage.total_tokens
+        : 5000;
 
     return { generatedImageUrl: generatedPublicUrl, tokensUsed };
   } catch (error: unknown) {

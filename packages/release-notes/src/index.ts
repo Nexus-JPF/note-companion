@@ -337,7 +337,7 @@ async function tryAnthropic(
  *
  * Priority:
  * 1. OpenAI (gpt-5.6-luna)
- * 2. Anthropic (claude-3-5-sonnet)
+ * 2. Anthropic (claude-sonnet-5-5)
  * 3. Template-based fallback (always succeeds)
  */
 export async function generateReleaseNotes(

@@ -36,6 +36,14 @@ describe('getTranscriptionModel', () => {
     expect(getTranscriptionModel()).toBe('gpt-transcribe');
   });
 
+  it('defaults to gpt-transcribe when OPENAI_API_BASE is the official OpenAI URL', async () => {
+    delete process.env.TRANSCRIPTION_MODEL;
+    process.env.OPENAI_API_BASE = 'https://api.openai.com/v1';
+    delete process.env.OPENAI_WHISPER_BASE_URL;
+    const { getTranscriptionModel } = await load();
+    expect(getTranscriptionModel()).toBe('gpt-transcribe');
+  });
+
   it('defaults to whisper-1 when OPENAI_API_BASE is set', async () => {
     delete process.env.TRANSCRIPTION_MODEL;
     process.env.OPENAI_API_BASE = 'http://localhost:11434/v1';

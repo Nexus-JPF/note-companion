@@ -29,7 +29,14 @@ describe('openai-reasoning', () => {
   it('returns chat settings only for reasoning models', () => {
     expect(getOpenAiOrganizerChatSettings('gpt-5.6-luna')).toEqual({
       reasoningEffort: 'low',
+      structuredOutputs: false,
     });
     expect(getOpenAiOrganizerChatSettings('gpt-4.1-mini')).toBeUndefined();
+  });
+
+  it('disables strict structured outputs for gpt-5 organizer models', () => {
+    expect(getOpenAiOrganizerChatSettings('gpt-5.6-luna')).toMatchObject({
+      structuredOutputs: false,
+    });
   });
 });

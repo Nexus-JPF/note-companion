@@ -1,10 +1,25 @@
 const DEFAULT_OPENAI_TRANSCRIPTION_MODEL = 'gpt-transcribe';
 const SELF_HOSTED_TRANSCRIPTION_MODEL = 'whisper-1';
 
+function isOfficialOpenAiApiBase(baseUrl: string): boolean {
+  try {
+    const { hostname } = new URL(baseUrl);
+    return hostname.toLowerCase() === 'api.openai.com';
+  } catch {
+    return false;
+  }
+}
+
 function hasCustomTranscriptionEndpoint(): boolean {
   const whisperBase = process.env.OPENAI_WHISPER_BASE_URL?.trim();
+  if (whisperBase && !isOfficialOpenAiApiBase(whisperBase)) {
+    return true;
+  }
   const openAiBase = process.env.OPENAI_API_BASE?.trim();
-  return Boolean(whisperBase || openAiBase);
+  if (openAiBase && !isOfficialOpenAiApiBase(openAiBase)) {
+    return true;
+  }
+  return false;
 }
 
 /**
