@@ -131,12 +131,12 @@ export default function NotesScreen() {
         return;
       }
       const asset = Asset.fromModule(
-        require("../../assets/einstein-document.jpg")
+        require("../../assets/sample-note.jpg")
       );
       await asset.downloadAsync();
       const uri = asset.localUri || asset.uri;
       const result = await handleFileProcess(
-        { uri, mimeType: "image/jpeg", name: "einstein-document.jpg" },
+        { uri, mimeType: "image/jpeg", name: "sample-note.jpg" },
         token
       );
       if (result.status === "error") {
@@ -168,13 +168,12 @@ export default function NotesScreen() {
         </ThemedText>
 
         <ThemedText style={styles.demoDescription}>
-          Try our OCR capabilities with this historical document from Albert
-          Einstein's archives:
+          Try our OCR capabilities with this handwritten sample note:
         </ThemedText>
 
         <View style={styles.demoImageContainer}>
           <Image
-            source={require("../../assets/einstein-document.jpg")}
+            source={require("../../assets/sample-note.jpg")}
             style={styles.demoImage}
             resizeMode="cover"
           />
