@@ -534,7 +534,7 @@ export function FileList({ pageSize = 12 }: FileListProps) {
                   className="mt-4"
                   onClick={() => handleExternalView(selectedFile)}
                 >
-                  Open in browser
+                  Open in new tab
                 </Button>
               </div>
             )}
@@ -551,7 +551,7 @@ export function FileList({ pageSize = 12 }: FileListProps) {
                     : handleExternalView(selectedFile)
                 }
               >
-                Open in browser
+                Open in new tab
               </Button>
             )}
           </div>
