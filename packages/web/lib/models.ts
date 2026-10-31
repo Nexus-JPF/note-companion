@@ -5,13 +5,14 @@ import { groq } from '@ai-sdk/groq';
 import { mistral } from '@ai-sdk/mistral';
 import { deepseek } from '@ai-sdk/deepseek';
 import { LanguageModel } from 'ai';
+import { getOpenAiOrganizerChatSettings } from './openai-reasoning';
 
 // Get model configuration from environment variables
 // Defaults to OpenAI for backward compatibility with cloud environment
 const MODEL_PROVIDER = (process.env.MODEL_PROVIDER || 'openai').toLowerCase();
-const MODEL_NAME = process.env.MODEL_NAME || 'gpt-4.1-mini';
+const MODEL_NAME = process.env.MODEL_NAME || 'gpt-5.6-luna';
 const VISION_MODEL_NAME =
-  process.env.VISION_MODEL || process.env.VISION_MODEL_NAME || 'gpt-4o';
+  process.env.VISION_MODEL || process.env.VISION_MODEL_NAME || 'gpt-5.6-luna';
 const RESPONSES_MODEL_NAME = process.env.RESPONSES_MODEL_NAME || MODEL_NAME;
 
 /**
@@ -35,16 +36,21 @@ function createModel(provider: string, modelName: string): LanguageModel {
       return deepseek(modelName);
 
     case 'openai':
-    default:
+    default: {
+      const openAiSettings = getOpenAiOrganizerChatSettings(modelName);
       // Support custom baseURL for local LLMs (e.g., Ollama)
       if (process.env.OPENAI_API_BASE) {
         const customProvider = createOpenAI({
           apiKey: process.env.OPENAI_API_KEY || '',
           baseURL: process.env.OPENAI_API_BASE,
         });
-        return customProvider(modelName) as LanguageModel;
+        return customProvider(
+          modelName,
+          openAiSettings
+        ) as LanguageModel;
       }
-      return openai(modelName) as LanguageModel;
+      return openai(modelName, openAiSettings) as LanguageModel;
+    }
   }
 }
 
@@ -69,14 +75,16 @@ export const getModel = (_name?: string): LanguageModel => {
   return DEFAULT_MODEL;
 };
 
-/** Vision / OCR model (defaults to gpt-4o; override with VISION_MODEL). */
+/** Vision / OCR model (defaults to gpt-5.6-luna; override with VISION_MODEL). */
 export const getVisionModel = (): LanguageModel => {
   return DEFAULT_VISION_MODEL;
 };
 
 const VISION_FALLBACK_MODEL_NAME =
   process.env.VISION_FALLBACK_MODEL ||
-  (MODEL_PROVIDER === 'openai' && !process.env.OPENAI_API_BASE ? 'gpt-4.1' : '');
+  (MODEL_PROVIDER === 'openai' && !process.env.OPENAI_API_BASE
+    ? 'gpt-5.6-terra'
+    : '');
 
 /** Second vision model tried when the primary refuses or returns nothing (null if unset or identical). */
 export const getVisionFallbackModel = (): LanguageModel | null => {

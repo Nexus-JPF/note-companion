@@ -10,6 +10,7 @@ import { promises as fsPromises } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import OpenAI from "openai";
+import { getTranscriptionModel } from "@/lib/transcription-model";
 
 // Function to generate tags
 export async function generateTags(
@@ -383,7 +384,7 @@ export async function generateTranscriptFromAudio(
     // Use the OpenAI API to generate the transcript
     const response = await openai.audio.transcriptions.create({
       file: audioStream,
-      model: "whisper-1",
+      model: getTranscriptionModel(),
     });
     return response.text;
   } catch (error) {
