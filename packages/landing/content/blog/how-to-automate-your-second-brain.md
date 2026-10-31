@@ -68,7 +68,7 @@ One vault for everything. Resist the urge to split personal and work into separa
 That's it. Don't build an elaborate folder tree — deep hierarchies are the first thing that breaks. Let links, not folders, do the organizing.
 
 **3. Add lightweight metadata.**
-Use frontmatter (the YAML block at the top of a note) for a few consistent fields — date, type, source. This is what lets you (and later, AI) filter and connect notes reliably.
+Use frontmatter (the YAML block at the top of a note) for a few consistent fields — date, type, source. This is what lets you (and later, AI) filter and connect notes reliably. For a full schema, migration tips, and Obsidian Properties after Notion or Roam, see [consistent YAML metadata in Obsidian](/blog/consistent-metadata-foundation-yaml-front-matter-obsidian).
 
 **4. Write atomic notes.**
 One idea per note, in your own words. Atomic notes are reusable; sprawling ones aren't. Include your confusion and disagreements — that judgment is the part AI can't fake.
