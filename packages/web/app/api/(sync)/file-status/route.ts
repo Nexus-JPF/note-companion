@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFileStatus } from "@/app/dashboard/sync/actions";
 import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
+import { clientErrorStatus } from "@/lib/auth-error-status";
 
 // Define the response type locally
 type FileStatusResponse = {
@@ -49,10 +50,13 @@ export async function GET(request: NextRequest) {
     // and not null
     if ('error' in result && result.error !== null) {
       console.log(`Error in getFileStatus: ${result.error}`);
+      // The caller is already authenticated here, so "Unauthorized" means the
+      // file is someone else's: answer exactly like a missing file.
+      const notFound =
+        result.error === "Unauthorized" || result.error === "File not found";
       return NextResponse.json(
-        { error: result.error },
-        { status: result.error === "Unauthorized" ? 401 : 
-                result.error === "File not found" ? 404 : 500 }
+        { error: notFound ? "File not found" : result.error },
+        { status: notFound ? 404 : 500 }
       );
     }
 
@@ -61,13 +65,12 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(response);
   } catch (error) {
-    if (error && typeof error === "object" && "status" in error) {
-      const status = (error as { status?: unknown }).status;
-      if (status === 401 || status === 403) {
-        const message =
-          "message" in error ? String((error as { message?: unknown }).message) : "Unauthorized";
-        return NextResponse.json({ error: message }, { status });
-      }
+    const clientStatus = clientErrorStatus(error);
+    if (clientStatus) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Request failed" },
+        { status: clientStatus }
+      );
     }
     console.error("Status check error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);

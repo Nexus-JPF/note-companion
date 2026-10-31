@@ -4,8 +4,8 @@ import { POST } from './route';
 const mockAuthorize = jest.fn();
 const mockWrite = jest.fn();
 
-jest.mock('@/lib/handleAuthorization', () => ({
-  handleAuthorizationV2: (...a: any[]) => mockAuthorize(...a),
+jest.mock('@clerk/nextjs/server', () => ({
+  auth: (...a: any[]) => mockAuthorize(...a),
 }));
 jest.mock('fs/promises', () => ({ mkdir: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('fs', () => ({
@@ -30,7 +30,7 @@ describe('POST /api/files/upload', () => {
   });
 
   it('rejects unauthenticated uploads and writes nothing', async () => {
-    mockAuthorize.mockRejectedValue(Object.assign(new Error('Unauthorized'), { status: 401 }));
+    mockAuthorize.mockResolvedValue({ userId: null });
     const res = await upload('note.md');
     expect(res.status).toBe(401);
     expect(mockWrite).not.toHaveBeenCalled();

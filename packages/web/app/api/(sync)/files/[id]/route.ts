@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db, uploadedFiles } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
+import { clientErrorStatus } from "@/lib/auth-error-status";
 
 export async function GET(
   request: NextRequest,
@@ -52,13 +53,12 @@ export async function GET(
       error: file.error || undefined
     });
   } catch (error) {
-    if (error && typeof error === "object" && "status" in error) {
-      const status = (error as { status?: unknown }).status;
-      if (status === 401 || status === 403) {
-        const message =
-          "message" in error ? String((error as { message?: unknown }).message) : "Unauthorized";
-        return NextResponse.json({ error: message }, { status });
-      }
+    const clientStatus = clientErrorStatus(error);
+    if (clientStatus) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Request failed" },
+        { status: clientStatus }
+      );
     }
     console.error("Error retrieving file:", error);
     return NextResponse.json(

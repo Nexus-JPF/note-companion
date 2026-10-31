@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { mkdir } from "fs/promises";
-import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
+import { auth } from "@clerk/nextjs/server";
 
 // Function to ensure directory exists
 async function ensureDir(dirPath: string) {
@@ -24,8 +24,15 @@ function safeFileName(name: unknown): string {
 
 export async function POST(request: NextRequest) {
   try {
-    // Only signed-in users (API key or Clerk session) may upload
-    await handleAuthorizationV2(request);
+    // Only signed-in dashboard users may upload. A Clerk session is enough:
+    // unlike the API routes, this does not depend on plan or token balance.
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
     // Get upload directory from environment or use default
     const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
@@ -70,15 +77,6 @@ export async function POST(request: NextRequest) {
       files: uploadedFiles
     });
   } catch (error) {
-    if (error && typeof error === 'object' && 'status' in error) {
-      const status = (error as { status?: unknown }).status;
-      if (status === 401 || status === 403) {
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized' },
-          { status }
-        );
-      }
-    }
     console.error('Error uploading files:', error);
     return NextResponse.json(
       { 

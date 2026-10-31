@@ -47,6 +47,12 @@ describe('GET /api/files/[id]', () => {
     expect(mockWhere).not.toHaveBeenCalled();
   });
 
+  it('passes other client errors such as 429 through instead of a generic 500', async () => {
+    mockAuthorize.mockRejectedValue(Object.assign(new Error('Token limit reached'), { status: 429 }));
+    const res = await call('7');
+    expect(res.status).toBe(429);
+  });
+
   it('returns 401 when no user is identified', async () => {
     mockAuthorize.mockResolvedValue({ userId: null });
     const res = await call('7');

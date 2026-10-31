@@ -43,11 +43,21 @@ describe('/api/file-status', () => {
     expect(mockGetFileStatus).toHaveBeenCalledWith(7, 'user_1');
   });
 
-  it("maps another user's file to the Unauthorized error from getFileStatus", async () => {
+  it("answers 404 for someone else's file, exactly like a missing file", async () => {
     mockAuthorize.mockResolvedValue({ userId: 'user_1' });
-    mockGetFileStatus.mockResolvedValue({ error: 'Unauthorized' });
+    mockGetFileStatus.mockResolvedValueOnce({ error: 'Unauthorized' });
+    const theirs = await get();
+    mockGetFileStatus.mockResolvedValueOnce({ error: 'File not found' });
+    const missing = await get();
+    expect(theirs.status).toBe(404);
+    expect(missing.status).toBe(404);
+    expect(await theirs.json()).toEqual(await missing.json());
+  });
+
+  it('passes other client errors such as 429 through', async () => {
+    mockAuthorize.mockRejectedValue(Object.assign(new Error('Token limit reached'), { status: 429 }));
     const res = await get();
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(429);
   });
 
   it('POST forwards the same authorization', async () => {
