@@ -61,7 +61,7 @@ export const CatalystGate: React.FC<CatalystGateProps> = ({
           </ul>
           <div className="flex flex-col gap-3">
             <a
-              href="https://notecompanion.ai"
+              href="https://notecompanion.ai/?utm_source=obsidian&utm_medium=in-app&utm_campaign=catalyst-upgrade"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block px-4 py-2 bg-[--interactive-accent] text-[--text-on-accent] rounded-lg hover:bg-[--interactive-accent-hover] transition-colors"
