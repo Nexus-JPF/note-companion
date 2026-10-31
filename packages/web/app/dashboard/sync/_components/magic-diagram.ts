@@ -1,10 +1,11 @@
-import type { UploadedFile } from '@/drizzle/schema';
-
 /** A finished Magic Diagram: has a generated image to show instead of the original sketch. */
-export function isMagicDiagram(
-  file: UploadedFile
-): file is UploadedFile & { generatedImageUrl: string } {
-  return file.processType === 'magic-diagram' && !!file.generatedImageUrl;
+export function getMagicDiagramImageUrl(file: {
+  processType?: string | null;
+  generatedImageUrl?: string | null;
+}): string | null {
+  return file.processType === 'magic-diagram' && file.generatedImageUrl
+    ? file.generatedImageUrl
+    : null;
 }
 
 export function openInNewTab(url: string) {

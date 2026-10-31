@@ -37,7 +37,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { StatusBadge } from './StatusBadge';
-import { isMagicDiagram, openInNewTab } from './magic-diagram';
+import { getMagicDiagramImageUrl, openInNewTab } from './magic-diagram';
 
 interface FileListProps {
   pageSize?: number;
@@ -392,6 +392,7 @@ export function FileList({ pageSize = 12 }: FileListProps) {
 
   const renderFilePreview = () => {
     if (!selectedFile) return null;
+    const diagramUrl = getMagicDiagramImageUrl(selectedFile);
 
     return (
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
@@ -409,16 +410,16 @@ export function FileList({ pageSize = 12 }: FileListProps) {
           </DialogHeader>
 
           <div className="flex-1 overflow-auto p-4 bg-slate-50 rounded-md">
-            {isMagicDiagram(selectedFile) ? (
+            {diagramUrl ? (
               <div className="flex flex-col items-center gap-3 h-full bg-white p-4 rounded-lg">
                 <a
-                  href={selectedFile.generatedImageUrl}
+                  href={diagramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 min-h-0 flex justify-center items-center"
                 >
                   <img
-                    src={selectedFile.generatedImageUrl}
+                    src={diagramUrl}
                     alt={`Generated diagram for ${selectedFile.originalName}`}
                     className="max-h-full max-w-full object-contain"
                   />
@@ -545,8 +546,8 @@ export function FileList({ pageSize = 12 }: FileListProps) {
               <Button
                 variant="outline"
                 onClick={() =>
-                  isMagicDiagram(selectedFile)
-                    ? openInNewTab(selectedFile.generatedImageUrl)
+                  diagramUrl
+                    ? openInNewTab(diagramUrl)
                     : handleExternalView(selectedFile)
                 }
               >
