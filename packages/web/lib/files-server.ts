@@ -1,4 +1,5 @@
 import "server-only";
+import { signR2Url, signR2UrlsInText } from "@/lib/r2-client";
 
 import { db, uploadedFiles } from "@/drizzle/schema";
 import { eq, desc, sql } from "drizzle-orm";
@@ -81,8 +82,17 @@ export async function getFilesForUser(
       .from(uploadedFiles)
       .where(eq(uploadedFiles.userId, userId));
 
+    // Links to stored files are signed on the way out (they expire)
+    const signedFiles = await Promise.all(
+      files.map(async (file) => ({
+        ...file,
+        blobUrl: await signR2Url(file.blobUrl),
+        textContent: await signR2UrlsInText(file.textContent),
+      }))
+    );
+
     return {
-      files,
+      files: signedFiles,
       pagination: {
         total: count,
         page,
@@ -122,7 +132,7 @@ export async function getFileStatusForUser(
 
     return {
       status: file.status,
-      text: file.textContent,
+      text: await signR2UrlsInText(file.textContent),
       error: file.error,
     };
   } catch (error) {
