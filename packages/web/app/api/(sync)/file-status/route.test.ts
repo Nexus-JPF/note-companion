@@ -7,8 +7,8 @@ const mockGetFileStatus = jest.fn();
 jest.mock('@/lib/handleAuthorization', () => ({
   handleAuthorizationV2: (...a: any[]) => mockAuthorize(...a),
 }));
-jest.mock('@/app/dashboard/sync/actions', () => ({
-  getFileStatus: (...a: any[]) => mockGetFileStatus(...a),
+jest.mock('@/lib/files-server', () => ({
+  getFileStatusForUser: (...a: any[]) => mockGetFileStatus(...a),
 }));
 
 const get = (query = 'fileId=7', headers: Record<string, string> = {}) =>

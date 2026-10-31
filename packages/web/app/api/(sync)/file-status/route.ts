@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFileStatus } from "@/app/dashboard/sync/actions";
+import { getFileStatusForUser } from "@/lib/files-server";
 import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 import { clientErrorStatus } from "@/lib/auth-error-status";
 
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
 
     console.log(`Processing file status request for fileId: ${fileId}`);
     
-    // getFileStatus only returns the file when it belongs to this user
-    const result = await getFileStatus(fileId, userId);
+    // getFileStatusForUser only returns the file when it belongs to this user
+    const result = await getFileStatusForUser(fileId, userId);
     
     if (!result) {
       console.error(`Unexpected null result from getFileStatus for fileId: ${fileId}`);

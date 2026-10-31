@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clerkClient, auth } from "@clerk/nextjs/server";
-import { createLicenseKeyFromUserId } from "@/app/actions";
+import { createLicenseKeyFromUserId } from "@/lib/account-server";
 import { createEmptyUserUsage, initializeTierConfig } from "@/drizzle/schema";
 import { isRateLimited } from "@/lib/auth-rate-limit";
 import { captureServerEvent } from "@/lib/server-analytics";

@@ -1,4 +1,7 @@
-import { createLicenseKeyFromUserId } from './actions';
+import { createLicenseKeyFromUserId } from '@/lib/account-server';
+
+// lib/account-server is server-only; the marker module only exists under Next
+jest.mock('server-only', () => ({}), { virtual: true });
 
 // Create a mock for the keys.createKey method
 const mockCreateKey = jest.fn();

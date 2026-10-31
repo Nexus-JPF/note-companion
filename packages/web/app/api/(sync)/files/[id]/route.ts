@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteFile } from "@/app/dashboard/sync/actions";
-import { auth } from "@clerk/nextjs/server";
+import { deleteFileForUser } from "@/lib/files-server";
 import { db, uploadedFiles } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 import { clientErrorStatus } from "@/lib/auth-error-status";
+import { authenticateUser } from "@/lib/authenticate-user";
 
 export async function GET(
   request: NextRequest,
@@ -81,36 +81,41 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    // Check authentication first
-    const { userId } = await auth();
+    // An API key (mobile) or the Clerk session (web). Identity only: people can
+    // always delete their own files, whatever their plan or token balance.
+    const userId = await authenticateUser(request);
     if (!userId) {
       console.error("Unauthorized file deletion attempt");
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-    
-    const fileId = parseInt(id, 10);
-    if (isNaN(fileId)) {
-      return NextResponse.json(
-        { error: "Invalid file ID" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const result = await deleteFile(fileId);
-    
+    const { id } = await params;
+    const fileId = parseInt(id, 10);
+    if (isNaN(fileId)) {
+      return NextResponse.json({ error: "Invalid file ID" }, { status: 400 });
+    }
+
+    const result = await deleteFileForUser(fileId, userId);
+
     if (!result.success) {
+      // Someone else's file looks exactly like a missing one
+      const notFound =
+        result.error === "Unauthorized" || result.error === "File not found";
       return NextResponse.json(
-        { error: result.error || "Failed to delete file" },
-        { status: result.error === "Unauthorized" ? 401 : 500 }
+        { error: notFound ? "File not found" : result.error || "Failed to delete file" },
+        { status: notFound ? 404 : 500 }
       );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    const clientStatus = clientErrorStatus(error);
+    if (clientStatus) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Request failed" },
+        { status: clientStatus }
+      );
+    }
     console.error("Delete file error:", error);
     return NextResponse.json(
       { error: "Failed to delete file" },

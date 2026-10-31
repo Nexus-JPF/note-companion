@@ -1,15 +1,21 @@
 import { NextRequest } from 'next/server';
-import { GET } from './route';
+import { GET, DELETE } from './route';
 
 const mockAuthorize = jest.fn();
 const mockWhere = jest.fn();
 const mockLimit = jest.fn();
+const mockDeleteForUser = jest.fn();
+const mockAuthenticate = jest.fn();
 
 jest.mock('@/lib/handleAuthorization', () => ({
   handleAuthorizationV2: (...a: any[]) => mockAuthorize(...a),
 }));
-jest.mock('@clerk/nextjs/server', () => ({ auth: jest.fn() }));
-jest.mock('@/app/dashboard/sync/actions', () => ({ deleteFile: jest.fn() }));
+jest.mock('@/lib/authenticate-user', () => ({
+  authenticateUser: (...a: any[]) => mockAuthenticate(...a),
+}));
+jest.mock('@/lib/files-server', () => ({
+  deleteFileForUser: (...a: any[]) => mockDeleteForUser(...a),
+}));
 jest.mock('drizzle-orm', () => ({
   and: (...conditions: unknown[]) => ({ and: conditions }),
   eq: (column: unknown, value: unknown) => ({ column, value }),
@@ -93,5 +99,45 @@ describe('GET /api/files/[id]', () => {
     mockAuthorize.mockResolvedValue({ userId: 'user_1' });
     const res = await call('abc');
     expect(res.status).toBe(400);
+  });
+
+  describe('DELETE', () => {
+    const del = (id: string, headers: Record<string, string> = {}) =>
+      DELETE(new NextRequest(`http://localhost/api/files/${id}`, { method: 'DELETE', headers }), {
+        params: Promise.resolve({ id }),
+      });
+
+    it('rejects a request that fails authorization without deleting', async () => {
+      mockAuthenticate.mockResolvedValue(null);
+      const res = await del('7', { authorization: 'Bearer anything-at-all' });
+      expect(res.status).toBe(401);
+      expect(mockDeleteForUser).not.toHaveBeenCalled();
+    });
+
+    it('deletes through the server-only helper as the authenticated user (API key or session)', async () => {
+      mockAuthenticate.mockResolvedValue('user_1');
+      mockDeleteForUser.mockResolvedValue({ success: true });
+      const res = await del('7');
+      expect(res.status).toBe(200);
+      expect(mockDeleteForUser).toHaveBeenCalledWith(7, 'user_1');
+    });
+
+    it("answers 404 for someone else's file, exactly like a missing file", async () => {
+      mockAuthenticate.mockResolvedValue('user_1');
+      mockDeleteForUser.mockResolvedValueOnce({ success: false, error: 'Unauthorized' });
+      const theirs = await del('7');
+      mockDeleteForUser.mockResolvedValueOnce({ success: false, error: 'File not found' });
+      const missing = await del('7');
+      expect(theirs.status).toBe(404);
+      expect(missing.status).toBe(404);
+      expect(await theirs.json()).toEqual(await missing.json());
+    });
+
+    it('rejects a non-numeric id', async () => {
+      mockAuthenticate.mockResolvedValue('user_1');
+      const res = await del('abc');
+      expect(res.status).toBe(400);
+      expect(mockDeleteForUser).not.toHaveBeenCalled();
+    });
   });
 });
