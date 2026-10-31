@@ -1,4 +1,4 @@
-const DIAGRAM_LINK = /(?<!!)\[Generated Diagram Image\]\((\S+?)\)/g;
+const DIAGRAM_LINK = /(?<!!)\[Generated Diagram Image\]\((\S+?)\)(?=\s|$)/g;
 
 /**
  * Magic Diagram notes link to the generated image as a plain markdown link.

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Share, Alert, Image, Platform, ActivityIndicator, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Share, Alert, Image, Platform, ActivityIndicator, Modal, ScrollView, useWindowDimensions, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { UploadedFile } from '@/utils/api';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -48,6 +48,8 @@ interface FileCardProps {
 export function FileCard({ file, onDelete, onView }: FileCardProps) {
   const router = useRouter();
   const [imageZoomed, setImageZoomed] = React.useState(false);
+  const [imageEnlarged, setImageEnlarged] = React.useState(false);
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [moderation, setModeration] = React.useState<{
     isAppropriate: boolean;
     contentFlags?: string[];
@@ -94,8 +96,8 @@ export function FileCard({ file, onDelete, onView }: FileCardProps) {
 
   // Display a snippet of extracted text or the generated image
   const renderContentPreview = () => {
-    // Show the generated image whenever the server returned one
-    if (file.generatedImageUrl) {
+    // Show the generated image for magic diagrams (same rule as the web dashboard)
+    if (file.processType === 'magic-diagram' && file.generatedImageUrl) {
       return (
         <TouchableOpacity
           activeOpacity={0.8}
@@ -241,7 +243,7 @@ export function FileCard({ file, onDelete, onView }: FileCardProps) {
 
   return (
     <View style={[styles.cardContainer, { backgroundColor }]}>
-      {file.generatedImageUrl ? (
+      {file.processType === 'magic-diagram' && file.generatedImageUrl ? (
         <Modal
           visible={imageZoomed}
           transparent
@@ -249,21 +251,41 @@ export function FileCard({ file, onDelete, onView }: FileCardProps) {
           onRequestClose={() => setImageZoomed(false)}
         >
           <View style={styles.zoomBackdrop}>
+            {/* iOS pinch-zooms via maximumZoomScale; Android has no pinch on
+                ScrollView, so tapping the image toggles a 2.5x pannable view */}
             <ScrollView
               maximumZoomScale={4}
               minimumZoomScale={1}
               centerContent
               contentContainerStyle={styles.zoomContent}
             >
-              <Image
-                source={{ uri: file.generatedImageUrl }}
-                style={styles.zoomImage}
-                resizeMode="contain"
-              />
+              <ScrollView
+                horizontal
+                scrollEnabled={imageEnlarged}
+                contentContainerStyle={styles.zoomContent}
+              >
+                <TouchableOpacity
+                  activeOpacity={1}
+                  onPress={() => setImageEnlarged((v) => !v)}
+                  accessibilityLabel={imageEnlarged ? 'Shrink diagram' : 'Enlarge diagram'}
+                >
+                  <Image
+                    source={{ uri: file.generatedImageUrl }}
+                    style={[
+                      styles.zoomImage,
+                      imageEnlarged && { width: windowWidth * 2.5, height: windowHeight * 0.8 },
+                    ]}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              </ScrollView>
             </ScrollView>
             <TouchableOpacity
               style={styles.zoomClose}
-              onPress={() => setImageZoomed(false)}
+              onPress={() => {
+                setImageZoomed(false);
+                setImageEnlarged(false);
+              }}
               accessibilityLabel="Close"
             >
               <MaterialIcons name="close" size={28} color="#fff" />
@@ -721,9 +743,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   zoomImage: {
-    width: '100%',
-    height: '100%',
-    minHeight: 400,
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height * 0.8,
   },
   zoomClose: {
     position: 'absolute',

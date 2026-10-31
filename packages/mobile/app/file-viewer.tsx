@@ -11,7 +11,6 @@ import {
   Share,
   useColorScheme,
   SafeAreaView,
-  Linking,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
@@ -331,13 +330,7 @@ export default function FileViewerScreen() {
 
     return (
       <ScrollView style={styles.markdownContainer}>
-        <Markdown
-          style={adjustedStyles}
-          onLinkPress={(url) => {
-            Linking.openURL(url).catch(() => {});
-            return false;
-          }}
-        >
+        <Markdown style={adjustedStyles}>
           {withInlineDiagramImages(params.content || '')}
         </Markdown>
       </ScrollView>
