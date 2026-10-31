@@ -15,6 +15,12 @@ const mockUnlink = jest.fn();
 const mockVerifyKey = jest.fn();
 const mockOpenAICreate = jest.fn();
 const mockFetch = jest.fn();
+const mockDownloadFromR2 = jest.fn();
+
+jest.mock('@/lib/r2-client', () => ({
+  ...jest.requireActual('@/lib/r2-client'),
+  downloadFromR2: (...args: unknown[]) => mockDownloadFromR2(...args),
+}));
 
 jest.mock('@unkey/api', () => ({
   Unkey: jest.fn().mockImplementation(() => ({
@@ -104,6 +110,7 @@ describe('POST /api/(newai)/transcribe', () => {
     jest.clearAllMocks();
     process.env.UNKEY_ROOT_KEY = 'test-root-key';
     process.env.OPENAI_API_KEY = 'test-openai-key';
+    process.env.ENABLE_USER_MANAGEMENT = 'true'; // production setup: uploads/<userId>/
     tempFilePath = join(tmpdir(), `test_${Date.now()}.mp3`);
 
     // Default mocks
@@ -322,6 +329,30 @@ describe('POST /api/(newai)/transcribe', () => {
       expect(data.text).toBeDefined();
     });
 
+    it('should keep a traversal-style extension inside the temp directory', async () => {
+      const base64Data = Buffer.from('audio data').toString('base64');
+      (fsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+      await POST(
+        new Request('http://localhost:3000/api/transcribe', {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer valid-key',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            audio: `data:audio/mp3;base64,${base64Data}`,
+            extension: '../../../app/evil',
+          }),
+        })
+      );
+
+      const written = (fsPromises.writeFile as jest.Mock).mock.calls[0][0] as string;
+      expect(written).not.toContain('..');
+      expect(written.startsWith(tmpdir())).toBe(true);
+      expect(written).toMatch(/upload_\d+\.webm$/);
+    });
+
     it('should return 400 when base64 data is invalid', async () => {
       // Reset mocks
       jest.clearAllMocks();
@@ -369,62 +400,105 @@ describe('POST /api/(newai)/transcribe', () => {
   });
 
   describe('Presigned URL Upload', () => {
-    it('should transcribe audio from presigned URL', async () => {
-      const fileUrl = 'https://r2.example.com/audio.mp3';
-      const fileBuffer = Buffer.from('audio file data');
+    const post = (body: Record<string, unknown>) =>
+      POST(
+        new Request('http://localhost:3000/api/transcribe', {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer valid-key',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        })
+      );
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        arrayBuffer: jest.fn().mockResolvedValue(fileBuffer.buffer),
-      });
-
+    it('should transcribe the caller\'s audio read from R2 by key', async () => {
+      mockDownloadFromR2.mockResolvedValueOnce(Buffer.from('audio file data'));
       (fsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
 
-      const request = new Request('http://localhost:3000/api/transcribe', {
-        method: 'POST',
-        headers: {
-          authorization: 'Bearer valid-key',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          fileUrl,
-          key: 'file-key',
-          extension: 'mp3',
-        }),
+      const response = await post({
+        fileUrl: 'https://r2.example.com/audio.mp3',
+        key: 'uploads/test-user-id/abc-audio.mp3',
+        extension: 'mp3',
       });
-
-      const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(200);
       expect(data.text).toBeDefined();
-      expect(mockFetch).toHaveBeenCalledWith(fileUrl);
+      expect(mockDownloadFromR2).toHaveBeenCalledWith('uploads/test-user-id/abc-audio.mp3');
+      // The client-supplied URL is accepted for older clients but never fetched
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('should return error when presigned URL download fails', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-      });
+    it('should return error when the R2 download fails', async () => {
+      mockDownloadFromR2.mockRejectedValueOnce(new Error('NoSuchKey'));
 
-      const request = new Request('http://localhost:3000/api/transcribe', {
-        method: 'POST',
-        headers: {
-          authorization: 'Bearer valid-key',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          fileUrl: 'https://r2.example.com/missing.mp3',
-          key: 'file-key',
-          extension: 'mp3',
-        }),
+      const response = await post({
+        fileUrl: 'https://r2.example.com/missing.mp3',
+        key: 'uploads/test-user-id/abc-missing.mp3',
+        extension: 'mp3',
       });
-
-      const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(500);
       expect(data.error).toContain('Failed to download file from R2');
+    });
+
+    it('should refuse another user\'s key without reading it', async () => {
+      const response = await post({
+        fileUrl: 'https://r2.example.com/audio.mp3',
+        key: 'uploads/someone-else/abc-audio.mp3',
+        extension: 'mp3',
+      });
+
+      expect(response.status).toBe(403);
+      expect(mockDownloadFromR2).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should keep a traversal-style extension inside the temp directory', async () => {
+      mockDownloadFromR2.mockResolvedValueOnce(Buffer.from('audio file data'));
+      (fsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+      await post({
+        key: 'uploads/test-user-id/abc-audio.mp3',
+        extension: '../../etc/cron.d/x',
+      });
+
+      const written = (fsPromises.writeFile as jest.Mock).mock.calls[0][0] as string;
+      expect(written).not.toContain('..');
+      expect(written.startsWith(tmpdir())).toBe(true);
+      expect(written).toMatch(/r2_audio_\d+\.webm$/);
+    });
+
+    it('should read keys under the shared default user when user management is off', async () => {
+      const previous = process.env.ENABLE_USER_MANAGEMENT;
+      delete process.env.ENABLE_USER_MANAGEMENT;
+      try {
+        mockDownloadFromR2.mockResolvedValueOnce(Buffer.from('audio file data'));
+        (fsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+        await post({ key: 'uploads/user/abc-audio.mp3', extension: 'mp3' });
+        expect(mockDownloadFromR2).toHaveBeenCalledWith('uploads/user/abc-audio.mp3');
+
+        mockDownloadFromR2.mockClear();
+        const other = await post({ key: 'uploads/someone-else/abc-audio.mp3', extension: 'mp3' });
+        expect(other.status).toBe(403);
+        expect(mockDownloadFromR2).not.toHaveBeenCalled();
+      } finally {
+        if (previous === undefined) delete process.env.ENABLE_USER_MANAGEMENT;
+        else process.env.ENABLE_USER_MANAGEMENT = previous;
+      }
+    });
+
+    it('should refuse a URL with no key instead of fetching it', async () => {
+      const response = await post({
+        fileUrl: 'http://169.254.169.254/latest/meta-data',
+        extension: 'mp3',
+      });
+
+      expect(response.status).toBe(403);
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 

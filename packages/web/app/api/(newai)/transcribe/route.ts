@@ -9,6 +9,7 @@ import {
   checkAudioTranscriptionQuota,
   incrementAudioTranscriptionUsage,
 } from '@/drizzle/schema';
+import { downloadFromR2, isOwnedUploadKey } from '@/lib/r2-client';
 import {
   normalizeAudioForWhisper,
   splitAudioFileBySizeHeuristic,
@@ -23,6 +24,17 @@ const MAX_UPLOAD_BYTES = 250 * 1024 * 1024;
 const MAX_AUDIO_MINUTES = 180;
 const WHISPER_MAX_MB = 25;
 const WHISPER_CONCURRENCY = 2;
+
+/**
+ * Client-supplied extensions end up in temp file paths. Allow only plain
+ * alphanumerics so something like "../../x" cannot escape the temp directory;
+ * anything else falls back to webm.
+ */
+function safeExtension(extension: unknown, fallback = 'webm'): string {
+  const value =
+    typeof extension === 'string' ? extension.trim().toLowerCase() : '';
+  return /^[a-z0-9]{1,8}$/.test(value) ? value : fallback;
+}
 
 /**
  * Gets the duration of an audio file in minutes
@@ -196,7 +208,7 @@ export async function POST(request: Request) {
         );
       }
 
-      extension = audioFile.name.split('.').pop()?.toLowerCase() || 'webm';
+      extension = safeExtension(audioFile.name.split('.').pop());
       const arrayBuffer = await audioFile.arrayBuffer();
       const buffer = new Uint8Array(arrayBuffer);
       tempFilePath = join(tmpdir(), `upload_${Date.now()}.${extension}`);
@@ -204,18 +216,30 @@ export async function POST(request: Request) {
     } else if (contentType.includes('application/json')) {
       const body = await request.json();
 
-      // Handle pre-signed URL flow (larger files > 4MB)
-      if (body.fileUrl && body.key) {
+      // Handle pre-signed URL flow (larger files > 4MB). The file is already in R2:
+      // read it by key with our own credentials, and only if it is the caller's.
+      // Older clients also send `fileUrl`; it is accepted but never fetched.
+      if (body.key || body.fileUrl) {
+        // Keys are created under the same id (create-upload-url): the shared
+        // default 'user' when user management is off (self-hosting)
+        const uploadOwnerId =
+          process.env.ENABLE_USER_MANAGEMENT === 'true' ? userId : 'user';
+        if (!isOwnedUploadKey(body.key, uploadOwnerId)) {
+          return NextResponse.json(
+            { error: 'Invalid file key' },
+            { status: 403 }
+          );
+        }
         return handlePresignedUrlTranscription(
-          body.fileUrl,
-          body.extension || 'webm',
+          body.key,
+          safeExtension(body.extension),
           userId
         );
       }
 
       // Handle base64 upload (from audio recorder)
       if (body.audio && body.extension) {
-        extension = body.extension;
+        extension = safeExtension(body.extension);
         const base64Data = body.audio.split(';base64,').pop();
         if (!base64Data) {
           return NextResponse.json(
@@ -431,7 +455,7 @@ export async function POST(request: Request) {
 }
 
 async function handlePresignedUrlTranscription(
-  fileUrl: string,
+  r2Key: string,
   extension: string,
   userId: string
 ): Promise<NextResponse> {
@@ -439,15 +463,21 @@ async function handlePresignedUrlTranscription(
   let chunkPaths: string[] = [];
 
   try {
-    const fileResponse = await fetch(fileUrl);
-    if (!fileResponse.ok) {
-      throw new Error(
-        `Failed to download file from R2: ${fileResponse.status}`
-      );
+    let downloaded: Buffer;
+    try {
+      downloaded = await downloadFromR2(r2Key);
+    } catch (error) {
+      console.error('Failed to download file from R2:', error);
+      throw new Error('Failed to download file from R2');
     }
-
-    const arrayBuffer = await fileResponse.arrayBuffer();
-    const buffer = new Uint8Array(arrayBuffer);
+    // A plain Uint8Array view over the same bytes (no copy), the same type the
+    // direct-upload path writes. A raw Buffer does not type-check with newer
+    // @types/node, where Buffer is Buffer<ArrayBufferLike>.
+    const buffer = new Uint8Array(
+      downloaded.buffer as ArrayBuffer,
+      downloaded.byteOffset,
+      downloaded.byteLength
+    );
 
     tempFilePath = join(tmpdir(), `r2_audio_${Date.now()}.${extension}`);
     await fsPromises.writeFile(tempFilePath, buffer);
