@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Share, Alert, Image, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Share, Alert, Image, Platform, ActivityIndicator, Modal, ScrollView, useWindowDimensions, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { UploadedFile } from '@/utils/api';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -47,6 +47,9 @@ interface FileCardProps {
 
 export function FileCard({ file, onDelete, onView }: FileCardProps) {
   const router = useRouter();
+  const [imageZoomed, setImageZoomed] = React.useState(false);
+  const [imageEnlarged, setImageEnlarged] = React.useState(false);
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [moderation, setModeration] = React.useState<{
     isAppropriate: boolean;
     contentFlags?: string[];
@@ -93,14 +96,21 @@ export function FileCard({ file, onDelete, onView }: FileCardProps) {
 
   // Display a snippet of extracted text or the generated image
   const renderContentPreview = () => {
-    // If it's a magic diagram and has a generated image URL, show the image
+    // Show the generated image for magic diagrams (same rule as the web dashboard)
     if (file.processType === 'magic-diagram' && file.generatedImageUrl) {
       return (
-        <Image 
-          source={{ uri: file.generatedImageUrl }}
-          style={styles.generatedImagePreview}
-          resizeMode="contain" // Or "cover" depending on desired look
-        />
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setImageZoomed(true)}
+          accessibilityRole="imagebutton"
+          accessibilityLabel="Open generated diagram"
+        >
+          <Image
+            source={{ uri: file.generatedImageUrl }}
+            style={styles.generatedImagePreview}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
       );
     }
     
@@ -233,6 +243,56 @@ export function FileCard({ file, onDelete, onView }: FileCardProps) {
 
   return (
     <View style={[styles.cardContainer, { backgroundColor }]}>
+      {file.processType === 'magic-diagram' && file.generatedImageUrl ? (
+        <Modal
+          visible={imageZoomed}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setImageZoomed(false)}
+        >
+          <View style={styles.zoomBackdrop}>
+            {/* iOS pinch-zooms via maximumZoomScale; Android has no pinch on
+                ScrollView, so tapping the image toggles a 2.5x pannable view */}
+            <ScrollView
+              maximumZoomScale={4}
+              minimumZoomScale={1}
+              centerContent
+              contentContainerStyle={styles.zoomContent}
+            >
+              <ScrollView
+                horizontal
+                scrollEnabled={imageEnlarged}
+                contentContainerStyle={styles.zoomContent}
+              >
+                <TouchableOpacity
+                  activeOpacity={1}
+                  onPress={() => setImageEnlarged((v) => !v)}
+                  accessibilityLabel={imageEnlarged ? 'Shrink diagram' : 'Enlarge diagram'}
+                >
+                  <Image
+                    source={{ uri: file.generatedImageUrl }}
+                    style={[
+                      styles.zoomImage,
+                      imageEnlarged && { width: windowWidth * 2.5, height: windowHeight * 0.8 },
+                    ]}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              </ScrollView>
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.zoomClose}
+              onPress={() => {
+                setImageZoomed(false);
+                setImageEnlarged(false);
+              }}
+              accessibilityLabel="Close"
+            >
+              <MaterialIcons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      ) : null}
       {/* Processing Badge */}
       {(file.processingStatus === "pending" ||
         file.processingStatus === "processing") && (
@@ -673,6 +733,24 @@ const styles = StyleSheet.create({
   contentContainer: {
     flexDirection: 'row',
     marginBottom: 16,
+  },
+  zoomBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+  },
+  zoomContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  zoomImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height * 0.8,
+  },
+  zoomClose: {
+    position: 'absolute',
+    top: 56,
+    right: 20,
+    padding: 8,
   },
   generatedImagePreview: {
     width: '100%',

@@ -5,6 +5,7 @@
   "scripts": {
     "clean": "git clean -xdf .expo .turbo node_modules",
     "start": "expo start --go",
+    "test": "jest",
     "start:go": "expo start --go",
     "start:tunnel": "expo start --tunnel --go",
     "android": "expo run:android",
