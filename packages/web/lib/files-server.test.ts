@@ -52,14 +52,32 @@ describe('files-server signs stored links on the way out', () => {
           error: null,
           textContent: '[Generated Diagram Image](https://pub.example/generated/u/1-a.png)',
           blobUrl: 'https://pub.example/uploads/u/x-a.png',
+          processType: 'magic-diagram',
+          generatedImageUrl: 'https://pub.example/generated/u/1-a.png',
+        },
+        {
+          id: 2,
+          originalName: 'b.png',
+          fileType: 'image',
+          status: 'completed',
+          createdAt: new Date(),
+          tokensUsed: 1,
+          error: null,
+          textContent: 'text',
+          blobUrl: 'https://pub.example/uploads/u/x-b.png',
+          processType: 'standard-ocr',
+          generatedImageUrl: null,
         },
       ],
-      [{ count: 1 }]
+      [{ count: 2 }]
     );
     const result = (await getFilesForUser({ page: 1, limit: 10 }, 'user_1')) as any;
     expect(result.files[0].blobUrl).toBe('signed:user_1:https://pub.example/uploads/u/x-a.png');
     expect(result.files[0].textContent).toContain('signed:user_1:https://pub.example/generated/u/1-a.png');
-    expect(result.pagination.total).toBe(1);
+    expect(result.files[0].processType).toBe('magic-diagram');
+    expect(result.files[0].generatedImageUrl).toBe('signed:user_1:https://pub.example/generated/u/1-a.png');
+    expect(result.files[1].generatedImageUrl).toBeNull();
+    expect(result.pagination.total).toBe(2);
   });
 
   it('signs links inside the text returned for a single file', async () => {

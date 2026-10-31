@@ -16,6 +16,8 @@ type FilesResponse = {
     error: string | null;
     textContent: string | null;
     blobUrl: string;
+    processType: string | null;
+    generatedImageUrl: string | null;
   }>;
   pagination: {
     total: number;

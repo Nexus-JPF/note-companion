@@ -11,6 +11,7 @@ import {
   Share,
   useColorScheme,
   SafeAreaView,
+  Linking,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
@@ -18,6 +19,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { TextDocumentViewer } from '@/components/text-document-viewer';
 import { FilePreview } from '@/components/file-preview';
 import * as FileSystem from 'expo-file-system/legacy';
+import { withInlineDiagramImages } from '@/utils/diagram-markdown';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -329,8 +331,14 @@ export default function FileViewerScreen() {
 
     return (
       <ScrollView style={styles.markdownContainer}>
-        <Markdown style={adjustedStyles}>
-          {params.content || ''}
+        <Markdown
+          style={adjustedStyles}
+          onLinkPress={(url) => {
+            Linking.openURL(url).catch(() => {});
+            return false;
+          }}
+        >
+          {withInlineDiagramImages(params.content || '')}
         </Markdown>
       </ScrollView>
     );

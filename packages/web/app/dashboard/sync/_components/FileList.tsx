@@ -408,7 +408,31 @@ export function FileList({ pageSize = 12 }: FileListProps) {
           </DialogHeader>
 
           <div className="flex-1 overflow-auto p-4 bg-slate-50 rounded-md">
-            {selectedFile.fileType.includes('image') ? (
+            {selectedFile.processType === 'magic-diagram' &&
+            selectedFile.generatedImageUrl ? (
+              <div className="flex flex-col items-center gap-3 h-full bg-white p-4 rounded-lg">
+                <a
+                  href={selectedFile.generatedImageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 min-h-0 flex justify-center items-center"
+                >
+                  <img
+                    src={selectedFile.generatedImageUrl}
+                    alt={`Generated diagram for ${selectedFile.originalName}`}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </a>
+                <a
+                  href={selectedFile.generatedImageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground underline"
+                >
+                  Open full size
+                </a>
+              </div>
+            ) : selectedFile.fileType.includes('image') ? (
               <div className="flex justify-center items-center h-full bg-white p-4 rounded-lg shadow-sm">
                 <img
                   src={selectedFile.blobUrl}

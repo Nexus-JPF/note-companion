@@ -21,6 +21,8 @@ export interface FileListResponse {
     error: string | null;
     textContent: string | null;
     blobUrl: string;
+    processType: string | null;
+    generatedImageUrl: string | null;
   }>;
   pagination: {
     total: number;
@@ -68,6 +70,8 @@ export async function getFilesForUser(
         error: uploadedFiles.error,
         textContent: uploadedFiles.textContent,
         blobUrl: uploadedFiles.blobUrl,
+        processType: uploadedFiles.processType,
+        generatedImageUrl: uploadedFiles.generatedImageUrl,
       })
       .from(uploadedFiles)
       .where(eq(uploadedFiles.userId, userId))
@@ -87,6 +91,9 @@ export async function getFilesForUser(
       files.map(async (file) => ({
         ...file,
         blobUrl: await signR2Url(file.blobUrl, userId),
+        generatedImageUrl: file.generatedImageUrl
+          ? await signR2Url(file.generatedImageUrl, userId)
+          : null,
         textContent: await signR2UrlsInText(file.textContent, userId),
       }))
     );

@@ -25,6 +25,19 @@ export function FileCard({ file, onView }: FileCardProps) {
   };
 
   const renderPreview = () => {
+    // Magic diagrams: show the generated image rather than the original upload
+    if (file.processType === 'magic-diagram' && file.generatedImageUrl) {
+      return (
+        <div className="mt-2 rounded-md overflow-hidden bg-slate-50 flex justify-center items-center h-40">
+          <img
+            src={file.generatedImageUrl}
+            alt={`Generated diagram for ${file.originalName}`}
+            className="max-h-full max-w-full object-contain"
+          />
+        </div>
+      );
+    }
+
     // For images, show the actual image
     if (file.fileType.includes('image')) {
       return (
