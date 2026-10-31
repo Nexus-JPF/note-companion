@@ -1,4 +1,4 @@
-import { isOwnedUploadKey } from './r2-client';
+import { isOwnedStorageKey, isOwnedUploadKey } from './r2-client';
 
 describe('isOwnedUploadKey', () => {
   it('accepts the caller\'s own upload keys', () => {
@@ -22,5 +22,19 @@ describe('isOwnedUploadKey', () => {
     expect(isOwnedUploadKey('uploads/user_1/../user_2/abc.pdf', 'user_1')).toBe(false);
     expect(isOwnedUploadKey('uploads/user_1/./abc.pdf', 'user_1')).toBe(false);
     expect(isOwnedUploadKey(`uploads/user_1/${'a'.repeat(2000)}`, 'user_1')).toBe(false);
+  });
+});
+
+describe('isOwnedStorageKey', () => {
+  it('accepts the owner\'s uploads/ and generated/ keys only', () => {
+    expect(isOwnedStorageKey('uploads/user_1/a.png', 'user_1')).toBe(true);
+    expect(isOwnedStorageKey('generated/user_1/1-ab-a.png', 'user_1')).toBe(true);
+    expect(isOwnedStorageKey('generated/user_2/1-ab-a.png', 'user_1')).toBe(false);
+    expect(isOwnedStorageKey('generated/user_10/a.png', 'user_1')).toBe(false);
+    expect(isOwnedStorageKey('other/user_1/a.png', 'user_1')).toBe(false);
+  });
+
+  it('keeps isOwnedUploadKey limited to uploads/', () => {
+    expect(isOwnedUploadKey('generated/user_1/a.png', 'user_1')).toBe(false);
   });
 });

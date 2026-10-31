@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { signR2Url, signR2UrlsInText } from "@/lib/r2-client";
 import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 import { db, uploadedFiles } from "@/drizzle/schema";
 import { eq, is } from "drizzle-orm";
@@ -64,10 +65,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Return the relevant status information
     return NextResponse.json({
       status: fileRecord.status,
-      text: fileRecord.textContent, // Mobile app expects 'text' field
+      text: await signR2UrlsInText(fileRecord.textContent, fileRecord.userId), // Mobile app expects 'text' field
       error: fileRecord.error,
       fileId: fileRecord.id, // Include fileId for confirmation
-      url: fileRecord.blobUrl,
+      url: await signR2Url(fileRecord.blobUrl, fileRecord.userId),
       mimeType: fileRecord.fileType,
       fileName: fileRecord.originalName,
       updatedAt: fileRecord.updatedAt,

@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 import { clientErrorStatus } from "@/lib/auth-error-status";
 import { authenticateUser } from "@/lib/authenticate-user";
+import { signR2Url, signR2UrlsInText } from "@/lib/r2-client";
 
 export async function GET(
   request: NextRequest,
@@ -48,8 +49,8 @@ export async function GET(
     return NextResponse.json({
       status: file.status || 'processing',
       fileId: file.id,
-      url: file.blobUrl,
-      text: file.textContent || '',
+      url: await signR2Url(file.blobUrl, userId),
+      text: (await signR2UrlsInText(file.textContent, userId)) || '',
       error: file.error || undefined
     });
   } catch (error) {
