@@ -21,6 +21,9 @@ import {
 
 export const maxDuration = 800;
 
+/** Minimum tokens billed per Magic Diagram (the old flat rate). */
+const MAGIC_DIAGRAM_MIN_TOKENS = 5000;
+
 function getOpenAIImageClient() {
   return new OpenAI({
     apiKey: process.env.OPENAI_API_KEY || "",
@@ -92,10 +95,11 @@ async function processMagicDiagram(
     await uploadToR2(generatedR2Key, generatedImageBuffer, "image/png");
     const generatedPublicUrl = `${R2_PUBLIC_URL}/${generatedR2Key}`;
 
-    const tokensUsed =
-      response.usage?.total_tokens != null
-        ? response.usage.total_tokens
-        : 5000;
+    // Bill actual usage, but never less than the previous flat rate.
+    const tokensUsed = Math.max(
+      MAGIC_DIAGRAM_MIN_TOKENS,
+      response.usage?.total_tokens ?? 0
+    );
 
     return { generatedImageUrl: generatedPublicUrl, tokensUsed };
   } catch (error: unknown) {
