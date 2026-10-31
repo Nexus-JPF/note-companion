@@ -448,13 +448,21 @@ async function handlePresignedUrlTranscription(
   let chunkPaths: string[] = [];
 
   try {
-    let buffer: Buffer;
+    let downloaded: Buffer;
     try {
-      buffer = await downloadFromR2(r2Key);
+      downloaded = await downloadFromR2(r2Key);
     } catch (error) {
       console.error('Failed to download file from R2:', error);
       throw new Error('Failed to download file from R2');
     }
+    // A plain Uint8Array view over the same bytes (no copy), the same type the
+    // direct-upload path writes. A raw Buffer does not type-check with newer
+    // @types/node, where Buffer is Buffer<ArrayBufferLike>.
+    const buffer = new Uint8Array(
+      downloaded.buffer as ArrayBuffer,
+      downloaded.byteOffset,
+      downloaded.byteLength
+    );
 
     tempFilePath = join(tmpdir(), `r2_audio_${Date.now()}.${extension}`);
     await fsPromises.writeFile(tempFilePath, buffer);
