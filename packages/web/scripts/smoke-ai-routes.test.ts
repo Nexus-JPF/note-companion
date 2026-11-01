@@ -42,11 +42,11 @@ function handler(req: http.IncomingMessage, res: http.ServerResponse) {
 function runScript(env: Record<string, string>) {
   return new Promise<{ code: number | null; out: string }>((resolve) => {
     const child = spawn(process.execPath, [SCRIPT], {
-      env: { PATH: process.env.PATH ?? '', ...env },
+      env: { PATH: process.env.PATH ?? '', ...env } as NodeJS.ProcessEnv,
     });
     let out = '';
-    child.stdout.on('data', (d) => (out += d));
-    child.stderr.on('data', (d) => (out += d));
+    child.stdout?.on('data', (d) => (out += d));
+    child.stderr?.on('data', (d) => (out += d));
     child.on('close', (code) => resolve({ code, out }));
   });
 }
