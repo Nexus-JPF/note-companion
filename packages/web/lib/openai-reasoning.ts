@@ -1,4 +1,8 @@
-export type OpenAiOrganizerReasoningEffort = 'low' | 'medium' | 'high';
+export type OpenAiOrganizerReasoningEffort =
+  | 'none'
+  | 'low'
+  | 'medium'
+  | 'high';
 
 export type OpenAiOrganizerChatSettings = {
   reasoningEffort: OpenAiOrganizerReasoningEffort;
@@ -11,12 +15,23 @@ export function isOpenAiReasoningModel(modelId: string): boolean {
   return modelId.startsWith('o') || modelId.startsWith('gpt-5');
 }
 
-export function getOrganizerReasoningEffort(): OpenAiOrganizerReasoningEffort {
-  const raw = (process.env.ORGANIZER_REASONING_EFFORT || 'low').toLowerCase();
-  if (raw === 'medium' || raw === 'high') {
+/**
+ * gpt-5.1+ (e.g. gpt-5.4-nano, gpt-5.6-luna) reject function tools combined with
+ * reasoning_effort on /v1/chat/completions, and our structuredOutputs:false
+ * generateObject calls use a function tool. They accept 'none' instead.
+ */
+function acceptsNoneEffort(modelId: string): boolean {
+  return /^gpt-5\.\d/.test(modelId);
+}
+
+export function getOrganizerReasoningEffort(
+  modelId?: string
+): OpenAiOrganizerReasoningEffort {
+  const raw = process.env.ORGANIZER_REASONING_EFFORT?.toLowerCase();
+  if (raw === 'none' || raw === 'low' || raw === 'medium' || raw === 'high') {
     return raw;
   }
-  return 'low';
+  return modelId && acceptsNoneEffort(modelId) ? 'none' : 'low';
 }
 
 export function getOpenAiOrganizerChatSettings(
@@ -26,7 +41,7 @@ export function getOpenAiOrganizerChatSettings(
     return undefined;
   }
   return {
-    reasoningEffort: getOrganizerReasoningEffort(),
+    reasoningEffort: getOrganizerReasoningEffort(modelId),
     structuredOutputs: false,
   };
 }

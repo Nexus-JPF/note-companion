@@ -24,10 +24,26 @@ describe('openai-reasoning', () => {
   it('defaults organizer reasoning effort to low', () => {
     delete process.env.ORGANIZER_REASONING_EFFORT;
     expect(getOrganizerReasoningEffort()).toBe('low');
+    expect(getOrganizerReasoningEffort('gpt-5')).toBe('low');
+    expect(getOrganizerReasoningEffort('o3-mini')).toBe('low');
+  });
+
+  it('defaults to none for gpt-5.1+ models, which reject tools with reasoning', () => {
+    delete process.env.ORGANIZER_REASONING_EFFORT;
+    expect(getOrganizerReasoningEffort('gpt-5.4-nano')).toBe('none');
+    expect(getOrganizerReasoningEffort('gpt-5.6-luna')).toBe('none');
+  });
+
+  it('lets ORGANIZER_REASONING_EFFORT override the default, including none', () => {
+    process.env.ORGANIZER_REASONING_EFFORT = 'medium';
+    expect(getOrganizerReasoningEffort('gpt-5.6-luna')).toBe('medium');
+    process.env.ORGANIZER_REASONING_EFFORT = 'none';
+    expect(getOrganizerReasoningEffort('o3-mini')).toBe('none');
   });
 
   it('returns chat settings only for reasoning models', () => {
-    expect(getOpenAiOrganizerChatSettings('gpt-5.6-luna')).toEqual({
+    delete process.env.ORGANIZER_REASONING_EFFORT;
+    expect(getOpenAiOrganizerChatSettings('gpt-5')).toEqual({
       reasoningEffort: 'low',
       structuredOutputs: false,
     });
