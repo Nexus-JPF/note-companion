@@ -79,7 +79,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ tags: sortedTags });
   } catch (error) {
-    console.error('Tag generation error:', error);
+    console.error('Tag generation error:', {
+      message: error instanceof Error ? error.message : String(error),
+      status: (error as { status?: number } | null)?.status,
+    });
 
     // Properly handle AuthorizationError with status codes
     // Use try-catch for instanceof check in case AuthorizationError is undefined (e.g., in tests)

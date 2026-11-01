@@ -1,0 +1,40 @@
+name: Smoke test AI routes
+
+# Live check that the AI routes the plugin depends on still work with the
+# deployed model/provider config. A failed run means a route is returning an
+# error (see the job log for the route and the server's message).
+on:
+  schedule:
+    - cron: "17 */6 * * *" # every 6 hours
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Deployment to test (default: production; only app.notecompanion.ai, localhost and our Vercel previews are allowed)"
+        required: false
+        default: ""
+      only:
+        description: "Comma-separated route names to run (default: all)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Run smoke test
+        env:
+          SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
+          SMOKE_BASE_URL: ${{ inputs.base_url }}
+          SMOKE_ONLY: ${{ inputs.only }}
+        run: node packages/web/scripts/smoke-ai-routes.mjs
