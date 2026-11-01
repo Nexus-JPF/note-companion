@@ -6,6 +6,7 @@ import type { ThumbnailProps } from './compositions/Thumbnail';
 import { FORMATS, FPS } from './tokens';
 import { ep01 } from './episodes/ep01-youtube-to-notes';
 import { ep02 } from './episodes/ep02-handwriting-to-notes';
+import { ep03 } from './episodes/ep03-voice-memo-to-notes';
 import type { EpisodeProps } from './types';
 
 /**
@@ -16,6 +17,7 @@ import type { EpisodeProps } from './types';
 export const RemotionRoot: React.FC = () => {
   const duration = episodeDurationInFrames(ep01.footageDurationInSeconds, FPS);
   const duration2 = episodeDurationInFrames(ep02.footageDurationInSeconds, FPS);
+  const duration3 = episodeDurationInFrames(ep03.footageDurationInSeconds, FPS);
 
   return (
     <>
@@ -154,6 +156,24 @@ export const RemotionRoot: React.FC = () => {
         width={FORMATS.clip.width}
         height={FORMATS.clip.height}
         defaultProps={{ ...ep02, format: 'clip' } satisfies EpisodeProps}
+      />
+      <Composition
+        id="Episode3"
+        component={Episode}
+        durationInFrames={duration3}
+        fps={FPS}
+        width={FORMATS.episode.width}
+        height={FORMATS.episode.height}
+        defaultProps={{ ...ep03, format: 'episode' } satisfies EpisodeProps}
+      />
+      <Composition
+        id="Clip3"
+        component={Episode}
+        durationInFrames={duration3}
+        fps={FPS}
+        width={FORMATS.clip.width}
+        height={FORMATS.clip.height}
+        defaultProps={{ ...ep03, format: 'clip' } satisfies EpisodeProps}
       />
     </>
   );
