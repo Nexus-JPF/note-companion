@@ -77,10 +77,14 @@ Formatting Instruction:
 
     return response;
   } catch (error) {
+    console.error("format-stream failed:", {
+      message: error instanceof Error ? error.message : String(error),
+      status: (error as { status?: number } | null)?.status,
+    });
     if (error) {
       return NextResponse.json(
         { error: error.message },
-        { status: error.status }
+        { status: error.status || 500 }
       );
     }
   }

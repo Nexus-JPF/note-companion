@@ -22,10 +22,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ content: response.object.formattedContent });
   } catch (error) {
+    console.error("format failed:", {
+      message: error instanceof Error ? error.message : String(error),
+      status: (error as { status?: number } | null)?.status,
+    });
     if (error) {
       return NextResponse.json(
         { error: error.message },
-        { status: error.status }
+        { status: error.status || 500 }
       );
     }
   }
