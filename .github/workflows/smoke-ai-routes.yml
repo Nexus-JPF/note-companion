@@ -3,9 +3,14 @@ name: Smoke test AI routes
 # Live check that the AI routes the plugin depends on still work with the
 # deployed model/provider config. A failed run means a route is returning an
 # error (see the job log for the route and the server's message).
+#
+# Runs after each production deploy of the web app (code or env var changes only
+# take effect through a deploy), plus once a day as a backstop for provider-side
+# changes that happen without a deploy (model deprecation, key or quota issues).
 on:
+  deployment_status:
   schedule:
-    - cron: "17 */6 * * *" # every 6 hours
+    - cron: "17 6 * * *" # daily
   workflow_dispatch:
     inputs:
       base_url:
@@ -22,6 +27,18 @@ permissions:
 
 jobs:
   smoke:
+    # deployment_status fires for every Vercel project and environment; only run
+    # for a successful production deploy of the web app (not previews or landing).
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment_status.environment == 'Production – note-companion')
+    # Job-level (not workflow-level) so skipped preview/landing events never
+    # join the group and cancel a real run. Queue instead of cancelling so a
+    # run that is half done still reports.
+    concurrency:
+      group: smoke-ai-routes
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -31,6 +48,12 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "24.x"
+
+      # Vercel reports success when the build finishes; give the alias a moment
+      # to switch to the new deployment so we don't test the previous one.
+      - name: Wait for the new deployment to serve traffic
+        if: github.event_name == 'deployment_status'
+        run: sleep 60
 
       - name: Run smoke test
         env:
