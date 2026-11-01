@@ -33,6 +33,12 @@ jobs:
       github.event_name != 'deployment_status' ||
       (github.event.deployment_status.state == 'success' &&
        github.event.deployment_status.environment == 'Production – note-companion')
+    # Job-level (not workflow-level) so skipped preview/landing events never
+    # join the group and cancel a real run. Queue instead of cancelling so a
+    # run that is half done still reports.
+    concurrency:
+      group: smoke-ai-routes
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
