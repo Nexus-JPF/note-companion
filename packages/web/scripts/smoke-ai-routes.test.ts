@@ -42,7 +42,8 @@ function handler(req: http.IncomingMessage, res: http.ServerResponse) {
 function runScript(env: Record<string, string>) {
   return new Promise<{ code: number | null; out: string }>((resolve) => {
     const child = spawn(process.execPath, [SCRIPT], {
-      env: { PATH: process.env.PATH ?? '', ...env } as NodeJS.ProcessEnv,
+      // Start from the real env but drop any SMOKE_* so tests control them.
+      env: { ...process.env, SMOKE_API_KEY: '', SMOKE_BASE_URL: '', SMOKE_ONLY: '', ...env },
     });
     let out = '';
     child.stdout?.on('data', (d) => (out += d));
