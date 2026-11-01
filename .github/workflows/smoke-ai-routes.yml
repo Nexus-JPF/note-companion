@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: "Deployment to test (default: production)"
+        description: "Deployment to test (default: production; only app.notecompanion.ai, localhost and our Vercel previews are allowed)"
         required: false
         default: ""
       only:

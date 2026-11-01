@@ -93,6 +93,12 @@ CRITICAL:
 
     const result = streamText({
       model: model as any,
+      onError: ({ error }) => {
+        console.error('enhance-meeting-note stream error:', {
+          message: error instanceof Error ? error.message : String(error),
+          status: (error as { status?: number } | null)?.status,
+        });
+      },
       system: systemPrompt,
       messages: [
         {

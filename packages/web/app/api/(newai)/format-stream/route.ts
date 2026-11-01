@@ -40,6 +40,12 @@ export async function POST(request: NextRequest) {
 
     const result = streamText({
       model: model as any,
+      onError: ({ error }) => {
+        console.error('format-stream stream error:', {
+          message: error instanceof Error ? error.message : String(error),
+          status: (error as { status?: number } | null)?.status,
+        });
+      },
       system: 'Answer directly in markdown',
       messages: [
         {

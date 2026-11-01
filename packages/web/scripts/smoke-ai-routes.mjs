@@ -26,6 +26,17 @@ const ONLY = (process.env.SMOKE_ONLY || "")
   .filter(Boolean);
 const TIMEOUT_MS = 90_000;
 
+// The API key is sent to BASE_URL, so only allow our own hosts.
+const ALLOWED_HOST = /^(app\.notecompanion\.ai|localhost|127\.0\.0\.1|[a-z0-9-]+-nexus-jpf-inc\.vercel\.app)$/;
+
+export function assertAllowedBaseUrl(url) {
+  const parsed = new URL(url);
+  const local = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  if (!ALLOWED_HOST.test(parsed.hostname) || (!local && parsed.protocol !== "https:")) {
+    throw new Error(`Refusing to send the API key to ${parsed.origin}`);
+  }
+}
+
 const NOTE = `# Weekly sync
 Attendees: Sam, Priya. We agreed to ship the new onboarding flow on Friday.
 Action items: Sam updates the docs, Priya reviews the pricing page.`;
@@ -108,7 +119,8 @@ export const checks = [
   },
   {
     // Sends the chat tool definitions to the model, which is the combination
-    // (tools + reasoning settings) that has broken before.
+    // (tools + reasoning settings) that has broken before. Web search is on by
+    // default, so this covers the search path; the next check covers no-search.
     name: "chat/v5",
     path: "/api/chat/v5",
     body: {
@@ -128,6 +140,35 @@ export const checks = [
   },
 ];
 
+const chatCheck = checks.find((c) => c.name === "chat/v5");
+checks.push({
+  ...chatCheck,
+  name: "chat/v5 (no search)",
+  body: { ...chatCheck.body, enableChatWebSearch: false },
+});
+
+/** Decide pass/fail for a response. Pure, so it can be unit tested. */
+export function evaluate(check, status, raw) {
+  if (!(status >= 200 && status < 300)) {
+    return `HTTP ${status}: ${raw.slice(0, 300)}`;
+  }
+  let verdict;
+  if (check.json) {
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return `non-JSON body: ${raw.slice(0, 200)}`;
+    }
+    // A 200 carrying an error body is a failure (some routes used to do this).
+    if (parsed && parsed.error) return `200 with error: ${parsed.error}`;
+    verdict = check.json(parsed);
+  } else {
+    verdict = check.stream(raw);
+  }
+  return verdict === true ? null : String(verdict);
+}
+
 async function run(check) {
   const started = Date.now();
   try {
@@ -143,29 +184,10 @@ async function run(check) {
     const raw = await res.text(); // reads streams to the end
     const ms = Date.now() - started;
 
-    if (!res.ok) {
-      return { ...check, ok: false, ms, detail: `HTTP ${res.status}: ${raw.slice(0, 300)}` };
-    }
-
-    let verdict;
-    if (check.json) {
-      let parsed;
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        return { ...check, ok: false, ms, detail: `non-JSON body: ${raw.slice(0, 200)}` };
-      }
-      // A 200 carrying an error body is a failure (some routes used to do this).
-      if (parsed && parsed.error) {
-        return { ...check, ok: false, ms, detail: `200 with error: ${parsed.error}` };
-      }
-      verdict = check.json(parsed);
-    } else {
-      verdict = check.stream(raw);
-    }
-    return verdict === true
+    const failure = evaluate(check, res.status, raw);
+    return failure === null
       ? { ...check, ok: true, ms }
-      : { ...check, ok: false, ms, detail: String(verdict) };
+      : { ...check, ok: false, ms, detail: failure };
   } catch (error) {
     return {
       ...check,
@@ -181,6 +203,7 @@ async function main() {
     console.error("SMOKE_API_KEY is required");
     process.exit(2);
   }
+  assertAllowedBaseUrl(BASE_URL);
   const selected = ONLY.length
     ? checks.filter((c) => ONLY.includes(c.name))
     : checks;
@@ -210,5 +233,8 @@ async function main() {
 // Only run when executed directly (so the checks can be imported in tests).
 import { fileURLToPath } from "node:url";
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main();
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(2);
+  });
 }
