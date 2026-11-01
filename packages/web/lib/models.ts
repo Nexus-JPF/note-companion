@@ -7,6 +7,8 @@ import { deepseek } from '@ai-sdk/deepseek';
 import { LanguageModel } from 'ai';
 import { getOpenAiOrganizerChatSettings } from './openai-reasoning';
 
+type OpenAIChatSettings = Parameters<typeof openai>[1];
+
 // Get model configuration from environment variables
 // Defaults to OpenAI for backward compatibility with cloud environment
 const MODEL_PROVIDER = (process.env.MODEL_PROVIDER || 'openai').toLowerCase();
@@ -37,7 +39,11 @@ function createModel(provider: string, modelName: string): LanguageModel {
 
     case 'openai':
     default: {
-      const openAiSettings = getOpenAiOrganizerChatSettings(modelName);
+      // The SDK's v1 chat settings type omits reasoningEffort 'none', but 1.3.x
+      // forwards the value to OpenAI unchanged, so cast to the SDK type.
+      const openAiSettings = getOpenAiOrganizerChatSettings(modelName) as
+        | OpenAIChatSettings
+        | undefined;
       // Support custom baseURL for local LLMs (e.g., Ollama)
       if (process.env.OPENAI_API_BASE) {
         const customProvider = createOpenAI({
