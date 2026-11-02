@@ -10,6 +10,8 @@
     "render:clip": "remotion render Clip out/clip.mp4",
     "render:episode2": "remotion render Episode2 out/episode2.mp4",
     "render:clip2": "remotion render Clip2 out/clip2.mp4",
+    "render:episode3": "remotion render Episode3 out/episode3.mp4",
+    "render:clip3": "remotion render Clip3 out/clip3.mp4",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
