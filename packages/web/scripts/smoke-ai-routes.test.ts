@@ -31,6 +31,10 @@ function handler(req: http.IncomingMessage, res: http.ServerResponse) {
         return void res.end('   '); // empty stream
       case '/api/enhance-meeting-note':
         return void res.end('- notes');
+      case '/api/transcribe':
+        return /multipart\/form-data/.test(req.headers['content-type'] ?? '')
+          ? json(200, { text: 'ping' })
+          : json(400, { error: 'expected multipart' });
       case '/api/chat/v5':
         return void res.end('data: {"type":"text-delta","delta":"pong"}\n\n');
       default:
@@ -67,9 +71,10 @@ describe('smoke-ai-routes script', () => {
     const { code, out } = await runScript({
       SMOKE_BASE_URL: base,
       SMOKE_API_KEY: KEY,
-      SMOKE_ONLY: 'classify1,enhance-meeting-note,chat/v5,chat/v5 (no search)',
+      SMOKE_ONLY: 'classify1,enhance-meeting-note,transcribe (m4a),chat/v5,chat/v5 (no search)',
     });
     expect(out).toMatch(/PASS\s+classify1/);
+    expect(out).toMatch(/PASS\s+transcribe \(m4a\)/);
     expect(out).toMatch(/PASS\s+chat\/v5 \(no search\)/);
     expect(code).toBe(0);
   });
