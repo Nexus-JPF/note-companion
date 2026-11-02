@@ -7,11 +7,16 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname, '../../'),
   // Don't bundle these (native binaries); load from node_modules at runtime
   serverExternalPackages: ['ffmpeg-static', '@ffprobe-installer/ffprobe', 'postgres'],
-  // Include ffmpeg/ffprobe binaries in the transcribe API route bundle (Vercel)
+  // Include ffmpeg/ffprobe binaries in the transcribe API route bundle (Vercel).
+  // The repo uses node-linker=hoisted, so these packages live in the root node_modules
+  // (not packages/web/node_modules); globs resolve from the project dir (packages/web).
+  // The packages locate their binaries via a dynamic path, so the tracer can't find them.
+  // The key is the normalized route ("(newai)" route group stripped), see lib/audio/tracing-config.test.ts.
   outputFileTracingIncludes: {
-    '/api/(newai)/transcribe': [
-      './node_modules/ffmpeg-static/ffmpeg',
-      './node_modules/@ffprobe-installer/ffprobe/**',
+    '/api/transcribe': [
+      '../../node_modules/ffmpeg-static/ffmpeg',
+      '../../node_modules/@ffprobe-installer/ffprobe/**',
+      '../../node_modules/@ffprobe-installer/linux-x64/**',
     ],
   },
   eslint: {
