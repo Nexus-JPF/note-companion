@@ -19,14 +19,28 @@ export function CrispWidget() {
   const websiteId = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID;
   const { user, isLoaded } = useUser();
 
+  const userId = user?.id;
+  const email = user?.primaryEmailAddress?.emailAddress;
+  const fullName = user?.fullName;
+
   useEffect(() => {
-    if (!websiteId || !isLoaded || !user) return;
+    if (!websiteId || !isLoaded || !userId) return;
     // Crisp replays queued commands once its script has loaded.
     window.$crisp = window.$crisp || [];
-    const email = user.primaryEmailAddress?.emailAddress;
+    window.$crisp.push(['do', 'chat:show']);
     if (email) window.$crisp.push(['set', 'user:email', [email]]);
-    if (user.fullName) window.$crisp.push(['set', 'user:nickname', [user.fullName]]);
-  }, [websiteId, isLoaded, user]);
+    if (fullName) window.$crisp.push(['set', 'user:nickname', [fullName]]);
+  }, [websiteId, isLoaded, userId, email, fullName]);
+
+  // Sign-out happens in place, so the Crisp script and session cookie stay in
+  // the browser. Reset the session so the next account doesn't inherit this chat.
+  useEffect(
+    () => () => {
+      window.$crisp?.push(['do', 'session:reset']);
+      window.$crisp?.push(['do', 'chat:hide']);
+    },
+    []
+  );
 
   if (!websiteId) return null;
 
