@@ -14,6 +14,7 @@ import {
   FileSymlink,
   RefreshCw,
   Key,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +24,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 
 export default function DashboardPage() {
@@ -100,20 +100,23 @@ export default function DashboardPage() {
   // Format date in a readable way
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    const diffMs = Date.now() - date.getTime();
+    const minutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
 
-    if (date.toDateString() === today.toDateString()) {
-      return 'Today';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    } else {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      });
-    }
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      ...(date.getFullYear() !== new Date().getFullYear() && {
+        year: 'numeric',
+      }),
+    });
   };
 
   // Format number with commas
@@ -362,23 +365,44 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-1 max-h-[400px] overflow-y-auto">
-              {recentFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-md"
-                >
-                  <div className="flex items-center gap-2">
-                    {getFileIcon(file.type)}
-                    <div>
-                      <p className="text-sm font-medium">{file.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {file.path}
-                      </p>
+              {recentFiles.map((file) => {
+                const row = (
+                  <>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {getFileIcon(file.type)}
+                      <span className="text-sm font-medium truncate">
+                        {file.name}
+                      </span>
+                      {file.path && (
+                        <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                      )}
                     </div>
+                    <span
+                      className="text-xs text-muted-foreground whitespace-nowrap shrink-0"
+                      title={new Date(file.date).toLocaleString()}
+                    >
+                      {formatDate(file.date)}
+                    </span>
+                  </>
+                );
+                const rowClass =
+                  'group flex items-center justify-between gap-4 px-2 py-2 rounded-md hover:bg-slate-50';
+                return file.path ? (
+                  <a
+                    key={file.id}
+                    href={file.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={rowClass}
+                  >
+                    {row}
+                  </a>
+                ) : (
+                  <div key={file.id} className={rowClass}>
+                    {row}
                   </div>
-                  <Badge variant="outline">{formatDate(file.date)}</Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
