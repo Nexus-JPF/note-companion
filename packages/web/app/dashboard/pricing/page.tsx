@@ -67,7 +67,21 @@ export default function PlanSelectionPage() {
       
       <div className="mt-8 pt-6 border-t border-slate-200">
         <p className="text-sm text-slate-500">
-          Already subscribed? <ManageSubscriptionLink className="text-blue-600 hover:underline">Manage or cancel your subscription</ManageSubscriptionLink>. All plans include our core features. Have questions? <a href="#" className="text-blue-600 hover:underline">Contact us</a>
+          Already subscribed? <ManageSubscriptionLink className="text-blue-600 hover:underline">Manage or cancel your subscription</ManageSubscriptionLink>. All plans include our core features. Have questions? <a
+            href="mailto:info@notecompanion.ai"
+            className="text-blue-600 hover:underline"
+            onClick={(e) => {
+              // Prefer the Crisp live chat when it's loaded; otherwise fall back to email.
+              const crisp = (window as unknown as { $crisp?: unknown[] }).$crisp;
+              if (crisp && document.getElementById("crisp-sdk")) {
+                e.preventDefault();
+                crisp.push(["do", "chat:show"]);
+                crisp.push(["do", "chat:open"]);
+              }
+            }}
+          >
+            Contact us
+          </a>
         </p>
       </div>
     </div>
