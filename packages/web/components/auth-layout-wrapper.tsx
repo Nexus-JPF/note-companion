@@ -5,6 +5,7 @@ import { NavigationBar } from '@/components/navigation-bar';
 import { Link } from '@/components/ui/link';
 import ExtraUserSettings from '@/components/user-management';
 import { PHProvider } from '@/app/providers';
+import { CrispWidget } from '@/components/crisp-widget';
 
 interface AuthLayoutWrapperProps {
   children: React.ReactNode;
@@ -36,6 +37,7 @@ export default function AuthLayoutWrapper({
         <main className="min-h-screen text-stone-900 font-sans">
           {children} {/* Render the page content passed from layout */}
         </main>
+        <CrispWidget />
       </SignedIn>
       <SignedOut>
         {/* SignedOut renders its children only when the user is signed out */}

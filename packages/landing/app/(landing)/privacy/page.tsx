@@ -68,6 +68,7 @@ export default function PrivacyPolicyPage() {
           <li>PostHog for product analytics</li>
           <li>Stripe for payments and billing</li>
           <li>Loops for account and product emails</li>
+          <li>Crisp for live chat support (receives your name and email if you are signed in, and sets cookies on our websites)</li>
           <li>Cloudflare R2 for storing files you upload for processing</li>
           <li>Unkey for verifying license keys</li>
         </ul>
