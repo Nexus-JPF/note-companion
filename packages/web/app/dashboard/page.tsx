@@ -85,6 +85,26 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
+  // File links are signed and expire after an hour, so refresh them (and the
+  // relative times) whenever the tab becomes visible again.
+  React.useEffect(() => {
+    const refresh = async () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        const res = await fetch('/api/files/recent');
+        if (res.ok) setRecentFiles(await res.json());
+      } catch (err) {
+        console.error('Error refreshing recent files:', err);
+      }
+    };
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
+
   // Helper to get icon based on file type
   const getFileIcon = (type: string) => {
     switch (type) {
@@ -374,12 +394,15 @@ export default function DashboardPage() {
                         {file.name}
                       </span>
                       {file.path && (
-                        <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                        <span className="sr-only">(opens in new tab)</span>
+                      )}
+                      {file.path && (
+                        <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" />
                       )}
                     </div>
                     <span
                       className="text-xs text-muted-foreground whitespace-nowrap shrink-0"
-                      title={new Date(file.date).toLocaleString()}
+                      title={new Date(file.date).toLocaleString('en-US')}
                     >
                       {formatDate(file.date)}
                     </span>
