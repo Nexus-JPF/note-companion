@@ -71,12 +71,15 @@ export default function PlanSelectionPage() {
             href="mailto:info@notecompanion.ai"
             className="text-blue-600 hover:underline"
             onClick={(e) => {
-              // Prefer the Crisp live chat when it's loaded; otherwise fall back to email.
-              const crisp = (window as unknown as { $crisp?: unknown[] }).$crisp;
-              if (crisp && document.getElementById("crisp-sdk")) {
+              // Crisp swaps the window.$crisp queue array for its own object once
+              // loaded. Only take over the click then; if it's blocked or still
+              // loading, keep the mailto fallback so the link never goes dead.
+              const crisp = window.$crisp as unknown;
+              if (crisp && !Array.isArray(crisp)) {
                 e.preventDefault();
-                crisp.push(["do", "chat:show"]);
-                crisp.push(["do", "chat:open"]);
+                const { push } = crisp as { push: (cmd: unknown[]) => void };
+                push.call(crisp, ["do", "chat:show"]);
+                push.call(crisp, ["do", "chat:open"]);
               }
             }}
           >
