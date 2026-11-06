@@ -16,6 +16,8 @@ export async function submitBetaRequest(
     };
   }
 
+  const isAndroid = source === 'android_waitlist';
+
   try {
     const apiKey = process.env.LOOPS_API_KEY;
     if (!apiKey) {
@@ -35,11 +37,10 @@ export async function submitBetaRequest(
       body: JSON.stringify({
         email,
         subscribed: true,
-        userGroup: 'MobileUsers', // Assign users to the MobileUsers group
+        // Android signups stay off the Mobile App list so they do not get iPhone emails
+        userGroup: isAndroid ? 'AndroidWaitlist' : 'MobileUsers',
         source,
-        mailingLists: {
-          "cm8qkg9g9015e0it80bmo4baz": true
-        }
+        ...(isAndroid ? {} : { mailingLists: { "cm8qkg9g9015e0it80bmo4baz": true } }),
       }),
     });
     
