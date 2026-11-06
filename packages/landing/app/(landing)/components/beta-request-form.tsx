@@ -8,11 +8,21 @@ import { submitBetaRequest } from "../actions";
 interface BetaRequestFormProps {
   className?: string;
   formId?: string;
+  source?: string;
+  buttonLabel?: string;
+  helperText?: string;
+  successTitle?: string;
+  successText?: string;
 }
 
 export function BetaRequestForm({ 
   className = "", 
-  formId = "form-" + Math.random().toString(36).substring(2, 9) 
+  formId = "form-" + Math.random().toString(36).substring(2, 9),
+  source,
+  buttonLabel = "Get Access Now",
+  helperText = "Access instructions will be sent to your email immediately.",
+  successTitle = "Thanks for joining!",
+  successText = "You now have beta access! Check your email for login instructions to start using Note Companion Mobile.",
 }: BetaRequestFormProps) {
   const [isPending, startTransition] = useTransition();
   const [isSuccess, setIsSuccess] = useState(false);
@@ -31,7 +41,7 @@ export function BetaRequestForm({
     
     startTransition(async () => {
       try {
-        const result = await submitBetaRequest(email);
+        const result = await submitBetaRequest(email, source);
         
         if (result.success) {
           setIsSuccess(true);
@@ -71,7 +81,7 @@ export function BetaRequestForm({
               type="submit" 
               disabled={isPending}
             >
-              {isPending ? "Requesting..." : "Get Access Now"}
+              {isPending ? "Requesting..." : buttonLabel}
               <Send className="ml-2 h-4 w-4" />
             </Button>
           </form>
@@ -79,7 +89,7 @@ export function BetaRequestForm({
             <p className="text-red-500 text-xs mt-2 text-center">{errorMessage}</p>
           )}
           <p className="text-xs text-muted-foreground mt-2 text-center">
-            Access instructions will be sent to your email immediately.
+            {helperText}
           </p>
         </div>
       ) : (
@@ -87,9 +97,9 @@ export function BetaRequestForm({
           <div className="bg-green-50 text-green-800 rounded-full p-2 mb-3">
             <CheckCircle className="h-6 w-6" />
           </div>
-          <h4 className="text-lg font-medium mb-1">Thanks for joining!</h4>
+          <h4 className="text-lg font-medium mb-1">{successTitle}</h4>
           <p className="text-muted-foreground text-sm text-center max-w-md">
-            You now have beta access! Check your email for login instructions to start using Note Companion Mobile.
+            {successText}
           </p>
         </div>
       )}

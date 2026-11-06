@@ -5,7 +5,10 @@ interface SubmitBetaRequestResult {
   message?: string;
 }
 
-export async function submitBetaRequest(email: string): Promise<SubmitBetaRequestResult> {
+export async function submitBetaRequest(
+  email: string,
+  source: string = 'mobile_beta_signup'
+): Promise<SubmitBetaRequestResult> {
   if (!email || !email.includes('@')) {
     return {
       success: false,
@@ -33,7 +36,7 @@ export async function submitBetaRequest(email: string): Promise<SubmitBetaReques
         email,
         subscribed: true,
         userGroup: 'MobileUsers', // Assign users to the MobileUsers group
-        source: 'mobile_beta_signup',
+        source,
         mailingLists: {
           "cm8qkg9g9015e0it80bmo4baz": true
         }
