@@ -5,13 +5,18 @@ interface SubmitBetaRequestResult {
   message?: string;
 }
 
-export async function submitBetaRequest(email: string): Promise<SubmitBetaRequestResult> {
+export async function submitBetaRequest(
+  email: string,
+  source: string = 'mobile_beta_signup'
+): Promise<SubmitBetaRequestResult> {
   if (!email || !email.includes('@')) {
     return {
       success: false,
       message: 'Please enter a valid email address'
     };
   }
+
+  const isAndroid = source === 'android_waitlist';
 
   try {
     const apiKey = process.env.LOOPS_API_KEY;
@@ -32,11 +37,10 @@ export async function submitBetaRequest(email: string): Promise<SubmitBetaReques
       body: JSON.stringify({
         email,
         subscribed: true,
-        userGroup: 'MobileUsers', // Assign users to the MobileUsers group
-        source: 'mobile_beta_signup',
-        mailingLists: {
-          "cm8qkg9g9015e0it80bmo4baz": true
-        }
+        // Android signups stay off the Mobile App list so they do not get iPhone emails
+        userGroup: isAndroid ? 'AndroidWaitlist' : 'MobileUsers',
+        source,
+        ...(isAndroid ? {} : { mailingLists: { "cm8qkg9g9015e0it80bmo4baz": true } }),
       }),
     });
     

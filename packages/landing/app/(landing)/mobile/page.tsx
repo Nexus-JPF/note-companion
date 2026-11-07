@@ -1,26 +1,45 @@
 import { Metadata } from "next";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Smartphone, Check, Camera, FileText, MessageSquare, Bell } from "lucide-react";
+import { ArrowRight, Smartphone, Camera, FileText, RefreshCw } from "lucide-react";
 import Image from 'next/image';
 import Link from "next/link";
 import { BetaRequestForm } from "../components/beta-request-form";
 import { defaultOpenGraph } from "@/lib/og";
 
 export const metadata: Metadata = {
-  title: "Note Companion Mobile - Your AI-powered Knowledge Partner with OCR",
+  title: "Note Companion for iPhone - Handwriting OCR for Obsidian",
   description:
-    "Access your notes anywhere with the Note Companion mobile app. Capture text from images with our powerful OCR, manage your knowledge, and stay organized across all your devices.",
+    "Note Companion for iPhone turns photos of handwritten notes, documents and whiteboards into searchable text, then syncs them to your Obsidian vault. Free on the App Store.",
   alternates: {
     canonical: '/mobile',
   },
   openGraph: {
     ...defaultOpenGraph,
-    title: "Note Companion Mobile - Your AI-powered Knowledge Partner with OCR",
+    title: "Note Companion for iPhone - Handwriting OCR for Obsidian",
     description:
-      "Access your notes anywhere with the Note Companion mobile app. Capture text from images with our powerful OCR, manage your knowledge, and stay organized across all your devices.",
+      "Note Companion for iPhone turns photos of handwritten notes, documents and whiteboards into searchable text, then syncs them to your Obsidian vault. Free on the App Store.",
     url: '/mobile',
   },
 };
+
+const APP_STORE_URL = "https://apps.apple.com/app/id6799668806";
+
+function AppStoreButton({ location }: { location: string }) {
+  return (
+    <a
+      href={APP_STORE_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-location={location}
+      className="inline-flex items-center gap-3 rounded-xl bg-black px-6 py-3 text-white transition-opacity hover:opacity-90"
+    >
+      <Smartphone className="h-6 w-6" />
+      <span className="text-left leading-tight">
+        <span className="block text-xs">Download on the</span>
+        <span className="block text-lg font-semibold">App Store</span>
+      </span>
+    </a>
+  );
+}
 
 export default function MobilePage() {
   return (
@@ -53,18 +72,17 @@ export default function MobilePage() {
             <div className="h-[1px] w-8 bg-muted-foreground/20"></div>
           </div>
           <p className="mt-6 text-lg leading-8">
-            The Note Companion mobile app transforms how you capture and organize knowledge. With powerful OCR technology, seamless sync with Obsidian, and AI-powered organization, your notes become a truly portable knowledge ecosystem.
+            Photograph handwritten notes, documents and whiteboards. Note Companion turns them into searchable text and syncs them to your Obsidian vault.
           </p>
           
           {/* Top CTA */}
-          <div className="mt-8 mb-16 flex flex-col items-center">
-            <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-amber-100 text-amber-800 mb-4">
-              <Bell className="h-4 w-4 mr-2" /> Coming Soon
-            </div>
-            <h3 className="text-xl font-semibold mb-3">Get Early Access</h3>
-            <BetaRequestForm className="w-full" formId="top-beta-form" />
+          <div className="mt-8 mb-16 flex flex-col items-center gap-3">
+            <AppStoreButton location="hero" />
+            <p className="text-sm text-muted-foreground">
+              Free for iPhone. Requires iOS 17 or later.
+            </p>
           </div>
-          
+
           {/* OCR Before/After */}
           <div className="mt-12 mb-12">
             <h2 className="text-2xl font-bold mb-6">Turn Photos into Searchable Text</h2>
@@ -107,15 +125,22 @@ export default function MobilePage() {
             </div>
           </div>
           
-          {/* Beta Request Signup */}
+          {/* Android notify */}
           <div className="mt-10 bg-gradient-to-r from-primary/10 to-primary/5 p-8 rounded-xl border border-primary/20">
-            <h3 className="text-xl font-bold mb-3">Request Beta Access</h3>
+            <h3 className="text-xl font-bold mb-3">Using Android?</h3>
             <p className="text-muted-foreground mb-5">
-              Be among the first to experience Note Companion Mobile. Sign up for early access and exclusive updates.
+              The app is iPhone-only for now. Leave your email and we will tell you when an Android version is ready.
             </p>
-            <BetaRequestForm formId="middle-beta-form" />
+            <BetaRequestForm
+              formId="android-notify-form"
+              source="android_waitlist"
+              buttonLabel="Notify Me"
+              helperText="One email when Android is ready. No spam."
+              successTitle="You're on the list"
+              successText="We'll email you when the Android app is ready."
+            />
           </div>
-          
+
         </div>
       </div>
 
@@ -133,7 +158,7 @@ export default function MobilePage() {
               </div>
               <h3 className="text-xl font-semibold mb-3">Advanced OCR</h3>
               <p className="text-muted-foreground mb-4">
-                Convert physical documents, whiteboards, and handwritten notes into perfectly formatted digital text with our state-of-the-art OCR technology.
+                Photograph handwritten notes, documents and whiteboards and get clean, searchable text back in seconds.
               </p>
             </div>
             {/* Feature 2 */}
@@ -141,19 +166,19 @@ export default function MobilePage() {
               <div className="mb-4 text-primary">
                 <FileText className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Seamless Organization</h3>
+              <h3 className="text-xl font-semibold mb-3">Photos and Files</h3>
               <p className="text-muted-foreground mb-4">
-                Captured notes are automatically sorted into the right folders with relevant tags thanks to our AI organization system that integrates with your Obsidian vault.
+                Take a photo, pick one from your library, or upload a file. Everything you process is kept in your My Notes tab.
               </p>
             </div>
             {/* Feature 3 */}
             <div className="bg-background/60 backdrop-blur-sm p-8 rounded-xl border border-border/40">
               <div className="mb-4 text-primary">
-                <MessageSquare className="h-8 w-8" />
+                <RefreshCw className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">AI Chat Integration</h3>
+              <h3 className="text-xl font-semibold mb-3">Sync to Obsidian</h3>
               <p className="text-muted-foreground mb-4">
-                Chat with your notes on the go. Ask questions, get summaries, or modify text using our powerful AI assistant directly from your mobile device.
+                Your processed notes sync to your Obsidian vault through the Note Companion plugin, so paper notes end up next to everything else you write.
               </p>
             </div>
           </div>
@@ -168,14 +193,13 @@ export default function MobilePage() {
             Get Started Today
           </h2>
           <p className="text-xl text-muted-foreground mb-10">
-            Request access to the Note Companion mobile beta and transform how you capture, organize, and interact with your knowledge.
+            Download Note Companion for iPhone and turn your next handwritten page into searchable text.
           </p>
-          
-          {/* Secondary Beta Form */}
-          <BetaRequestForm className="mb-8" formId="bottom-beta-form" />
-          
+
+          <AppStoreButton location="footer" />
+
           <p className="mt-6 text-sm text-muted-foreground">
-            Will support iOS 15+ and Android 10+. <Link href="/privacy" className="underline hover:text-primary">Privacy Policy</Link>
+            Requires iOS 17 or later. <Link href="/privacy" className="underline hover:text-primary">Privacy Policy</Link>
           </p>
         </div>
       </div>
