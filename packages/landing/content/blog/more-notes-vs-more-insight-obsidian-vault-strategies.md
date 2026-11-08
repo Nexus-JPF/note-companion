@@ -2,13 +2,12 @@
 title: 'Do You Need More Notes or More Insight? Obsidian Vault Strategies Compared'
 slug: 'more-notes-vs-more-insight-obsidian-vault-strategies'
 date: '2026-07-04'
+updated: '2026-11-08'
 category: 'Opinions'
 tags: ['obsidian', 'pkm', 'vault-organization', 'insights', 'workflow']
 excerpt: 'Is your Obsidian vault overflowing with notes, or is it streamlined for insight? We compare two popular strategies and show when quantity or curation wins.'
-image: '/blog/images/more-notes-vs-more-insight-obsidian-vault-strategies.png'
+image: '/blog/images/more-notes-vs-more-insight-obsidian-vault-strategies.webp'
 ---
-
-# Do You Need More Notes or More Insight? Obsidian Vault Strategies Compared
 
 ## The Myth of "More Notes, More Insight"
 
@@ -72,7 +71,7 @@ To regain control, Emily switched to a curated workflow:
 2. **Weekly processing sessions**: Every Friday, she reviews her inbox and processes notes.
 3. **Atomic notes**: She summarizes key arguments into individual notes (e.g., `projects/thesis/CarbonTaxArguments.md`), tags them (`#policy #climate`), and links to sources like `[[Smith_2022_ClimateImpact]]`.
 4. **Folder discipline**: Processed notes move into **projects/thesis/** or **literature/review/**, so she can focus on what matters.
-5. **AI assistance**: Emily uses Note Companion’s AI Organizer to suggest tags and folders, saving her time and ensuring consistency.
+5. **AI assistance**: Emily uses Note Companion’s Organizer to get tag and folder suggestions she can review, saving her time and keeping tags consistent.
 
 Now, when Emily needs to assemble her thesis argument, she navigates clear links and curated cards—no more wading through an endless backlog.
 
@@ -80,9 +79,9 @@ Now, when Emily needs to assemble her thesis argument, she navigates clear links
 
 AI can be a game-changer—but only if it fits your workflow. Here’s where tools like Note Companion can save you time (and sanity):
 
-- **Inbox Auto-Organization:** When you drop a note into your inbox, AI can recommend folders or tags—no more endless triage.
+- **Inbox processing:** Notes you drop into `_NoteCompanion/Inbox` are renamed automatically, and can be filed and tagged based on their content, so there is less triage. For notes already in your vault, the Organizer suggests folders and tags that you review before applying.
 - **Smart Summaries:** AI can distill meeting transcripts or articles into digestible summaries, making your processing sessions faster.
-- **Connection Suggestions:** AI-powered prompts can spot links between notes you might overlook, especially in larger vaults.
+- **Vault chat:** Ask questions across your notes, like “What have I captured about onboarding?”, to resurface material you have forgotten, especially in larger vaults.
 
 Crucially, AI works best when your vault has some structure. If your notes are pure chaos, even the smartest plugin can’t produce magic. Use AI to enhance your workflow—not replace your judgment.
 
