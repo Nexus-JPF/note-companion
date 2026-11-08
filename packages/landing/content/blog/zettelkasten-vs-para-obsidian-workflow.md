@@ -117,7 +117,7 @@ Obsidian’s flexibility means processing notes can become a bottleneck. Here’
 
 - **Inbox processing:** Note Companion can suggest folders and tags based on a note’s content, which speeds up the weekly triage. That helps with either framework, since PARA needs a folder and Zettelkasten still benefits from a few tags.
 - **Vault-wide searching:** Use Note Companion’s vault chat to ask questions like “Which projects mention onboarding?” or “What research connects to medieval trade?”—no matter your framework.
-- **Consistent titles:** It can suggest clearer filenames for inbox notes, so a growing vault stays easy to scan.
+- **Consistent titles:** Notes you drop into `_NoteCompanion/Inbox` are renamed automatically, so a growing vault stays easy to scan.
 
 In Zettelkasten, deciding what connects to what is the actual thinking, so keep that part by hand.
 
