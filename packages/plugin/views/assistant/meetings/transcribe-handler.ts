@@ -121,6 +121,7 @@ export class TranscribeHandler {
           headers: {
             Authorization: `Bearer ${plugin.settings.API_KEY}`,
           },
+          throw: false,
         }
       );
 

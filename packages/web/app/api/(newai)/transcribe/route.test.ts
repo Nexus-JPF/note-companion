@@ -63,6 +63,8 @@ const mockNormalizeAudioForWhisper = jest.fn(
 jest.mock('@/lib/audio/split-audio', () => ({
   normalizeAudioForWhisper: (path: string, extension?: string) =>
     mockNormalizeAudioForWhisper(path, extension),
+  isBinaryUnavailable: (err: unknown) =>
+    ['ENOENT', 'EACCES', 'EPERM'].includes((err as { code?: string })?.code ?? ''),
   splitAudioFileBySizeHeuristic: (
     tempPath: string,
     extension: string,
@@ -516,6 +518,79 @@ describe('POST /api/(newai)/transcribe', () => {
       expect(incrementAudioTranscriptionUsage).toHaveBeenCalledTimes(1);
       expect((incrementAudioTranscriptionUsage as jest.Mock).mock.calls[0][0]).toBe('test-user-id');
       expect((incrementAudioTranscriptionUsage as jest.Mock).mock.calls[0][1]).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Audio error status mapping', () => {
+    const postLargeAudio = () => {
+      jest.clearAllMocks();
+      mockVerifyKey.mockResolvedValue({
+        data: { valid: true, identity: { externalId: 'test-user-id' } },
+        error: null,
+      });
+      (checkAudioTranscriptionQuota as jest.Mock).mockResolvedValue({
+        remaining: 100,
+        usageError: false,
+      });
+      (fsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
+      (fsPromises.stat as jest.Mock).mockResolvedValue({ size: 26 * 1024 * 1024 });
+      (fsPromises.unlink as jest.Mock).mockResolvedValue(undefined);
+      return POST(
+        new Request('http://localhost:3000/api/transcribe', {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer valid-key',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            audio: `data:audio/mp3;base64,${Buffer.from('x'.repeat(1000)).toString('base64')}`,
+            extension: 'mp3',
+          }),
+        })
+      );
+    };
+
+    it('returns 503 when ffmpeg/ffprobe cannot be started', async () => {
+      const promise = postLargeAudio();
+      mockSplitAudioFileBySizeHeuristic.mockRejectedValue(
+        Object.assign(new Error('spawn ffprobe ENOENT'), { code: 'ENOENT' })
+      );
+      const response = await promise;
+      const data = await response.json();
+      expect(response.status).toBe(503);
+      expect(data.code).toBe('AUDIO_PROCESSING_UNAVAILABLE');
+    });
+
+    it('returns 400 when the file itself cannot be split', async () => {
+      const promise = postLargeAudio();
+      mockSplitAudioFileBySizeHeuristic.mockRejectedValue(
+        new Error('ffprobe did not return duration')
+      );
+      const response = await promise;
+      const data = await response.json();
+      expect(response.status).toBe(400);
+      expect(data.code).toBe('AUDIO_SPLIT_FAILED');
+    });
+
+    it('returns 500 (not 400) when Whisper fails on a chunk', async () => {
+      const promise = postLargeAudio();
+      mockSplitAudioFileBySizeHeuristic.mockResolvedValue({
+        chunkPaths: [join(tmpdir(), 'chunk_0.mp3')],
+        overlapSeconds: 2,
+      });
+      mockOpenAICreate.mockRejectedValue(new Error('429 rate limited'));
+      const response = await promise;
+      expect(response.status).toBe(500);
+    });
+
+    it('returns 503 when ffmpeg is unavailable during M4A normalization', async () => {
+      const promise = postLargeAudio();
+      mockNormalizeAudioForWhisper.mockRejectedValueOnce(
+        new Error('FFMPEG_UNAVAILABLE')
+      );
+      (fsPromises.stat as jest.Mock).mockResolvedValue({ size: 1024 * 1024 });
+      const response = await promise;
+      expect(response.status).toBe(503);
     });
   });
 

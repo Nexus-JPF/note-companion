@@ -761,6 +761,7 @@ export default class FileOrganizer extends Plugin {
     const response = await obsidianFetch(`${this.getServerUrl()}/api/transcribe`, {
       method: "POST",
       body: formData,
+      throw: false,
       headers: {
         Authorization: `Bearer ${this.settings.API_KEY}`,
       },
@@ -808,6 +809,7 @@ export default class FileOrganizer extends Plugin {
             "Content-Type": "application/json",
             Authorization: `Bearer ${this.settings.API_KEY}`,
           },
+          throw: false,
           body: JSON.stringify({
             filename: fileName,
             contentType: mimeType,
@@ -854,6 +856,7 @@ export default class FileOrganizer extends Plugin {
           "Content-Type": mimeType,
           // DO NOT include Authorization header - presigned URL handles auth
         },
+        throw: false,
         body: audioBuffer, // Send ArrayBuffer directly - no conversion needed
       });
 
@@ -872,6 +875,7 @@ export default class FileOrganizer extends Plugin {
             "Content-Type": "application/json",
             Authorization: `Bearer ${this.settings.API_KEY}`,
           },
+          throw: false,
           body: JSON.stringify({
             fileUrl: publicUrl,
             key: key,

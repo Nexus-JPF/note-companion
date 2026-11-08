@@ -5,6 +5,8 @@ export type ObsidianFetchInit = {
   headers?: Record<string, string> | Headers;
   body?: string | ArrayBuffer | FormData | Blob | null;
   signal?: AbortSignal;
+  /** Pass false to receive 4xx/5xx as a normal Response (requestUrl throws by default). */
+  throw?: boolean;
 };
 
 function normalizeHeaders(
@@ -135,6 +137,7 @@ export async function obsidianFetch(
     headers: requestHeaders,
     body,
     contentType,
+    throw: init?.throw,
   }).then(response => {
     const responseText = response.text;
 

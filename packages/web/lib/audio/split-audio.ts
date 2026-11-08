@@ -52,6 +52,12 @@ function getFfmpegPath(): string {
   }
 }
 
+/** True when the ffmpeg/ffprobe binary itself could not be started (missing or not executable). */
+export function isBinaryUnavailable(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
+  return code === 'ENOENT' || code === 'EACCES' || code === 'EPERM';
+}
+
 /**
  * Normalizes M4A/MP4 files for the Whisper API by re-encoding to MP3.
  * iOS and some recorders produce M4A with moov at the end or non-AAC codecs, which Whisper can reject.
@@ -85,6 +91,10 @@ export async function normalizeAudioForWhisper(
     return { path: outPath, cleanup: true };
   } catch (err) {
     console.warn('[normalizeAudioForWhisper] ffmpeg re-encode failed:', err);
+    // Binary missing/not executable is our infrastructure problem, not a bad file
+    if (isBinaryUnavailable(err)) {
+      throw new Error('FFMPEG_UNAVAILABLE');
+    }
     // Don't fall back: the file is likely corrupted/fragmented and Whisper would reject it too
     const e = new Error('AUDIO_UNREADABLE');
     if (err instanceof Error) (e as Error & { cause?: unknown }).cause = err;
