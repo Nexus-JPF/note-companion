@@ -69,6 +69,7 @@ import {
   readResponseJson,
   getApiError,
   type ApiErrorBody,
+  readApiErrorMessage,
 } from "./lib/api-json";
 import { addTextSelectionContext } from "./views/assistant/ai-chat/use-context-items";
 import {
@@ -911,9 +912,8 @@ export default class FileOrganizer extends Plugin {
     });
 
     if (!response.ok) {
-      const errorData = await readResponseJson<ApiErrorBody>(response);
       throw new Error(
-        `Transcription failed: ${getApiError(errorData) ?? response.statusText}`
+        `Transcription failed: ${await readApiErrorMessage(response)}`
       );
     }
     return response;
@@ -942,117 +942,97 @@ export default class FileOrganizer extends Plugin {
     const fileName = `audio-${Date.now()}.${fileExtension}`;
     const mimeType = `audio/${fileExtension}`;
 
-    try {
-      // Step 1: Get presigned URL from backend (small JSON request, bypasses Vercel body size limit)
-      const presignedUrlResponse = await obsidianFetch(
-        `${this.getServerUrl()}/api/create-upload-url`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${this.settings.API_KEY}`,
-          },
-          throw: false,
-          body: JSON.stringify({
-            filename: fileName,
-            contentType: mimeType,
-          }),
-        }
-      );
-
-      if (!presignedUrlResponse.ok) {
-        const errorData =
-          await readResponseJson<PresignedUrlErrorBody>(presignedUrlResponse);
-        const errorMessage =
-          getApiError(errorData) || errorData.details || "Unknown error";
-
-        // Check if error is due to missing R2 configuration
-        if (
-          errorMessage.includes("Missing R2 configuration") ||
-          errorMessage.includes("R2 storage is not properly configured") ||
-          errorMessage.includes("R2_PUBLIC_URL")
-        ) {
-          // Fall back to direct upload for self-hosted instances without R2
-          console.debug(
-            "R2 not configured, falling back to direct upload for self-hosted instance"
-          );
-          return this.transcribeAudioDirectUpload(audioBuffer, fileExtension);
-        }
-
-        throw new Error(`Failed to get presigned URL: ${errorMessage}`);
-      }
-
-      const { uploadUrl, key, publicUrl } =
-        await readResponseJson<PresignedUrlResponse>(presignedUrlResponse);
-
-      if (!uploadUrl || !key || !publicUrl) {
-        throw new Error("Invalid response from create-upload-url endpoint");
-      }
-
-      // Step 2: Upload directly to R2 using presigned URL (bypasses Vercel completely)
-      // This avoids Vercel's 4.5MB body size limit
-      // CORS is configured on R2 bucket, so we can use fetch with ArrayBuffer directly
-      // This ensures binary data integrity without any string conversion
-      const uploadResponse = await obsidianFetch(uploadUrl, {
-        method: "PUT",
+    // Only R2-not-configured falls back to direct upload (handled in step 1);
+    // everything else (auth, quota, 5xx) surfaces as-is rather than being masked
+    // by a body-limit error from the fallback.
+    // Step 1: Get presigned URL from backend (small JSON request, bypasses Vercel body size limit)
+    const presignedUrlResponse = await obsidianFetch(
+      `${this.getServerUrl()}/api/create-upload-url`,
+      {
+        method: "POST",
         headers: {
-          "Content-Type": mimeType,
-          // DO NOT include Authorization header - presigned URL handles auth
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.settings.API_KEY}`,
         },
         throw: false,
-        body: audioBuffer, // Send ArrayBuffer directly - no conversion needed
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error(
-          `Failed to upload audio to R2: ${uploadResponse.status} ${uploadResponse.statusText}`
-        );
+        body: JSON.stringify({
+          filename: fileName,
+          contentType: mimeType,
+        }),
       }
+    );
 
-      // Step 3: Trigger transcription with the uploaded file URL
-      const transcribeResponse = await obsidianFetch(
-        `${this.getServerUrl()}/api/transcribe`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${this.settings.API_KEY}`,
-          },
-          throw: false,
-          body: JSON.stringify({
-            fileUrl: publicUrl,
-            key: key,
-            extension: fileExtension,
-          }),
-        }
-      );
+    if (!presignedUrlResponse.ok) {
+      const errorMessage = await readApiErrorMessage(presignedUrlResponse);
 
-      if (!transcribeResponse.ok) {
-        const errorData =
-          await readResponseJson<ApiErrorBody>(transcribeResponse);
-        throw new Error(
-          `Transcription failed: ${getApiError(errorData) ?? transcribeResponse.statusText}`
-        );
-      }
-
-      return transcribeResponse;
-    } catch (error) {
-      // If any error related to presigned URL or R2, try direct upload as fallback
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      // Check if error is due to missing R2 configuration
       if (
-        errorMessage.includes("presigned URL") ||
-        errorMessage.includes("R2") ||
-        errorMessage.includes("Failed to upload audio to R2")
+        errorMessage.includes("Missing R2 configuration") ||
+        errorMessage.includes("R2 storage is not properly configured") ||
+        errorMessage.includes("R2_PUBLIC_URL")
       ) {
+        // Fall back to direct upload for self-hosted instances without R2
         console.debug(
-          "R2 upload failed, falling back to direct upload for self-hosted instance"
+          "R2 not configured, falling back to direct upload for self-hosted instance"
         );
         return this.transcribeAudioDirectUpload(audioBuffer, fileExtension);
       }
-      // Re-throw other errors (network, auth, etc.)
-      throw error;
+
+      throw new Error(`Failed to get presigned URL: ${errorMessage}`);
     }
+
+    const { uploadUrl, key, publicUrl } =
+      await readResponseJson<PresignedUrlResponse>(presignedUrlResponse);
+
+    if (!uploadUrl || !key || !publicUrl) {
+      throw new Error("Invalid response from create-upload-url endpoint");
+    }
+
+    // Step 2: Upload directly to R2 using presigned URL (bypasses Vercel completely)
+    // This avoids Vercel's 4.5MB body size limit
+    // CORS is configured on R2 bucket, so we can use fetch with ArrayBuffer directly
+    // This ensures binary data integrity without any string conversion
+    const uploadResponse = await obsidianFetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": mimeType,
+        // DO NOT include Authorization header - presigned URL handles auth
+      },
+      throw: false,
+      body: audioBuffer, // Send ArrayBuffer directly - no conversion needed
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(
+        `Failed to upload audio to R2: HTTP ${uploadResponse.status}`
+      );
+    }
+
+    // Step 3: Trigger transcription with the uploaded file URL
+    const transcribeResponse = await obsidianFetch(
+      `${this.getServerUrl()}/api/transcribe`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.settings.API_KEY}`,
+        },
+        throw: false,
+        body: JSON.stringify({
+          fileUrl: publicUrl,
+          key: key,
+          extension: fileExtension,
+        }),
+      }
+    );
+
+    if (!transcribeResponse.ok) {
+      throw new Error(
+        `Transcription failed: ${await readApiErrorMessage(transcribeResponse)}`
+      );
+    }
+
+    return transcribeResponse;
   }
 
   async generateTranscriptFromAudio(

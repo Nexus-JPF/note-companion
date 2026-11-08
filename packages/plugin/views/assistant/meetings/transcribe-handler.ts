@@ -5,8 +5,7 @@ import { RecordingMetadata, MeetingMetadataManager } from "./meeting-metadata";
 import { obsidianFetch } from "../../../lib/obsidian-fetch";
 import {
   readResponseJson,
-  getApiError,
-  type ApiErrorBody,
+  readApiErrorMessage,
 } from "../../../lib/api-json";
 
 type TranscribeResponse = { text: string };
@@ -59,10 +58,9 @@ export class TranscribeHandler {
       );
 
       if (!response.ok) {
-        const errorData = await readResponseJson<ApiErrorBody>(response);
         return {
           success: false,
-          error: getApiError(errorData) ?? "Transcription failed",
+          error: await readApiErrorMessage(response),
         };
       }
 
