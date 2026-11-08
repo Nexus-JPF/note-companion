@@ -1,14 +1,12 @@
 ---
-title: 'Zettelkasten vs PARA in Obsidian: Find Your Ideal Vault Workflow'
+title: 'Zettelkasten vs PARA in Obsidian: Which to Pick?'
 slug: 'zettelkasten-vs-para-obsidian-workflow'
 date: '2026-09-12'
 category: 'Guides'
 tags: ['obsidian', 'pkm', 'zettelkasten', 'para', 'workflow']
-excerpt: 'Explore the practical differences between Zettelkasten and PARA in Obsidian to choose a PKM workflow that truly matches your project style and note-taking habits.'
+excerpt: 'Zettelkasten or PARA in Obsidian? Compare both side by side, follow a setup walkthrough for each, and pick (or blend) the one that fits how you work.'
 image: '/blog/images/zettelkasten-vs-para-obsidian-workflow.png'
 ---
-
-# Zettelkasten vs PARA in Obsidian: Find Your Ideal Vault Workflow
 
 ## The PKM Dilemma: Organizing Chaos in Obsidian
 
