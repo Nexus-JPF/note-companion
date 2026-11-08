@@ -91,7 +91,7 @@ const LicenseForm = () => {
     const handleSetIsPaidUser = async () => {
       if (!user) return;
       try {
-        const isPaid = await isPaidUser(user.id);
+        const isPaid = await isPaidUser();
         setIsPaid(isPaid);
       } catch (error: unknown) {
         // Handle Server Action deployment mismatch errors silently

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getToken, handleAuthorizationV2 } from '@/lib/handleAuthorization';
 import { createAnonymousUser } from '../anon';
-import { createLicenseKeyFromUserId } from '@/app/actions';
+import { createLicenseKeyFromUserId } from '@/lib/account-server';
 import { createEmptyUserUsage, db, UserUsageTable } from '@/drizzle/schema';
 import { config, PRICES } from '@/srm.config';
 import { getUrl } from '@/lib/getUrl';
@@ -89,9 +89,6 @@ async function ensureAuthorizedUser(req: NextRequest) {
       error: errorMessage,
       status: errorStatus,
       hadLicenseKey: !!initialLicenseKey,
-      licenseKeyPrefix: initialLicenseKey
-        ? initialLicenseKey.substring(0, 10) + '...'
-        : 'none',
       path: req.nextUrl.pathname,
     });
 
@@ -100,7 +97,6 @@ async function ensureAuthorizedUser(req: NextRequest) {
       console.warn(
         'License key provided but authentication failed - creating anonymous user as fallback',
         {
-          keyPrefix: initialLicenseKey.substring(0, 10) + '...',
           error: errorMessage,
         }
       );

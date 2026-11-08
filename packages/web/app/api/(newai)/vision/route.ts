@@ -1,17 +1,16 @@
 import { NextResponse, NextRequest } from "next/server";
-import { generateText } from "ai";
-import { getModel } from "@/lib/models";
 import {
   handleAuthorizationV2,
   AuthorizationError,
 } from "@/lib/handleAuthorization";
 import { incrementAndLogTokenUsage } from "@/lib/incrementAndLogTokenUsage";
+import { extractTextFromVisionImage } from "@/lib/ocr-extract";
 import {
   normalizeVisionImage,
   validateVisionImageInput,
 } from "@/lib/vision-image";
 
-export const maxDuration = 300; // Vision models can be slower for complex images
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,46 +25,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const model = getModel();
+    const dataUrl = normalizeVisionImage(
+      validation.base64,
+      validation.mediaType
+    );
 
-    const defaultInstruction =
-      "Extract all text from the image comprehensively, preserving formatting. Focus only on extracting readable text, not describing visual elements.";
-    const responseInstruction = "Respond with only the extracted text.";
-
-    const promptText = payload.instructions?.trim()
-      ? `${defaultInstruction} ${payload.instructions} ${responseInstruction}`
-      : `${defaultInstruction} ${responseInstruction}`;
-
-    const response = await generateText({
-      model: model as any,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: promptText },
-            {
-              type: "image",
-              image: normalizeVisionImage(
-                validation.base64,
-                validation.mediaType
-              ),
-            },
-          ],
-        },
-      ],
+    const result = await extractTextFromVisionImage({
+      image: { kind: "dataUrl", dataUrl },
+      customInstructions: payload?.instructions,
+      retryOnEmpty: true,
     });
 
-    const tokens =
-      response.usage?.totalTokens ??
-      Math.ceil((response.text?.length ?? 0) / 4);
+    if (result.error) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
+    }
 
     try {
-      await incrementAndLogTokenUsage(userId, tokens);
+      await incrementAndLogTokenUsage(userId, result.tokensUsed);
     } catch (error) {
       console.error("Failed to increment token usage for vision:", error);
     }
 
-    return NextResponse.json({ text: response.text });
+    return NextResponse.json({ text: result.text });
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return NextResponse.json(

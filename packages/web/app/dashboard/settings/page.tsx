@@ -1,5 +1,6 @@
 "use client";
 
+import { ManageSubscriptionLink } from "@/components/manage-subscription-link";
 import { tw } from "@/lib/utils";
 import { StyledContainer } from "@/components/ui/utils";
 import {
@@ -43,7 +44,7 @@ export default function SettingsPage() {
                 </CardTitle>
               </div>
               <CardDescription className={tw("pt-1")}>
-                Manage your plan and payment details
+                Change plan, update payment method, or cancel your subscription
               </CardDescription>
             </CardHeader>
 
@@ -55,9 +56,9 @@ export default function SettingsPage() {
                 variant="outline"
                 asChild
               >
-                <a href={process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL_URL}>
-                  Manage Subscription
-                </a>
+                <ManageSubscriptionLink>
+                  Manage or cancel subscription
+                </ManageSubscriptionLink>
               </Button>
             </CardContent>
           </Card>

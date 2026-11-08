@@ -23,6 +23,33 @@ process.chdir(pluginDir);
 const outdir = isGithubAction
   ? path.join(pluginDir, "dist")
   : path.join(pluginDir, "../..");
+
+/** Local Obsidian dev vault — `pnpm dev` copies artifacts here after each build. */
+const devVaultPluginDir = path.join(
+  pluginDir,
+  "../../demo-vault/.obsidian/plugins/fileorganizer2000"
+);
+
+function copyDevBuildToDemoVault(outputDir) {
+  if (isGithubAction || prod) {
+    return;
+  }
+  if (!fs.existsSync(devVaultPluginDir)) {
+    return;
+  }
+  for (const file of ["main.js", "styles.css"]) {
+    const src = path.join(outputDir, file);
+    if (!fs.existsSync(src)) {
+      continue;
+    }
+    fs.copyFileSync(src, path.join(devVaultPluginDir, file));
+  }
+  const manifestSrc = path.join(outputDir, "manifest.json");
+  if (fs.existsSync(manifestSrc)) {
+    fs.copyFileSync(manifestSrc, path.join(devVaultPluginDir, "manifest.json"));
+  }
+  console.log(`[dev] Copied plugin build to ${devVaultPluginDir}`);
+}
 const requireFromPlugin = createRequire(path.join(pluginDir, "package.json"));
 const reactDir = path.dirname(requireFromPlugin.resolve("react/package.json"));
 const reactDomDir = path.dirname(requireFromPlugin.resolve("react-dom/package.json"));
@@ -49,6 +76,7 @@ function postProcessCss(outputDir) {
 	if (fs.existsSync(stylesPath)) {
 		fs.copyFileSync(stylesPath, mainPath);
 	}
+	copyDevBuildToDemoVault(resolvedDir);
 }
 
 const context = await esbuild.context({

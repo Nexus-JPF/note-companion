@@ -9,6 +9,8 @@ if (typeof window !== "undefined") {
     api_host: "/ingest",
     ui_host: "https://us.posthog.com",
     person_profiles: "identified_only",
+    // The dashboard shows emails, billing and license keys; never record it.
+    disable_session_recording: true,
     capture_pageview: false, // Disable automatic pageview capture, as we capture manually
     capture_pageleave: true, // Enable pageleave capture
     capture_performance: { web_vitals: true },

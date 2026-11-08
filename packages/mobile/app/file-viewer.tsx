@@ -18,6 +18,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { TextDocumentViewer } from '@/components/text-document-viewer';
 import { FilePreview } from '@/components/file-preview';
 import * as FileSystem from 'expo-file-system/legacy';
+import { withInlineDiagramImages } from '@/utils/diagram-markdown';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -330,7 +331,7 @@ export default function FileViewerScreen() {
     return (
       <ScrollView style={styles.markdownContainer}>
         <Markdown style={adjustedStyles}>
-          {params.content || ''}
+          {withInlineDiagramImages(params.content || '')}
         </Markdown>
       </ScrollView>
     );

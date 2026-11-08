@@ -298,7 +298,7 @@ async function tryOpenAI(diff: string, apiKey: string): Promise<ReleaseNotes> {
   console.log('Attempting to generate release notes with OpenAI...');
 
   const openai = createOpenAI({ apiKey });
-  const model = openai('gpt-4.1');
+  const model = openai('gpt-5.6-luna');
 
   const { object } = await generateObject({
     model: model as any, // Type cast for AI SDK v2 compatibility
@@ -320,7 +320,7 @@ async function tryAnthropic(
   console.log('Attempting to generate release notes with Anthropic...');
 
   const anthropic = createAnthropic({ apiKey });
-  const model = anthropic('claude-3-5-sonnet-20241022');
+  const model = anthropic('claude-sonnet-5-5');
 
   const { object } = await generateObject({
     model: model as any, // Type cast for AI SDK v2 compatibility
@@ -336,8 +336,8 @@ async function tryAnthropic(
  * Generate release notes with fallback providers.
  *
  * Priority:
- * 1. OpenAI (gpt-4.1)
- * 2. Anthropic (claude-3-5-sonnet)
+ * 1. OpenAI (gpt-5.6-luna)
+ * 2. Anthropic (claude-sonnet-5-5)
  * 3. Template-based fallback (always succeeds)
  */
 export async function generateReleaseNotes(

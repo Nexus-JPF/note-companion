@@ -118,9 +118,7 @@ export async function POST(req: NextRequest) {
           model: prepared.shouldUseSearch
             ? getResponsesModelV5()
             : getModelV5(),
-          ...(prepared.shouldUseSearch
-            ? { providerOptions: getChatResponsesProviderOptions() }
-            : {}),
+          providerOptions: getChatResponsesProviderOptions(),
           system: finished.system,
           stopWhen: stepCountIs(finished.effectiveMaxSteps),
           messages: finished.messages,

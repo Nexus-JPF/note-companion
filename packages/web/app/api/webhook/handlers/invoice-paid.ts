@@ -148,6 +148,7 @@ export const handleInvoicePaid = createWebhookHandler(
         lastPayment: new Date(),
         currentProduct: metadata?.product,
         currentPlan: metadata?.plan,
+        hasCatalystAccess: true,
       })
       .onConflictDoUpdate({
         target: [UserUsageTable.userId],
@@ -166,6 +167,7 @@ export const handleInvoicePaid = createWebhookHandler(
           lastPayment: new Date(),
           currentProduct: metadata?.product,
           currentPlan: metadata?.plan,
+          hasCatalystAccess: true,
         },
       });
 

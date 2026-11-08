@@ -29,6 +29,27 @@ export type LowerThirdCue = {
   detail?: string;
 };
 
+/** A one-shot sound effect. */
+export type SfxCue = {
+  /**
+   * Seconds from the start of the footage. Negative values land in the title
+   * card; values past footageDurationInSeconds land in the end card.
+   */
+  at: number;
+  /** Path relative to public/, e.g. 'sfx/whoosh.mp3'. */
+  file: string;
+  /** 0-1. Defaults to 0.4 so effects sit under the footage's own audio. */
+  volume?: number;
+};
+
+/** A looping background bed under the whole episode. */
+export type MusicBed = {
+  /** Path relative to public/, e.g. 'music/bed.mp3'. */
+  file: string;
+  /** 0-1 at full level. Defaults to 0.12 -- a bed, not a track. */
+  volume?: number;
+};
+
 export type EpisodeProps = {
   format: FormatName;
   /** Shown full-frame before the footage. */
@@ -49,6 +70,9 @@ export type EpisodeProps = {
    * for the whole episode.
    */
   focus?: FocusCue[];
+  /** Optional. Omit both and the episode renders silent, as before. */
+  music?: MusicBed;
+  sfx?: SfxCue[];
   endCard: {
     headline: string;
     url: string;

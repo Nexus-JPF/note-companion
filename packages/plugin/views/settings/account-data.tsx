@@ -272,6 +272,16 @@ export const AccountData: React.FC<AccountDataProps> = ({
             </div>
           )}
 
+          {!isSignup && (
+            <p className="text-xs text-[--text-muted]">
+              Signed up with Google or another social login? You have no password here.{" "}
+              <a href="https://app.notecompanion.ai/dashboard" target="_blank" rel="noopener noreferrer">
+                Open the dashboard
+              </a>{" "}
+              and copy your license key into the License Key field.
+            </p>
+          )}
+
           <button
             onClick={() => { void handleSignup(); }}
             disabled={isLoading}

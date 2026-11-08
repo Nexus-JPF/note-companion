@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
+import { withInlineDiagramImages } from '@/utils/diagram-markdown';
 
 interface TextDocumentViewerProps {
   content: string;
@@ -59,7 +60,7 @@ export const TextDocumentViewer: React.FC<TextDocumentViewerProps> = ({
             style={markdownStyles}
             mergeStyle={true}
           >
-            {content}
+            {withInlineDiagramImages(content)}
           </Markdown>
         </View>
       </ScrollView>

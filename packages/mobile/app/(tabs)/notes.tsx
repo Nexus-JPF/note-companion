@@ -15,6 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { fetchFiles, UploadedFile } from "@/utils/api";
 import { useAuth } from "@clerk/react";
 import { FileList } from "@/components/FileList";
+import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,6 +23,7 @@ import { useSemanticColor } from "@/hooks/useThemeColor";
 import * as FileSystem from "expo-file-system/legacy";
 import * as DocumentPicker from "expo-document-picker";
 import { Asset } from "expo-asset";
+import { handleFileProcess } from "@/utils/file-handler";
 
 export default function NotesScreen() {
   const { getToken } = useAuth();
@@ -32,6 +34,7 @@ export default function NotesScreen() {
   const [uploading, setUploading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const insets = useSafeAreaInsets();
+  const tabBarPadding = useTabBarPadding();
   const primaryColor = useSemanticColor("primary");
 
   const loadFiles = useCallback(
@@ -118,8 +121,42 @@ export default function NotesScreen() {
     </ThemedView>
   );
 
+  const handleTryDemo = async () => {
+    if (uploading) return;
+    setUploading(true);
+    try {
+      const token = await getToken();
+      if (!token) {
+        Alert.alert("Sign in required", "Please sign in to try the sample.");
+        return;
+      }
+      const asset = Asset.fromModule(
+        require("../../assets/sample-note.jpg")
+      );
+      await asset.downloadAsync();
+      const uri = asset.localUri || asset.uri;
+      const result = await handleFileProcess(
+        { uri, mimeType: "image/jpeg", name: "sample-note.jpg" },
+        token
+      );
+      if (result.status === "error") {
+        Alert.alert("Could not process the sample", result.error || "Please try again.");
+      }
+      await loadFiles(false);
+    } catch (err) {
+      console.error("Error processing demo document:", err);
+      Alert.alert("Could not process the sample", "Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const renderOnboarding = () => (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      // Leave room for the tab bar so the sample button is not cut off.
+      contentContainerStyle={{ paddingBottom: tabBarPadding }}
+    >
       <View style={styles.onboardingContainer}>
         <ThemedText type="heading" style={styles.onboardingTitle}>
           Welcome to Note Companion
@@ -131,9 +168,31 @@ export default function NotesScreen() {
         </ThemedText>
 
         <ThemedText style={styles.demoDescription}>
-          Try our OCR capabilities with this historical document from Albert
-          Einstein's archives:
+          Try our OCR capabilities with this handwritten sample note:
         </ThemedText>
+
+        <View style={styles.demoImageContainer}>
+          <Image
+            source={require("../../assets/sample-note.jpg")}
+            style={styles.demoImage}
+            resizeMode="cover"
+          />
+          {uploading && (
+            <View style={styles.uploadingOverlay}>
+              <ActivityIndicator size="large" color="#fff" />
+              <Text style={styles.uploadingText}>Extracting text...</Text>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={styles.demoButton}
+          onPress={handleTryDemo}
+          disabled={uploading}
+        >
+          <MaterialIcons name="auto-awesome" size={20} color="#fff" />
+          <Text style={styles.demoButtonText}>Try it with this document</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

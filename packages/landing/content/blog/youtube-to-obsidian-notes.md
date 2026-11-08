@@ -141,28 +141,6 @@ Dedicated transcript plugins are fine if you only want captions in a pane. This 
 - [ ] File the note out of inbox and link it to one real project or concept
 - [ ] Rewrite the one sentence you would actually quote
 
-## FAQ
-
-### Can Obsidian transcribe YouTube videos?
-
-Obsidian itself cannot. You need a plugin that fetches the video's existing captions or transcript. Note Companion does this from Chat or from a link dropped in your inbox, then turns that transcript into a structured note.
-
-### How do I take notes from a YouTube video in Obsidian?
-
-Paste the YouTube URL into Note Companion Chat and ask it to turn the video into a note. Or drop the link in your inbox folder and let inbox processing fetch the transcript, format the note, and suggest a folder and tags.
-
-### Do YouTube videos need captions for this to work?
-
-Yes. Note Companion fetches the video's transcript (captions or auto-captions). If none are available, the fetch fails. Then you need another source — your own notes, or an audio transcription of a downloaded file.
-
-### Should I keep the full transcript in the note?
-
-Usually no. A 40-minute video produces thousands of words you will never search. Keep a summary, timestamped points, and an embed so you can jump back. Note Companion uses the transcript as input and leaves it out of the finished note.
-
-### What is the difference between a transcript plugin and a YouTube note?
-
-A transcript plugin dumps captions into Markdown. A YouTube note is something you can find next month — title, channel, summary, clickable timestamps, tags, and links to related notes in your vault.
-
 ## Try it on one video
 
 Pick a video you watched this week and still cannot find. Paste the link in Chat. File the note next to the project it belongs to.

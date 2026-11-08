@@ -1,5 +1,12 @@
 import React from 'react';
-import { AbsoluteFill, Sequence, useVideoConfig } from 'remotion';
+import {
+  AbsoluteFill,
+  Audio,
+  interpolate,
+  Sequence,
+  staticFile,
+  useVideoConfig,
+} from 'remotion';
 import { color, FOCUS, motion } from '../tokens';
 import { getLayout } from '../layout';
 import { TitleCard } from '../components/TitleCard';
@@ -23,9 +30,11 @@ export const Episode: React.FC<EpisodeProps> = ({
   captions,
   lowerThirds,
   focus,
+  music,
+  sfx,
   endCard,
 }) => {
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
   const layout = getLayout(format);
 
   const titleFrames = motion.titleHold;
@@ -34,6 +43,32 @@ export const Episode: React.FC<EpisodeProps> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: color.paper }}>
+      {music ? (
+        <Audio
+          src={staticFile(music.file)}
+          loop
+          volume={(f) =>
+            // One second in, two seconds out, so the bed never starts or stops
+            // with a click.
+            interpolate(
+              f,
+              [0, fps, durationInFrames - 2 * fps, durationInFrames],
+              [0, 1, 1, 0],
+              { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' },
+            ) * (music.volume ?? 0.12)
+          }
+        />
+      ) : null}
+
+      {(sfx ?? []).map((cue, i) => (
+        <Sequence
+          key={`${cue.file}-${i}`}
+          from={Math.max(0, titleFrames + Math.round(cue.at * fps))}
+        >
+          <Audio src={staticFile(cue.file)} volume={cue.volume ?? 0.4} />
+        </Sequence>
+      ))}
+
       <Sequence durationInFrames={titleFrames}>
         <TitleCard
           title={title}

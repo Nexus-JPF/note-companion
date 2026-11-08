@@ -64,7 +64,7 @@ export function getNoteCompanionSettingDefinitions(
               control: { type: 'toggle', key: 'enableAttachmentProcessing' },
             },
             {
-              name: 'Generate AI description for images',
+              name: 'Extract text from images (OCR)',
               visible: () => settings.enableAttachmentProcessing,
               control: { type: 'toggle', key: 'enableImageDescription' },
             },
@@ -152,7 +152,7 @@ export function getNoteCompanionSettingDefinitions(
               },
             },
             {
-              name: 'Image instructions',
+              name: 'OCR instructions (optional)',
               control: {
                 type: 'textarea',
                 key: 'imageInstructions',

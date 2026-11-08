@@ -198,7 +198,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
               Note Companion License Key
             </h3>
             <p className="text-[--text-muted] mb-4">
-              Enter your license key to activate Note Companion.
+              Enter your license key to activate Note Companion. No key yet? Create a free account in the Account section below.
             </p>
           </div>
 

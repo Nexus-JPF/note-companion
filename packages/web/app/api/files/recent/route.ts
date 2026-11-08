@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, uploadedFiles } from '@/drizzle/schema';
 import { desc, eq } from 'drizzle-orm';
 import { handleAuthorizationV2 } from '@/lib/handleAuthorization';
+import { signR2Url } from '@/lib/r2-client';
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,13 +24,16 @@ export async function GET(req: NextRequest) {
       .limit(10); // Get the 10 most recent files
     
     // Transform the data if needed
-    const formattedFiles = recentFiles.map(file => ({
-      id: file.id,
-      name: file.name,
-      type: file.type === 'pdf' ? 'file' : (file.type === 'image' ? 'image' : 'markdown'),
-      date: file.date ? new Date(file.date).toISOString() : new Date().toISOString(),
-      path: file.path || '',
-    }));
+    const formattedFiles = await Promise.all(
+      recentFiles.map(async file => ({
+        id: file.id,
+        name: file.name,
+        type: file.type === 'pdf' ? 'file' : (file.type === 'image' ? 'image' : 'markdown'),
+        date: file.date ? new Date(file.date).toISOString() : new Date().toISOString(),
+        // Links to stored files are signed on the way out (they expire)
+        path: file.path ? await signR2Url(file.path, userId) : '',
+      }))
+    );
 
     return NextResponse.json(formattedFiles);
   } catch (error) {

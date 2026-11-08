@@ -1,4 +1,7 @@
-import { createLicenseKeyFromUserId } from './actions';
+import { createLicenseKeyFromUserId } from '@/lib/account-server';
+
+// lib/account-server is server-only; the marker module only exists under Next
+jest.mock('server-only', () => ({}), { virtual: true });
 
 // Create a mock for the keys.createKey method
 const mockCreateKey = jest.fn();
@@ -135,5 +138,31 @@ describe('createLicenseKeyFromUserId - Unkey API v2 Migration', () => {
     expect(mockCreateKey).not.toHaveBeenCalled();
 
     consoleSpy.mockRestore();
+  });
+  it('never writes the license key (or part of it) to the logs', async () => {
+    const secret = 'unkey_SECRET_license_key_do_not_log_0123456789';
+    mockCreateKey.mockResolvedValueOnce({
+      meta: { requestId: 'req_log' },
+      data: { key: secret, keyId: 'key_log' },
+      error: null,
+    });
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const result = await createLicenseKeyFromUserId('test-user-id');
+    expect(result).toEqual({ key: { key: secret } });
+
+    const logged = JSON.stringify([
+      ...logSpy.mock.calls,
+      ...errorSpy.mock.calls,
+      ...warnSpy.mock.calls,
+    ]);
+    expect(logged).not.toContain(secret);
+    expect(logged).not.toContain(secret.substring(0, 10));
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 });

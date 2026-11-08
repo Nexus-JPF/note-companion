@@ -6,6 +6,8 @@ const MAX_CONCURRENT_TASKS = 5;
 
 export interface QueueTaskMetadata {
   hash: string;
+  /** Per-task timeout; defaults to queue option when omitted */
+  timeoutMs?: number;
 }
 
 interface QueueItem<T> {
@@ -88,8 +90,9 @@ export class Queue<T> {
     this.processing.add(hash);
 
     try {
+      const timeoutMs = item.metadata?.timeoutMs ?? this.options.timeout;
       const timeoutPromise = new Promise((_, reject) => {
-        window.setTimeout(() => reject(new Error('Processing timeout')), this.options.timeout);
+        window.setTimeout(() => reject(new Error('Processing timeout')), timeoutMs);
       });
 
       await Promise.race([

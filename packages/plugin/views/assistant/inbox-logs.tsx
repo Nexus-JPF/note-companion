@@ -363,6 +363,11 @@ function FileCard({ record }: { record: FileRecord }) {
                   • {errorSummary}
                 </span>
               )}
+              {record.dismissed && (
+                <span className="text-[--text-faint] text-xs flex-shrink-0">
+                  dismissed
+                </span>
+              )}
             </div>
           </div>
           <UndoButton record={record} plugin={plugin} />

@@ -1,6 +1,8 @@
 import { normalizePath, TFile, App } from "obsidian";
 import { IdService } from "./id-service";
 import { parseJsonString } from "../../lib/api-json";
+import { pruneRecords } from "./record-pruning";
+import { logger } from "../../services/logger";
 /** Browser timer handle from `window.setTimeout` (Obsidian/Electron). */
 type TimeoutID = number;
 
@@ -81,6 +83,16 @@ export interface FileRecord {
   status: FileStatus;
   file: TFile | null;
   folder?: string;
+  /**
+   * Set when the user clears this issue from the Inbox "Recent Issues" list.
+   *
+   * Dismiss rather than hard-delete: the full processing log in the Inbox tab
+   * reads the same records, so deleting the entry would erase the history of
+   * what was attempted and why it failed. A flag clears the issue list and the
+   * error/bypassed tiles while leaving the log intact. Hard deletion is left to
+   * the retention policy in record-pruning.ts, which ages records out on load.
+   */
+  dismissed?: boolean;
 }
 
 export class RecordManager {
@@ -128,12 +140,23 @@ export class RecordManager {
         );
 
         // Convert the plain objects back to Map entries
-        this.records = new Map(
+        const loaded = new Map<string, FileRecord>(
           Object.entries(data).map(([hash, record]) => {
             // Restore TFile reference as null since it can't be serialized
             return [hash, { ...record, file: null }];
           })
         );
+
+        // Bound the store on load so `_NoteCompanion/.records` cannot grow for
+        // the life of the vault. See record-pruning.ts for the policy.
+        const { records, removed } = pruneRecords(loaded);
+        this.records = records;
+        if (removed > 0) {
+          logger.debug(
+            `RecordManager: pruned ${removed} record(s) outside the retention bounds`
+          );
+          this.debounceSave();
+        }
       }
     } catch (error) {
       console.warn("Failed to load records:", error);
@@ -167,6 +190,7 @@ export class RecordManager {
             logs: record.logs,
             status: record.status,
             folder: record.folder,
+            dismissed: record.dismissed,
           },
         ])
       );
@@ -201,7 +225,8 @@ export class RecordManager {
   }
 
   public startTracking(hash: string, originalName: string): string {
-    if (!this.records.has(hash)) {
+    const existing = this.records.get(hash);
+    if (!existing) {
       this.records.set(hash, {
         id: hash,
         file: null,
@@ -211,6 +236,10 @@ export class RecordManager {
         status: "queued",
         originalName,
       });
+    } else if (existing.dismissed) {
+      // Reprocessing a dismissed file is a fresh attempt: if it fails again the
+      // user needs to see it, so the dismissal does not carry over.
+      existing.dismissed = false;
     }
     this.debounceSave();
     return hash;
@@ -387,6 +416,39 @@ export class RecordManager {
     });
 
     return records;
+  }
+
+  /** Records the UI should count and surface — everything the user has not cleared. */
+  public getActiveRecords(): FileRecord[] {
+    return this.getAllRecords().filter(record => !record.dismissed);
+  }
+
+  /**
+   * Clear a single issue from the Inbox issue list and the status tiles.
+   * Returns false if the hash is unknown. Persisted through the debounced save.
+   */
+  public dismissRecord(hash: string): boolean {
+    const record = this.records.get(hash);
+    if (!record || record.dismissed) return false;
+    record.dismissed = true;
+    this.debounceSave();
+    return true;
+  }
+
+  /** Dismiss several records at once; returns how many changed. */
+  public dismissRecords(hashes: string[]): number {
+    let dismissed = 0;
+    for (const hash of hashes) {
+      const record = this.records.get(hash);
+      if (record && !record.dismissed) {
+        record.dismissed = true;
+        dismissed++;
+      }
+    }
+    if (dismissed > 0) {
+      this.debounceSave();
+    }
+    return dismissed;
   }
 
   public getRecordsWithErrors(): FileRecord[] {

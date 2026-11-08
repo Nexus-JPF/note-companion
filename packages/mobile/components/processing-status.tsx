@@ -50,7 +50,7 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
           </Text>
           {showDetails && (
             <Text style={styles.statusSubtext}>
-              "This will just take a moment"
+              This will just take a moment
             </Text>
           )}
         </View>

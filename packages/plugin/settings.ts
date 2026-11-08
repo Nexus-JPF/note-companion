@@ -53,7 +53,7 @@ export class FileOrganizerSettings {
   /** @internal One-time migration flag; see loadSettings() in index.ts. */
   useInboxMigrated = false;
   imageInstructions =
-    "Analyze the image and provide a clear, detailed description focusing on the main elements, context, and any text visible in the image. Include relevant details that would be useful for searching and organizing the image later.";
+    "For handwriting and whiteboards, preserve line breaks and list structure.";
   debugMode = false;
   enableTitleSuggestions = false;
   /**
@@ -71,6 +71,8 @@ export class FileOrganizerSettings {
     "Generate tags that capture the main topics, themes, and type of content in the document. Focus on specific, meaningful tags that will help with organization and retrieval.";
   hasCatalystAccess = null;
   hasRunOnboarding = false;
+  /** Set once the onboarding wizard has been auto-opened, so it is never forced on the user twice. */
+  hasShownOnboarding = false;
   pdfPageLimit = 10; // default to 10 pages
   /** @deprecated Use inboxNotificationLevel. Kept for settings migration only. */
   enableProcessingNotifications = true;

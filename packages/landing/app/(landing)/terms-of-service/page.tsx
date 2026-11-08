@@ -1,5 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
+import { defaultOpenGraph } from '@/lib/og';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
@@ -7,6 +8,13 @@ export const metadata: Metadata = {
     'The terms for using Note Companion, including licensing, paid plans, and content ownership.',
   alternates: {
     canonical: '/terms-of-service',
+  },
+  openGraph: {
+    ...defaultOpenGraph,
+    title: 'Terms of Service',
+    description:
+      'The terms for using Note Companion, including licensing, paid plans, and content ownership.',
+    url: '/terms-of-service',
   },
 };
 

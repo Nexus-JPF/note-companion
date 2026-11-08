@@ -491,7 +491,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       logMessage(selectedModelRef.current, "selectedModel");
 
       // Handle different model types
-      if (!plugin.settings.showLocalLLMInChat || selectedModelRef.current === "gpt-4o") {
+      if (!plugin.settings.showLocalLLMInChat || selectedModelRef.current === "gpt-4o-mini") {
         return obsidianFetch(url, options as ObsidianFetchInit | undefined);
       }
 

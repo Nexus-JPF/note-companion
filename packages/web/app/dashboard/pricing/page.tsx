@@ -1,5 +1,6 @@
 "use client";
 
+import { ManageSubscriptionLink } from "@/components/manage-subscription-link";
 import { PricingCards } from "@/components/pricing-cards";
 import { Star } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -66,7 +67,24 @@ export default function PlanSelectionPage() {
       
       <div className="mt-8 pt-6 border-t border-slate-200">
         <p className="text-sm text-slate-500">
-          All plans include our core features. Have questions? <a href="#" className="text-blue-600 hover:underline">Contact us</a>
+          Already subscribed? <ManageSubscriptionLink className="text-blue-600 hover:underline">Manage or cancel your subscription</ManageSubscriptionLink>. All plans include our core features. Have questions? <a
+            href="mailto:info@notecompanion.ai"
+            className="text-blue-600 hover:underline"
+            onClick={(e) => {
+              // Crisp swaps the window.$crisp queue array for its own object once
+              // loaded. Only take over the click then; if it's blocked or still
+              // loading, keep the mailto fallback so the link never goes dead.
+              const crisp = window.$crisp as unknown;
+              if (crisp && !Array.isArray(crisp)) {
+                e.preventDefault();
+                const { push } = crisp as { push: (cmd: unknown[]) => void };
+                push.call(crisp, ["do", "chat:show"]);
+                push.call(crisp, ["do", "chat:open"]);
+              }
+            }}
+          >
+            Contact us
+          </a>
         </p>
       </div>
     </div>

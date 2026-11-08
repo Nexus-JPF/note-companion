@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
-import { getUserBillingCycle } from './actions';
+import { getUserBillingCycleForUser } from '@/lib/account-server';
 
 // Force dynamic rendering to avoid static generation issues with Clerk
 export const dynamic = 'force-dynamic';
@@ -34,7 +34,7 @@ export default async function MainPage() {
     throw error;
   }
 
-  const billingCycle = await getUserBillingCycle(userId);
+  const billingCycle = await getUserBillingCycleForUser(userId);
   console.log('Billing cycle:', billingCycle);
 
   // if billing cycle part of legacy plans

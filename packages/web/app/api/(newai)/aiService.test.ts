@@ -14,11 +14,16 @@ import {
 } from './aiService';
 import { LanguageModel } from 'ai';
 import { generateObject, generateText, streamObject } from 'ai';
+import { extractTextFromVisionImage } from '@/lib/ocr-extract';
 import { createReadStream } from 'fs';
 import { promises as fsPromises } from 'fs';
 
 // Mock dependencies
 const mockOpenAICreate = jest.fn();
+
+jest.mock('@/lib/ocr-extract', () => ({
+  extractTextFromVisionImage: jest.fn(),
+}));
 
 jest.mock('ai', () => ({
   generateObject: jest.fn(),
@@ -303,23 +308,23 @@ describe('aiService', () => {
         modelId: 'gpt-4o',
       } as LanguageModel;
 
-      (generateText as jest.Mock).mockResolvedValueOnce({
+      (extractTextFromVisionImage as jest.Mock).mockResolvedValueOnce({
         text: 'Extracted text from image',
-        usage: { totalTokens: 100 },
+        tokensUsed: 100,
       });
 
       const result = await extractTextFromImage(imageBuffer, gpt4oModel);
 
       expect(result).toBe('Extracted text from image\n\n');
-      expect(generateText).toHaveBeenCalled();
+      expect(extractTextFromVisionImage).toHaveBeenCalled();
     });
 
     it('should extract text from image using default model', async () => {
       const imageBuffer = new ArrayBuffer(8);
 
-      (generateText as jest.Mock).mockResolvedValueOnce({
+      (extractTextFromVisionImage as jest.Mock).mockResolvedValueOnce({
         text: 'Extracted text',
-        usage: { totalTokens: 100 },
+        tokensUsed: 100,
       });
 
       const result = await extractTextFromImage(imageBuffer, mockModel);

@@ -31,6 +31,10 @@ export async function POST(request: NextRequest) {
     const documentType = response.object.documentType;
     return NextResponse.json({ documentType });
   } catch (error) {
+    console.error("classify1 failed:", {
+      message: error instanceof Error ? error.message : String(error),
+      status: (error as { status?: number } | null)?.status,
+    });
     // Properly handle AuthorizationError with status codes
     // Use try-catch for instanceof check in case AuthorizationError is undefined (e.g., in tests)
     try {

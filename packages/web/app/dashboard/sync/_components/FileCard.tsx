@@ -3,6 +3,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { FileText, FileImage } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import type { UploadedFile } from "@/drizzle/schema";
+import { getMagicDiagramImageUrl } from "./magic-diagram";
 
 interface FileCardProps {
   file: UploadedFile;
@@ -25,6 +26,20 @@ export function FileCard({ file, onView }: FileCardProps) {
   };
 
   const renderPreview = () => {
+    // Magic diagrams: show the generated image rather than the original upload
+    const diagramUrl = getMagicDiagramImageUrl(file);
+    if (diagramUrl) {
+      return (
+        <div className="mt-2 rounded-md overflow-hidden bg-slate-50 flex justify-center items-center h-40">
+          <img
+            src={diagramUrl}
+            alt={`Generated diagram for ${file.originalName}`}
+            className="max-h-full max-w-full object-contain"
+          />
+        </div>
+      );
+    }
+
     // For images, show the actual image
     if (file.fileType.includes('image')) {
       return (

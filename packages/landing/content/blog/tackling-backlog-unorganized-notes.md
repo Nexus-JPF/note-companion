@@ -78,7 +78,7 @@ This approach transforms scattered meeting notes into actionable, interconnected
 
 The best way to handle a backlog is to prevent it from growing. Develop daily or weekly habits to process notes soon after creation. Quick capture methods, such as voice memos, quick text notes, or clipping web articles, help ensure you don't lose ideas. However, the key is to regularly review and enrich these raw notes by adding context, linking to related content, and tagging them appropriately.
 
-Consistent linking and tagging as you go will keep your knowledge base usable and reduce the stress of large backlogs. Consider implementing small routines like dedicating 10 minutes at the end of each day to organize new notes or setting reminders to review notes weekly.
+Consistent linking and tagging as you go will keep your knowledge base usable and reduce the stress of large backlogs. Consider implementing small routines like dedicating 10 minutes at the end of each day to organize new notes or setting reminders to review notes weekly. A backlog is often a sign of capturing more than you curate; [more notes or more insight?](/blog/more-notes-vs-more-insight-obsidian-vault-strategies) compares both vault strategies.
 
 Additionally, using tools and plugins designed for your note-taking app can automate parts of the process. For example, Obsidian’s community plugins offer templates, daily notes, and backlinking capabilities that streamline note organization.
 

@@ -6,11 +6,13 @@ import { ArrowLeft, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BlogContent } from "../components/blog-content";
+import { BlogFaq } from "../components/blog-faq";
 import { BlogFaqSchema } from "../components/blog-faq-schema";
 import { BlogPostingSchema } from "../components/blog-posting-schema";
 import { BreadcrumbSchema } from "@/components/breadcrumb-schema";
 import { RelatedPosts } from "../components/related-posts";
 import { getPostBySlug, getAllPosts, getRelatedPosts } from "@/lib/blog";
+import { getSiteBaseUrl } from "@/lib/site-url";
 
 interface BlogPostPageProps {
   params: Promise<{
@@ -46,6 +48,7 @@ export async function generateMetadata({
     openGraph: {
       title: post.title,
       description: post.excerpt,
+      url: `/blog/${slug}`,
       type: "article",
       publishedTime: post.date,
       ...(post.updated && { modifiedTime: post.updated }),
@@ -70,17 +73,18 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   }
 
   const relatedPosts = getRelatedPosts(slug);
+  const siteUrl = getSiteBaseUrl();
 
   return (
     <div className="bg-background">
       <BlogPostingSchema post={post} />
       <BreadcrumbSchema
         items={[
-          { name: 'Home', url: 'https://www.notecompanion.ai' },
-          { name: 'Blog', url: 'https://www.notecompanion.ai/blog' },
+          { name: 'Home', url: siteUrl },
+          { name: 'Blog', url: `${siteUrl}/blog` },
           {
             name: post.headline ?? post.title,
-            url: `https://www.notecompanion.ai/blog/${post.slug}`,
+            url: `${siteUrl}/blog/${post.slug}`,
           },
         ]}
       />
@@ -155,6 +159,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
         {/* Article Content */}
         <BlogContent post={post} />
+
+        {post.faq && post.faq.length > 0 && <BlogFaq faq={post.faq} />}
 
         <RelatedPosts posts={relatedPosts} />
 

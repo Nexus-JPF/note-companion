@@ -3,6 +3,7 @@ import './globals.css';
 import { Metadata } from 'next';
 import Providers from './providers';
 import { OrganizationSchema } from '@/components/organization-schema';
+import { CrispWidget } from '@/components/crisp-widget';
 import { getSiteBaseUrl } from '@/lib/site-url';
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({
       <body className="bg-background" suppressHydrationWarning>
         <OrganizationSchema />
         <Providers>{children}</Providers>
+        <CrispWidget />
       </body>
     </html>
   );

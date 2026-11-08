@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { API_URL, API_CONFIG } from '@/constants/config';
+import { ensureJpegFormat } from '@/utils/share-handler';
 
 export type UploadStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'error' | 'pending';
 
@@ -135,9 +136,27 @@ export const prepareFile = async (
       default: file.uri,
     });
   }
+
+  const isHeic =
+    mimeType === 'image/heic' ||
+    mimeType === 'image/heif' ||
+    fileName.toLowerCase().endsWith('.heic') ||
+    fileName.toLowerCase().endsWith('.heif');
+
+  if (fileUri && isHeic) {
+    const jpegUri = await ensureJpegFormat(
+      fileUri.startsWith('file://') ? fileUri : `file://${fileUri}`
+    );
+    fileUri = Platform.select({
+      ios: jpegUri.replace('file://', ''),
+      android: jpegUri,
+      default: jpegUri,
+    });
+    mimeType = 'image/jpeg';
+  }
   
   return {
-    fileName,
+    fileName: isHeic ? fileName.replace(/\.(heic|heif)$/i, '.jpg') : fileName,
     mimeType,
     fileUri,
   };

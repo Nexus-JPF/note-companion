@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { signedOrPublicR2Url } from '@/lib/r2-client';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 import { v4 as uuidv4 } from "uuid";
@@ -186,8 +187,8 @@ export async function POST(request: NextRequest) {
 
     await r2Client.send(command);
 
-    // Construct public URL
-    const publicUrl = `${R2_PUBLIC_URL}/${key}`;
+    // Short-lived signed download link (field name kept for existing clients)
+    const publicUrl = await signedOrPublicR2Url(key);
 
     console.log(`Successfully uploaded audio to R2: ${key}`);
 

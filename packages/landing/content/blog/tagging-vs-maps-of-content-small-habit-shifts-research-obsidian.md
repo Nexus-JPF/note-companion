@@ -76,7 +76,7 @@ Ready to try it yourself? Here’s a practical, step-by-step process to experime
    - Update at least one relevant MOC, linking the new note under appropriate headings.
 
 3. **Weekly Review and Refinement**
-   - Open Obsidian’s tag pane. Scan for similar or redundant tags. Use Note Companion’s Organizer suggestions to merge or streamline tags and suggest folder moves.
+   - Open Obsidian's tag pane. Scan for similar or redundant tags. Use Note Companion's Organizer to see tags already in your vault alongside new suggestions, then merge duplicates manually (search-and-replace or Tag Wrangler) and file notes where they belong.
    - Review your MOCs: are they getting unwieldy? Split large ones, or add sub-sections for clarity.
    - Use Obsidian’s backlinks panel to spot notes not linked from any MOC—consider adding them.
 
@@ -105,8 +105,8 @@ Ready to try it yourself? Here’s a practical, step-by-step process to experime
 
 Note Companion can help you avoid common pitfalls as your research vault grows:
 
-- **Tag Consolidation:** Its Organizer surfaces similar tags (like `#policy-study` and `#policy-analysis`) for easy merging, so you don’t lose track of related work.
-- **MOC Coverage:** It spots orphan notes—files not linked from any MOC—and nudges you to connect them, ensuring nothing important falls through the cracks.
+- **Tag reuse:** Its Organizer lists tags already in your vault separately from new suggestions, so you can reuse `#literature-review` instead of inventing `#litreview`. Merging duplicates that already exist is still manual.
+- **MOC coverage:** Use the backlinks pane and your weekly review to spot notes not linked from any MOC and add them yourself.
 - **Title and Folder Suggestions:** When your inbox fills up, Note Companion proposes tidy file names and folder moves, streamlining later retrieval.
 
 By integrating Note Companion into your weekly review, you make your incremental habits more effective—staying focused on research, not just organization.

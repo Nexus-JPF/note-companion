@@ -33,6 +33,7 @@ import { FileOrganizerSettings, DEFAULT_SETTINGS } from "./settings";
 
 import { extractSelectionToNewNote } from "./commands/extract-selection-to-note";
 import { registerEventHandlers } from "./handlers/eventHandlers";
+import { shouldAutoOpenOnboarding } from "./onboarding-gate";
 import {
   initializeOrganizer,
   initializeFileOrganizationCommands,
@@ -58,6 +59,9 @@ import {
 import { initializeInboxQueue, Inbox } from "./inbox";
 import { migrateInboxNotificationLevel } from "./inbox/notification-level";
 import { migrateUseInbox } from "./inbox/use-inbox-migration";
+import { migrateImageOcrSettings } from "./inbox/migrate-image-instructions";
+import { extractLargestJpegFromPdf } from "./lib/extract-embedded-jpeg-from-pdf";
+import { renderPdfPageToPng } from "./lib/pdf-page-to-image";
 import { logger } from "./services/logger";
 import { layoutPdfTextItems } from "./lib/pdf-text-layout";
 import { obsidianFetch } from "./lib/obsidian-fetch";
@@ -121,6 +125,11 @@ type PresignedUrlErrorBody = ApiErrorBody & { details?: string };
 type PdfTextContent = { items: unknown[] };
 type PdfPage = {
   getTextContent: () => Promise<PdfTextContent>;
+  getViewport: (opts: { scale: number }) => { width: number; height: number };
+  render: (opts: {
+    canvasContext: CanvasRenderingContext2D;
+    viewport: { width: number; height: number };
+  }) => { promise: Promise<void> };
 };
 type PdfDocument = {
   numPages: number;
@@ -196,6 +205,10 @@ export default class FileOrganizer extends Plugin {
     if (useInboxMigration) {
       this.settings.useInbox = useInboxMigration.useInbox;
       this.settings.useInboxMigrated = useInboxMigration.useInboxMigrated;
+    }
+
+    if (migrateImageOcrSettings(this.settings)) {
+      await this.saveSettings();
     }
   }
 
@@ -669,25 +682,155 @@ export default class FileOrganizer extends Plugin {
   }
 
   async extractTextFromPDF(file: TFile): Promise<string> {
-    const pdfjsLib = (await loadPdfJs()) as PdfJsLib;
+    const raw = await this.app.vault.readBinary(file);
+    if (!raw || raw.byteLength === 0) {
+      return "";
+    }
+    // pdf.js may detach the buffer passed to getDocument; keep an independent copy.
+    const pdfBytes = new Uint8Array(raw).slice();
+    const arrayBuffer = pdfBytes.buffer.slice(
+      pdfBytes.byteOffset,
+      pdfBytes.byteOffset + pdfBytes.byteLength
+    );
+
     try {
-      const arrayBuffer = await this.app.vault.readBinary(file);
-      const bytes = new Uint8Array(arrayBuffer);
-      const doc = await pdfjsLib.getDocument({ data: bytes }).promise;
+      const pdfjsLib = (await loadPdfJs()) as PdfJsLib;
+      const doc = await pdfjsLib.getDocument({ data: pdfBytes.slice() }).promise;
       const pageTexts: string[] = [];
 
-      // Use pdfPageLimit to cap the maximum pages read.
       const pageLimit = Math.min(doc.numPages, this.settings.pdfPageLimit);
       for (let pageNum = 1; pageNum <= pageLimit; pageNum++) {
         const page = await doc.getPage(pageNum);
         const textContent = await page.getTextContent();
         pageTexts.push(layoutPdfTextItems(textContent.items));
       }
-      return pageTexts.join("\n\n");
+      const textLayer = pageTexts.join("\n\n");
+      const significantChars = textLayer.replace(/\s/g, "").length;
+      if (significantChars >= 40) {
+        return textLayer;
+      }
+
+      const embeddedFromDoc = await this.extractTextFromEmbeddedPdfJpeg(
+        arrayBuffer
+      );
+      if (embeddedFromDoc) {
+        return embeddedFromDoc;
+      }
+
+      const clientOcr = await this.extractTextFromPdfViaVision(doc, pageLimit);
+      if (clientOcr.trim()) {
+        return clientOcr;
+      }
     } catch (error) {
-      logger.error(`Error extracting text from PDF: ${error}`);
+      logger.error(`Error extracting text from PDF (client): ${error}`);
+    }
+
+    const embeddedFallback = await this.extractTextFromEmbeddedPdfJpeg(
+      arrayBuffer
+    );
+    if (embeddedFallback) {
+      return embeddedFallback;
+    }
+
+    try {
+      return await this.extractTextFromPdfViaServer(
+        arrayBuffer,
+        this.settings.pdfPageLimit
+      );
+    } catch (error) {
+      logger.error(`Error extracting text from PDF (server): ${error}`);
       return "";
     }
+  }
+
+  async extractTextFromEmbeddedPdfJpeg(
+    pdfData: ArrayBuffer
+  ): Promise<string> {
+    const jpeg = extractLargestJpegFromPdf(pdfData);
+    if (!jpeg) {
+      return "";
+    }
+    // Preview photo PDFs often embed a multi‑MB JPEG; canvas render + compress is safer.
+    const EMBEDDED_JPEG_DIRECT_OCR_MAX_BYTES = 4 * 1024 * 1024;
+    if (jpeg.byteLength > EMBEDDED_JPEG_DIRECT_OCR_MAX_BYTES) {
+      return "";
+    }
+    try {
+      const processed = await this.compressImage(jpeg);
+      if (processed.byteLength > EMBEDDED_JPEG_DIRECT_OCR_MAX_BYTES) {
+        return "";
+      }
+      const text = await this.extractTextFromImage(processed);
+      return text.trim();
+    } catch (error) {
+      logger.debug(`Embedded JPEG OCR skipped: ${error}`);
+      return "";
+    }
+  }
+
+  async extractTextFromPdfViaServer(
+    pdfData: ArrayBuffer,
+    pageLimit: number
+  ): Promise<string> {
+    const base64Pdf = arrayBufferToBase64(pdfData);
+    const response = await obsidianFetch(
+      `${this.getServerUrl()}/api/pdf-ocr`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.settings.API_KEY}`,
+        },
+        body: JSON.stringify({
+          pdf: base64Pdf,
+          pageLimit,
+          instructions: this.settings.imageInstructions,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorMessage = await parseApiErrorMessage(
+        response,
+        `HTTP error! status: ${response.status}`
+      );
+      throw new Error(errorMessage);
+    }
+
+    const data = await readResponseJson<VisionResponse & ApiErrorBody>(response);
+    const apiError = getApiError(data);
+    if (apiError) {
+      throw new Error(apiError);
+    }
+    if (typeof data.text !== "string") {
+      throw new Error("PDF OCR API returned no extracted text");
+    }
+    return data.text;
+  }
+
+  async extractTextFromPdfViaVision(
+    doc: PdfDocument,
+    pageLimit: number
+  ): Promise<string> {
+    const parts: string[] = [];
+    for (let pageNum = 1; pageNum <= pageLimit; pageNum++) {
+      try {
+        const page = await doc.getPage(pageNum);
+        const png = await renderPdfPageToPng(page, 2);
+        if (!png) {
+          logger.warn(`PDF page ${pageNum}: could not render page to image for OCR`);
+          continue;
+        }
+        const processed = await this.compressImage(png);
+        const pageText = await this.extractTextFromImage(processed);
+        if (pageText.trim()) {
+          parts.push(pageText.trim());
+        }
+      } catch (error) {
+        logger.error(`PDF page ${pageNum} OCR failed: ${error}`);
+      }
+    }
+    return parts.join("\n\n---\n\n");
   }
   getApiKey(): string {
     return this.settings.API_KEY;
@@ -1673,29 +1816,28 @@ export default class FileOrganizer extends Plugin {
   }
 
   async ensureAssistantView(): Promise<AssistantViewWrapper | null> {
-    // Try to find existing view
-    let view = this.app.workspace.getLeavesOfType(ORGANIZER_VIEW_TYPE)[0]
-      ?.view as AssistantViewWrapper;
+    const { workspace } = this.app;
 
-    // If view doesn't exist, create it
-    if (!view) {
-      const leaf = this.app.workspace.getRightLeaf(false);
-      if (leaf) {
-        await leaf.setViewState({
-          type: ORGANIZER_VIEW_TYPE,
-          active: true,
-        });
-
-        // Get the newly created view
-        view = this.app.workspace.getLeavesOfType(ORGANIZER_VIEW_TYPE)[0]
-          ?.view as AssistantViewWrapper;
-      }
+    // Reuse an existing leaf, or create one in the right sidebar
+    let leaf = workspace.getLeavesOfType(ORGANIZER_VIEW_TYPE)[0] ?? null;
+    if (!leaf) {
+      leaf = workspace.getRightLeaf(false);
+      if (!leaf) return null;
+      await leaf.setViewState({
+        type: ORGANIZER_VIEW_TYPE,
+        active: true,
+      });
     }
+
+    // A leaf restored from the saved workspace can still be a deferred view
+    // without our methods (such as activateTab) until it is loaded.
+    await leaf.loadIfDeferred();
+
+    const view = leaf.view as AssistantViewWrapper;
+    if (!view || typeof view.activateTab !== "function") return null;
 
     // Reveal and focus the leaf
-    if (view) {
-      void this.app.workspace.revealLeaf(view.leaf);
-    }
+    void workspace.revealLeaf(leaf);
 
     return view;
   }
@@ -1714,7 +1856,10 @@ export default class FileOrganizer extends Plugin {
     initializeOrganizer(this);
     initializeFileOrganizationCommands(this);
 
-    this.app.workspace.onLayoutReady(() => registerEventHandlers(this));
+    this.app.workspace.onLayoutReady(() => {
+      registerEventHandlers(this);
+      void this.maybeShowOnboarding();
+    });
     if (this.settings.useInbox) {
       void this.processBacklog();
     }
@@ -1985,12 +2130,14 @@ export default class FileOrganizer extends Plugin {
       leaf => new DashboardView(leaf, this)
     );
 
-    // Add command to open dashboard
+    // Re-run the first-run setup wizard (kept under the old command id so hotkeys still work)
     this.addCommand({
       id: "open-fo2k-dashboard",
-      name: "Open dashboard",
-      callback: () => {
-        void this.activateDashboard();
+      name: "Run setup wizard",
+      callback: async () => {
+        this.settings.hasRunOnboarding = false;
+        await this.saveSettings();
+        await this.activateDashboard();
       },
     });
 
@@ -2223,6 +2370,24 @@ export default class FileOrganizer extends Plugin {
 
     const { titles } = await readResponseJson<TitlesResponse>(response);
     return titles;
+  }
+
+  /**
+   * Opens the onboarding wizard once for a brand-new install: no license key,
+   * not self-hosting, and the wizard has never been shown. Existing users and
+   * anyone who closed it are never interrupted again.
+   */
+  private async maybeShowOnboarding(): Promise<void> {
+    if (!shouldAutoOpenOnboarding(this.settings)) {
+      return;
+    }
+    this.settings.hasShownOnboarding = true;
+    await this.saveSettings();
+    await this.activateDashboard();
+  }
+
+  closeDashboard(): void {
+    this.app.workspace.detachLeavesOfType(DASHBOARD_VIEW_TYPE);
   }
 
   async activateDashboard(): Promise<DashboardView | null> {

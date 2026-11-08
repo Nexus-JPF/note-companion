@@ -13,7 +13,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   backgroundColor: "#ffffff",
   assetBundlePatterns: ["**/*"],
   ios: {
-    supportsTablet: true,
+    supportsTablet: false,
     bundleIdentifier: "ai.notecompanion.app",
     privacyManifests: {
       NSPrivacyAccessedAPITypes: [
@@ -34,7 +34,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
       CFBundleAllowMixedLocalizations: true,
       NSPhotoLibraryUsageDescription:
-        "Allow access so you can attach receipt photos to an expense. Example: tap 'Add receipt', pick a photo, and we save it with the transaction.",
+        "Note Companion reads photos you choose from your library to extract their text and save it as notes (e.g., pick a photo of handwritten notes).",
       NSCameraUsageDescription:
         "Note Companion uses the camera to capture documents or diagrams that are then converted into text and saved as notes (e.g., snap a whiteboard to create a meeting note).",
       LSApplicationQueriesSchemes: ["obsidian"],
@@ -115,10 +115,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         image: "./assets/splash.png",
         resizeMode: "contain",
+        // The plugin defaults to a 100pt-wide image, which made the wordmark tiny.
+        imageWidth: 400,
         backgroundColor: "#ffffff",
         dark: {
           image: "./assets/splash-white.png",
           resizeMode: "contain",
+          imageWidth: 400,
           backgroundColor: "#ffffff",
         },
       },

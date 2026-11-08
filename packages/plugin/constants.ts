@@ -8,7 +8,6 @@ export const VALID_IMAGE_EXTENSIONS = [
   "jpg",
   "jpeg",
   "gif",
-  "svg",
   "webp",
 ];
 

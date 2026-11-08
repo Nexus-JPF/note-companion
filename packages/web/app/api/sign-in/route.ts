@@ -1,110 +1,147 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clerkClient, auth } from "@clerk/nextjs/server";
-import { createLicenseKeyFromUserId } from "@/app/actions";
+import { createLicenseKeyFromUserId } from "@/lib/account-server";
 import { createEmptyUserUsage } from "@/drizzle/schema";
+import { isRateLimited } from "@/lib/auth-rate-limit";
+import { captureServerEvent } from "@/lib/server-analytics";
+
+const DASHBOARD_URL = "https://app.notecompanion.ai/dashboard";
+
+// One generic message for every credential failure (unknown email, wrong
+// password, passwordless/social account) so account existence is not leaked.
+const INVALID_CREDENTIALS_ERROR = `Signed up with Google or another social login? There is no password to enter: sign in at ${DASHBOARD_URL} and copy your license key from there. Otherwise, check your email and password.`;
+
+const WINDOW_MS = 15 * 60 * 1000;
+const MAX_ATTEMPTS_PER_IP = 20;
+const MAX_ATTEMPTS_PER_EMAIL = 5;
+
+function invalidCredentials() {
+  return NextResponse.json(
+    { success: false, error: INVALID_CREDENTIALS_ERROR },
+    { status: 400 }
+  );
+}
+
+// Failures are counted anonymously (no email, no person profile) with an
+// internal-only reason, so social-login attempts show up without being
+// revealed to the caller.
+async function failedSignIn(reason: string) {
+  await captureServerEvent("plugin_signin_failed", { reason });
+  return invalidCredentials();
+}
 
 export async function POST(req: NextRequest) {
-  console.log('🔒 Sign-in attempt started');
-
   try {
-    // For development mode, we'll use the current auth session if available
-    console.log('Checking auth session...');
-    const { userId } = await auth();
-
-    // If we're in development mode and have a userId, use it
-    if (process.env.NODE_ENV === 'development' && userId) {
-      console.log('📝 Development mode - using existing session', { userId });
-
-      // Add more detailed logging for license key creation
-      console.log('Attempting to create license key for user:', userId);
-      const licenseKeyResult = await createLicenseKeyFromUserId(userId);
-      console.log('License key creation result:', licenseKeyResult);
-
-      if ('error' in licenseKeyResult) {
-        console.error('❌ License key creation failed:', licenseKeyResult.error);
+    // Development convenience: reuse the current Clerk session if present.
+    if (process.env.NODE_ENV === "development") {
+      const { userId } = await auth();
+      if (userId) {
+        const result = await createLicenseKeyFromUserId(userId);
+        if ("error" in result) {
+          return NextResponse.json(
+            { success: false, error: result.error },
+            { status: 500 }
+          );
+        }
         return NextResponse.json({
-          success: false,
-          error: licenseKeyResult.error,
-        }, { status: 500 });
+          success: true,
+          licenseKey: result.key.key,
+          userId,
+          message: "Development mode: Using current session",
+        });
       }
-
-      console.log('🔑 License key created successfully in dev mode');
-
-      return NextResponse.json({
-        success: true,
-        licenseKey: licenseKeyResult.key.key,
-        userId,
-        message: "Development mode: Using current session",
-      });
     }
 
-    // For production, we'll need to sign in the user
-    const { email, password } = await req.json();
-    console.log('📧 Attempting sign in for email:', email);
+    let body: { email?: unknown; password?: unknown };
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+    const email =
+      typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body.password === "string" ? body.password : "";
 
     if (!email || !password) {
-      console.warn('❌ Missing credentials', { email: !!email, password: !!password });
-      return NextResponse.json({
-        success: false,
-        error: "Email and password are required",
-      }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Email and password are required" },
+        { status: 400 }
+      );
     }
 
-    // get user
-    console.log('🔍 Looking up user by email...');
-    const usersResponse = await (await clerkClient()).users.getUserList({
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "unknown";
+    if (
+      isRateLimited(`sign-in:ip:${ip}`, MAX_ATTEMPTS_PER_IP, WINDOW_MS) ||
+      isRateLimited(`sign-in:email:${email}`, MAX_ATTEMPTS_PER_EMAIL, WINDOW_MS)
+    ) {
+      await captureServerEvent("plugin_signin_failed", { reason: "rate_limited" });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Too many sign-in attempts. Please try again later.",
+        },
+        { status: 429 }
+      );
+    }
+
+    const clerk = await clerkClient();
+    const { data: users } = await clerk.users.getUserList({
       emailAddress: [email],
     });
+    const user = users[0];
 
-    const users = usersResponse.data;
-    console.log(`👥 Found ${users.length} matching users`);
-
-    if (users.length === 0) {
-      console.warn('❌ No user found for email:', email);
-      return NextResponse.json({
-        success: false,
-        error: "No account found with this email",
-      }, { status: 400 });
+    // Passwordless (social-login) users cannot be verified here and get the
+    // same generic error; they are pointed at the web dashboard instead.
+    if (!user) {
+      return failedSignIn("no_account");
+    }
+    if (!user.passwordEnabled) {
+      return failedSignIn("social_account");
     }
 
-    console.log('🔐 User found, generating license key...');
-    // Add more detailed logging for production license key creation
-    const licenseKeyResult = await createLicenseKeyFromUserId(users[0].id);
-    console.log('License key creation result:', licenseKeyResult);
-
-    if ('error' in licenseKeyResult) {
-      console.error('❌ License key creation failed:', licenseKeyResult.error);
-      return NextResponse.json({
-        success: false,
-        error: licenseKeyResult.error,
-      }, { status: 500 });
+    try {
+      const result = await clerk.users.verifyPassword({
+        userId: user.id,
+        password,
+      });
+      if (!result?.verified) return failedSignIn("wrong_password");
+    } catch (error: any) {
+      // Clerk rejects wrong passwords with a 4xx; treat anything else as a server error.
+      const status = error?.status;
+      if (status && status >= 400 && status < 500 && status !== 429) {
+        return failedSignIn("wrong_password");
+      }
+      throw error;
     }
 
-    // Ensure user usage record exists (creates if doesn't exist, no-op if exists)
-    await createEmptyUserUsage(users[0].id);
+    const licenseKeyResult = await createLicenseKeyFromUserId(user.id);
+    if ("error" in licenseKeyResult) {
+      return NextResponse.json(
+        { success: false, error: licenseKeyResult.error },
+        { status: 500 }
+      );
+    }
 
-    console.log('✅ License key generated successfully');
+    await createEmptyUserUsage(user.id);
+    await captureServerEvent("plugin_signin_succeeded", {}, user.id);
 
     return NextResponse.json({
       success: true,
       licenseKey: licenseKeyResult.key.key,
-      userId: users[0].id,
+      userId: user.id,
     });
   } catch (error) {
-    console.error("❌ Error during sign in:", error);
-
-    // Log additional error details if available
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
-    }
-
-    return NextResponse.json({
-      success: false,
-      error: "An error occurred during sign in",
-    }, { status: 500 });
+    // Deliberately no email/credentials in logs.
+    console.error(
+      "Error during sign in:",
+      error instanceof Error ? error.name : "unknown"
+    );
+    return NextResponse.json(
+      { success: false, error: "An error occurred during sign in" },
+      { status: 500 }
+    );
   }
 }

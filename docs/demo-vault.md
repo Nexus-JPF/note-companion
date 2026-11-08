@@ -112,16 +112,21 @@ Eleven notes, one coherent scenario: a product researcher running customer
 interviews for an onboarding redesign.
 
 ```
-Inbox/              three unfiled notes, for the organizer demo
+Unsorted/           three unfiled notes, for the organizer demo
 Meetings/           one meeting note with action items
 Projects/           the project the research feeds
 Research/           two interviews plus a synthesis note
 Reference/          two evergreen notes
 ```
 
-`Inbox/Untitled.md` is deliberately untitled — it is the note the title
+`Unsorted/Untitled.md` is deliberately untitled — it is the note the title
 suggestion acts on, and its content is unambiguous enough that a good suggestion
 is obviously good.
+
+The folder is called `Unsorted/`, not `Inbox/`, on purpose. The plugin has its
+own inbox — `_NoteCompanion/Inbox` by default — and two folders reading "Inbox"
+in the same file tree is confusing on camera. See the gotcha below for the
+sharper reason.
 
 Keep it small. A vault this size loads instantly, fits in the file tree without
 scrolling, and every note on screen is one a viewer might plausibly have written.
@@ -135,6 +140,14 @@ Adding notes for their own sake is how you end up back where the old GIFs were.
 panel already shows an `Applying…` spinner, so the notice is duplicate feedback.
 Until that's resolved in the product, plan shots so a notice isn't firing while
 the tab bar is the subject.
+
+**The plugin's inbox eats its whole folder on load.** `onload` calls
+`processBacklog()` (`packages/plugin/index.ts:1715`), which enqueues *every*
+file already under `pathToWatch` — not just newly-created ones. So never point
+the inbox setting at a folder that holds notes you want to keep on screen:
+opening the vault would process them before you hit record. Leave it at the
+default `_NoteCompanion/Inbox`, which is gitignored and empty at the start of
+every take.
 
 **The AI is non-deterministic.** You cannot reshoot a take and get the same
 suggestion, title, or chat response. If a cut depends on specific output, either

@@ -29,6 +29,7 @@ const config: Config.InitialOptions = {
     '^@/lib/models$': '<rootDir>/__mocks__/@/lib/models.ts',
     '^@/lib/posthog$': '<rootDir>/__mocks__/@/lib/posthog.ts',
     '^@/lib/prompts/chat-prompt$': '<rootDir>/__mocks__/@/lib/prompts/chat-prompt.ts',
+    '^server-only$': '<rootDir>/__mocks__/server-only.ts',
     '^@/srm.config$': '<rootDir>/__mocks__/@/srm.config.ts',
     '^@/(.*)$': '<rootDir>/$1',
     '^next/server$': '<rootDir>/__mocks__/next/server.ts',

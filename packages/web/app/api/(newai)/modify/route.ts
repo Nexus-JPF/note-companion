@@ -51,7 +51,10 @@ Modified content with the text "${content}" applied according to the instruction
       explanation: response.object.explanation
     });
   } catch (error) {
-    console.error("Error in modify route:", error);
+    console.error("Error in modify route:", {
+      message: error instanceof Error ? error.message : String(error),
+      status: error?.status,
+    });
     return NextResponse.json(
       { error: error.message || "Failed to modify content" },
       { status: error.status || 500 }

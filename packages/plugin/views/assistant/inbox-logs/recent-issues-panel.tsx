@@ -2,8 +2,9 @@ import * as React from "react";
 import { FileRecord, FileStatus, RecordManager } from "../../../inbox/services/record-manager";
 import { TFile, Notice } from "obsidian";
 import { Inbox } from "../../../inbox";
+import { getLatestLogTime } from "../../../inbox/services/record-pruning";
 import { tw } from "../../../lib/utils";
-import { RotateCcw, AlertCircle } from "lucide-react";
+import { RotateCcw, AlertCircle, X } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import FileOrganizer from "../../../index";
 
@@ -36,7 +37,8 @@ const IssueCard: React.FC<{
   record: FileRecord;
   plugin: FileOrganizer;
   onRetry: (record: FileRecord) => Promise<void>;
-}> = ({ record, plugin, onRetry }) => {
+  onDismiss: (record: FileRecord) => void;
+}> = ({ record, plugin, onRetry, onDismiss }) => {
   const [isRetrying, setIsRetrying] = React.useState(false);
   const recordManager = RecordManager.getInstance(plugin.app);
   const lastError = recordManager.getLastError(record.id);
@@ -112,63 +114,91 @@ const IssueCard: React.FC<{
             </div>
           )}
         </div>
-        <Button
-          onClick={() => { void handleRetry(); }}
-          disabled={isRetrying}
-          size="sm"
-          variant="outline"
-          className={tw("flex items-center gap-1 text-xs")}
-          title="Retry processing this file"
-        >
-          <RotateCcw className={tw(`w-3 h-3 ${isRetrying ? "animate-spin" : ""}`)} />
-          {isRetrying ? "Retrying..." : "Retry"}
-        </Button>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Button
+            onClick={() => { void handleRetry(); }}
+            disabled={isRetrying}
+            size="sm"
+            variant="outline"
+            className={tw("flex items-center gap-1 text-xs")}
+            title="Retry processing this file"
+          >
+            <RotateCcw className={tw(`w-3 h-3 ${isRetrying ? "animate-spin" : ""}`)} />
+            {isRetrying ? "Retrying..." : "Retry"}
+          </Button>
+          <button
+            onClick={() => onDismiss(record)}
+            className="clickable-icon"
+            aria-label="Dismiss this issue"
+            title="Dismiss this issue (keeps it in the processing log)"
+          >
+            <X className={tw("w-3 h-3")} />
+          </button>
+        </div>
       </div>
     </div>
   );
 };
 
+const VISIBLE_ISSUE_LIMIT = 10;
+
 // Main Recent Issues Panel component
 export const RecentIssuesPanel: React.FC<{ plugin: FileOrganizer }> = ({ plugin }) => {
+  // Every outstanding issue, newest first. Only the first VISIBLE_ISSUE_LIMIT
+  // are rendered, but "Clear all" acts on the whole list so a long backlog
+  // takes one click rather than one click per visible page.
   const [issues, setIssues] = React.useState<FileRecord[]>([]);
 
-  // Fetch and filter issues
+  const fetchIssues = React.useCallback(() => {
+    try {
+      const recordManager = RecordManager.getInstance(plugin.app);
+      const allRecords = recordManager.getAllRecords();
+
+      // Filter for error and bypassed files the user has not cleared
+      const errorAndBypassed = allRecords.filter(
+        (r) => !r.dismissed && (r.status === "error" || r.status === "bypassed")
+      );
+
+      // Sort by most recent timestamp. Shares the parser with the retention
+      // policy so log timestamps are read the same way everywhere.
+      const sorted = errorAndBypassed.sort(
+        (a, b) => getLatestLogTime(b) - getLatestLogTime(a)
+      );
+
+      setIssues(sorted);
+    } catch (error) {
+      console.error("Error fetching issues:", error);
+      setIssues([]);
+    }
+  }, [plugin.app]);
+
   React.useEffect(() => {
-    const fetchIssues = () => {
-      try {
-        const recordManager = RecordManager.getInstance(plugin.app);
-        const allRecords = recordManager.getAllRecords();
-
-        // Filter for error and bypassed files
-        const errorAndBypassed = allRecords.filter(
-          (r) => r.status === "error" || r.status === "bypassed"
-        );
-
-        // Sort by most recent timestamp
-        const sorted = errorAndBypassed.sort((a, b) => {
-          const getLatestTimestamp = (record: FileRecord): number => {
-            const timestamps = Object.values(record.logs).map((log) =>
-              new Date(log.timestamp).getTime()
-            );
-            return timestamps.length > 0 ? Math.max(...timestamps) : 0;
-          };
-
-          return getLatestTimestamp(b) - getLatestTimestamp(a);
-        });
-
-        // Limit to last 10
-        setIssues(sorted.slice(0, 10));
-      } catch (error) {
-        console.error("Error fetching issues:", error);
-        setIssues([]);
-      }
-    };
-
     fetchIssues();
     // Poll every 2 seconds (less frequent than main InboxLogs since this is a summary)
     const interval = window.setInterval(fetchIssues, 2000);
     return () => window.clearInterval(interval);
-  }, [plugin.app]);
+  }, [fetchIssues]);
+
+  // Dismiss handlers. Dismissing marks the record rather than deleting it, so
+  // the file stays in the full processing log below while leaving this list
+  // and the error/bypassed tiles.
+  const handleDismiss = React.useCallback(
+    (record: FileRecord) => {
+      RecordManager.getInstance(plugin.app).dismissRecord(record.id);
+      fetchIssues();
+    },
+    [plugin.app, fetchIssues]
+  );
+
+  const handleClearAll = React.useCallback(() => {
+    const cleared = RecordManager.getInstance(plugin.app).dismissRecords(
+      issues.map((record) => record.id)
+    );
+    fetchIssues();
+    if (cleared > 0) {
+      new Notice(`Cleared ${cleared} issue${cleared === 1 ? "" : "s"}`);
+    }
+  }, [plugin.app, issues, fetchIssues]);
 
   // Retry handler
   const handleRetry = React.useCallback(
@@ -293,28 +323,46 @@ export const RecentIssuesPanel: React.FC<{ plugin: FileOrganizer }> = ({ plugin 
     return null;
   }
 
+  const visibleIssues = issues.slice(0, VISIBLE_ISSUE_LIMIT);
+
   return (
     <div className="border-b border-[--background-modifier-border]">
       <div className="px-3 py-2 bg-[--background-secondary]">
-        <div className="flex items-center gap-2 mb-2">
-          <AlertCircle className="w-4 h-4 text-[--text-error]" />
-          <h3 className="text-sm font-semibold text-[--text-normal]">
-            Recent Issues ({issues.length})
-          </h3>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertCircle className="w-4 h-4 text-[--text-error] flex-shrink-0" />
+            <h3 className="text-sm font-semibold text-[--text-normal] truncate">
+              Recent Issues ({issues.length})
+            </h3>
+          </div>
+          <button
+            onClick={handleClearAll}
+            className="text-xs text-[--text-muted] hover:text-[--text-normal] flex-shrink-0"
+            aria-label="Clear all issues"
+            title="Dismiss every issue listed here (keeps them in the processing log)"
+          >
+            Clear all
+          </button>
         </div>
         <div className="text-xs text-[--text-muted] mb-2">
           Files that failed processing or were bypassed
         </div>
       </div>
       <div className="max-h-64 overflow-y-auto">
-        {issues.map((record) => (
+        {visibleIssues.map((record) => (
           <IssueCard
             key={record.id}
             record={record}
             plugin={plugin}
             onRetry={handleRetry}
+            onDismiss={handleDismiss}
           />
         ))}
+        {issues.length > visibleIssues.length && (
+          <div className="px-2 py-1 text-xs text-[--text-faint]">
+            {issues.length - visibleIssues.length} more not shown
+          </div>
+        )}
       </div>
     </div>
   );

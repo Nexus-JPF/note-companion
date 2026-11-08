@@ -38,6 +38,31 @@ npx remotion render Episode out/episode.mp4 --browser-executable=/path/to/chrome
 A new episode is a file in `src/episodes/` and two lines in `src/Root.tsx`. See
 `src/episodes/ep01-youtube-to-notes.ts`.
 
+## Thumbnails
+
+YouTube picks a frame if you don't give it one, and every frame here is a wall
+of small text -- unreadable at the ~210px wide a thumbnail is actually seen at
+in search. So there is a `Thumbnail` composition, rendered as a still:
+
+```bash
+npx remotion still ThumbB out/thumb-B.png
+```
+
+Three variants (`ThumbA`, `ThumbB`, `ThumbC`) are registered in `src/Root.tsx`
+as the same composition with different props, so they can be compared at real
+size rather than argued about. Change the props, or add a fourth.
+
+The headline is three or four words at a size that looks absurd full-size and
+is merely legible small; anything smaller vanishes. The screenshot behind it is
+texture, not subject -- zoomed into one recognisable region and faded, because
+a whole window at 210px is noise.
+
+Shots come out of the footage and are gitignored like it:
+
+```bash
+ffmpeg -ss 45 -i public/ep01.mp4 -frames:v 1 public/shot-organizer.png
+```
+
 ## The ten decisions
 
 Everything the kit standardises lives in `src/tokens.ts`. That file *is* the

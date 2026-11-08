@@ -22,7 +22,9 @@ type UsageData = {
   tokenUsage: number;
   maxTokenUsage: number;
   subscriptionStatus: string;
-  tier: string;
+  // /api/usage returns `currentPlan`; `tier` is a legacy field the app used to read
+  currentPlan?: string;
+  tier?: string;
   // Note: audioTranscriptionMinutes and maxAudioTranscriptionMinutes are intentionally
   // excluded from the mobile app display for now, even if present in the API response
 };
@@ -103,9 +105,37 @@ export function UsageStatus({ compact = false }: UsageStatusProps) {
       case 'monthly':
         return 'Monthly Subscription';
       case 'yearly':
+      case 'subscription_yearly':
         return 'Yearly Subscription';
+      case 'lifetime_license':
+        return 'Lifetime License';
+      case 'top_up':
+      case 'top_up_minutes':
+        return 'Top-up';
       default:
         return plan || 'Basic Plan';
+    }
+  };
+
+  // Show the real subscription status instead of guessing "Free Usage" for any
+  // non-active value (a paid plan with e.g. past_due is not free usage).
+  const getStatusDisplay = (status?: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active':
+        return 'Active Account';
+      case 'trialing':
+        return 'Trial';
+      case 'past_due':
+        return 'Payment past due';
+      case 'canceled':
+      case 'cancelled':
+        return 'Canceled';
+      case 'inactive':
+      case undefined:
+      case '':
+        return 'Inactive';
+      default:
+        return status;
     }
   };
 
@@ -118,12 +148,10 @@ export function UsageStatus({ compact = false }: UsageStatusProps) {
         <MaterialIcons name="star" size={24} color={primaryColor} />
         <View style={styles.planDetails}>
           <ThemedText type="defaultSemiBold">
-            {getPlanDisplay(usageData?.tier || 'free')}
+            {getPlanDisplay(usageData?.currentPlan || usageData?.tier || 'free')}
           </ThemedText>
           <ThemedText colorName="textSecondary" type="caption">
-            {usageData?.subscriptionStatus === 'active'
-              ? 'Active Account'
-              : 'Free Usage'}
+            {getStatusDisplay(usageData?.subscriptionStatus)}
           </ThemedText>
         </View>
       </View>

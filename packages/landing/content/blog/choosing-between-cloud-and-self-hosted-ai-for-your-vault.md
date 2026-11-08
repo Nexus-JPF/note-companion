@@ -13,7 +13,7 @@ excerpt: 'Deciding between cloud and self-hosted AI for your vault involves weig
 
 As note-taking and knowledge management evolve, AI integration becomes a compelling way to supercharge your workflows. Whether it’s generating summaries, extracting insights, or linking ideas, AI can transform how you interact with your vault. But a critical question arises: should your AI run in the cloud or be self-hosted? Both options have distinct advantages and trade-offs that can significantly impact your experience, privacy, and control.
 
-This post explores the key considerations to help you decide which AI setup aligns with your vault and workflow. If data ownership matters most, start with [why your second brain should be local-first](/blog/why-your-second-brain-should-be-local-first).
+This post explores the key considerations to help you decide which AI setup aligns with your vault and workflow. If data ownership matters most, start with [why your second brain should be local-first](/blog/why-your-second-brain-should-be-local-first). If you would rather not pick just one, see [why supporting multiple AI providers matters](/blog/why-supporting-multiple-ai-providers-matters-for-obsidian-users).
 
 ## The Appeal of Cloud-Based AI
 

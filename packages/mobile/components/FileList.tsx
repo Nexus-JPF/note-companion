@@ -14,6 +14,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { FileCard } from './FileCard';
 import { fetchFiles, deleteFile, UploadedFile, PaginationData } from '@/utils/api';
 import { useAuth } from '@clerk/react';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 interface FileListProps {
   files: UploadedFile[];
@@ -35,6 +36,7 @@ export function FileList({
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const { getToken } = useAuth();
+  const tabBarPadding = useTabBarPadding();
 
   const handleLoadMore = () => {
     // If pagination is handled by parent, this becomes a no-op
@@ -72,40 +74,24 @@ export function FileList({
     }
   };
 
+  // FileCard already asks for confirmation before calling this.
   const handleDelete = async (id: number) => {
     try {
-      Alert.alert(
-        'Delete File',
-        'Are you sure you want to delete this file?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              const token = await getToken();
-              if (!token) {
-                throw new Error('Please sign in to delete files');
-              }
-              
-              const result = await deleteFile(id, token);
-              
-              if (!result.success) {
-                throw new Error(result.error || 'Failed to delete file');
-              }
-              
-              // Notify parent component about deletion
-              if (onFileDeleted) {
-                onFileDeleted();
-              }
-            },
-          },
-        ],
-        { cancelable: true }
-      );
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Please sign in to delete files');
+      }
+
+      const result = await deleteFile(id, token);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete file');
+      }
+
+      // Notify parent component about deletion
+      if (onFileDeleted) {
+        onFileDeleted();
+      }
     } catch (err) {
       console.error('Error deleting file:', err);
       Alert.alert('Error', 'Failed to delete file. Please try again.');
@@ -154,7 +140,8 @@ export function FileList({
           onView={handleView}
         />
       )}
-      contentContainerStyle={styles.listContent}
+      // Leave room for the tab bar so the last card's button is reachable.
+      contentContainerStyle={[styles.listContent, { paddingBottom: tabBarPadding }]}
       refreshControl={
         <RefreshControl 
           refreshing={refreshing} 
