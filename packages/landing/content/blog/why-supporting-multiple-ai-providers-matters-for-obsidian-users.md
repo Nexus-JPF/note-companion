@@ -5,10 +5,8 @@ date: '2026-05-09'
 category: 'Opinions'
 tags: ['obsidian', 'ai', 'knowledge-management', 'productivity', 'integration']
 excerpt: 'Discover the benefits of supporting multiple AI providers in Obsidian, from flexibility and reliability to cost control and personalized workflows.'
-image: '/blog/images/why-supporting-multiple-ai-providers-matters-for-obsidian-users.png'
+image: '/blog/images/why-supporting-multiple-ai-providers-matters-for-obsidian-users.webp'
 ---
-
-# Why Supporting Multiple AI Providers Matters for Obsidian Users
 
 ## The Growing Role of AI in Obsidian Workflows
 
