@@ -121,7 +121,6 @@ type PresignedUrlResponse = {
   key: string;
   publicUrl: string;
 };
-type PresignedUrlErrorBody = ApiErrorBody & { details?: string };
 
 type PdfTextContent = { items: unknown[] };
 type PdfPage = {
