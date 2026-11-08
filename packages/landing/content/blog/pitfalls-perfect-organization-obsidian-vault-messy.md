@@ -22,7 +22,7 @@ Obsidian is built for flexibility. Unlike a bookshelf where every book has a sta
 
 When you try to shoehorn every new note into a rigid hierarchy, you create friction at the moment of capture. You hesitate: Does this belong under `/reference/2024/` or `/projects/old/`? Should it be tagged `#meeting` or `#discussion`? The time you spend pondering classification is time you’re not spending actually working with your knowledge.
 
-Instead, let your organization be provisional. Allow folders, tags, and connections to emerge as your needs change. Use Obsidian’s strengths—search, backlinks, and graph view—to navigate through the mess, rather than relying on a brittle perfect structure.
+Instead, let your organization be provisional. Allow folders, tags, and connections to emerge as your needs change. Use Obsidian’s strengths—search, backlinks, and graph view—to navigate through the mess, rather than relying on a brittle perfect structure. If your vault keeps growing faster than your understanding of it, see [do you need more notes or more insight?](/blog/more-notes-vs-more-insight-obsidian-vault-strategies).
 
 ## Embracing Productive Messiness in Obsidian
 

@@ -24,7 +24,7 @@ Before you dive in, it’s worth understanding why local AI is so appealing for 
 - **No surprise charges:** You avoid the unpredictability of pay-per-use APIs and subscription fees.
 - **Tailored experience:** Choose models and tweak parameters to fit your note-taking style and hardware.
 
-Self-hosting isn’t about building models from scratch. It’s about running a lean, efficient local AI that plugs into your favorite Obsidian workflows—giving you fast, secure, and customizable assistance without the cloud.
+Self-hosting isn’t about building models from scratch. It’s about running a lean, efficient local AI that plugs into your favorite Obsidian workflows—giving you fast, secure, and customizable assistance without the cloud. Self-hosting is one way to choose your own model; for the wider case for choosing among providers, see [why supporting multiple AI providers matters](/blog/why-supporting-multiple-ai-providers-matters-for-obsidian-users).
 
 ## Minimal Self-Hosted AI: Your 30-Minute Workflow
 

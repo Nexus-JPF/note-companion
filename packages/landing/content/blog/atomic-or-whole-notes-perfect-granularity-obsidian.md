@@ -14,7 +14,7 @@ image: '/blog/images/atomic-or-whole-notes-perfect-granularity-obsidian.png'
 
 One of the biggest challenges in personal knowledge management isn’t capturing information—it's deciding **how much to put in each note**. Should you break everything down into tiny, focused "atomic" notes, or keep related ideas bundled together in comprehensive documents?
 
-This decision—your note granularity—directly affects how easily you can retrieve, connect, and build on your knowledge in Obsidian. There’s no one-size-fits-all answer, but your workflow, the scale of your vault, and the kind of projects you tackle can point you toward the best approach.
+This decision—your note granularity—directly affects how easily you can retrieve, connect, and build on your knowledge in Obsidian. There’s no one-size-fits-all answer, but your workflow, the scale of your vault, and the kind of projects you tackle can point you toward the best approach. Granularity is one half of vault strategy; the other is volume, covered in [more notes or more insight](/blog/more-notes-vs-more-insight-obsidian-vault-strategies).
 
 Let’s dig into two popular strategies, see where each shines, and walk through a practical method to find your sweet spot.
 

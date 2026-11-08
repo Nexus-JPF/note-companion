@@ -12,7 +12,7 @@ image: '/blog/images/designing-ai-plugins-any-provider-engineering-challenges.pn
 
 ## The Fragmented AI Landscape: Before Universal Compatibility
 
-Imagine you’re a developer tasked with building an AI plugin for a knowledge management app. Initially, you integrate with a single AI provider—everything works fine. But soon, users request support for other providers, each with different APIs, rate limits, input formats, and response structures. Suddenly, your plugin is a patchwork of provider-specific code, brittle and difficult to maintain.
+Imagine you’re a developer tasked with building an AI plugin for a knowledge management app. Initially, you integrate with a single AI provider—everything works fine. But soon, users request support for other providers, each with different APIs, rate limits, input formats, and response structures. Suddenly, your plugin is a patchwork of provider-specific code, brittle and difficult to maintain. For the user-side view of this problem, see [why supporting multiple AI providers matters for Obsidian users](/blog/why-supporting-multiple-ai-providers-matters-for-obsidian-users).
 
 Before universal compatibility, plugin developers often face these challenges:
 
