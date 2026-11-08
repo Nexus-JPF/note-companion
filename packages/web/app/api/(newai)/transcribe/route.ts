@@ -13,6 +13,7 @@ import { downloadFromR2, isOwnedUploadKey } from '@/lib/r2-client';
 import {
   normalizeAudioForWhisper,
   splitAudioFileBySizeHeuristic,
+  isBinaryUnavailable,
 } from '@/lib/audio/split-audio';
 import { getTranscriptionModel } from '@/lib/transcription-model';
 
@@ -165,6 +166,72 @@ async function transcribeChunksInOrder(
   );
   await Promise.all(workers);
   return results;
+}
+
+/**
+ * Splits a long recording into Whisper-sized chunks. Maps failures so callers
+ * can tell a bad file (400) apart from broken server tooling (503).
+ */
+async function splitForWhisper(
+  inputPath: string,
+  extension: string,
+  fileBytes: number
+): Promise<string[]> {
+  try {
+    const { chunkPaths } = await splitAudioFileBySizeHeuristic(
+      inputPath,
+      extension,
+      fileBytes,
+      { outputDir: tmpdir() }
+    );
+    return chunkPaths;
+  } catch (splitError) {
+    console.error('[Transcribe] Chunking failed:', splitError);
+    if (isBinaryUnavailable(splitError)) {
+      throw new Error('FFMPEG_UNAVAILABLE');
+    }
+    throw new Error('AUDIO_SPLIT_FAILED');
+  }
+}
+
+/**
+ * Maps known audio-processing errors to a response with a stable `code`.
+ * Returns null for unknown errors so the caller falls back to its 500.
+ */
+function audioErrorResponse(error: unknown): NextResponse | null {
+  const message = error instanceof Error ? error.message : '';
+  switch (message) {
+    case 'AUDIO_UNREADABLE':
+      return NextResponse.json(
+        {
+          code: 'AUDIO_UNREADABLE',
+          error:
+            'This recording could not be decoded (corrupted or unsupported format). Try re-exporting as MP3 or WAV, or use a different recorder.',
+        },
+        { status: 400 }
+      );
+    case 'AUDIO_SPLIT_FAILED':
+      return NextResponse.json(
+        {
+          code: 'AUDIO_SPLIT_FAILED',
+          error:
+            "We couldn't split this long recording. Try re-exporting it as MP3, or split it into shorter parts.",
+        },
+        { status: 400 }
+      );
+    case 'FFMPEG_UNAVAILABLE':
+      console.error('[Transcribe] ffmpeg/ffprobe binary unavailable on server');
+      return NextResponse.json(
+        {
+          code: 'AUDIO_PROCESSING_UNAVAILABLE',
+          error:
+            'Audio processing is temporarily unavailable on the server. Your recording is fine; please try again later.',
+        },
+        { status: 503 }
+      );
+    default:
+      return null;
+  }
 }
 
 export async function POST(request: Request) {
@@ -348,38 +415,22 @@ export async function POST(request: Request) {
           `[Transcribe] Transcription completed. Transcript length: ${transcriptLength} characters`
         );
       } else {
-        try {
-          const { chunkPaths: paths } = await splitAudioFileBySizeHeuristic(
-            tempFilePath,
-            extension,
-            fileBytes,
-            { outputDir: tmpdir() }
-          );
-          chunkPaths = paths;
-          console.log(
-            `[Transcribe] Chunked into ${chunkPaths.length} segments, transcribing with concurrency ${WHISPER_CONCURRENCY}`
-          );
-          const chunkTexts = await transcribeChunksInOrder(
-            openai,
-            chunkPaths,
-            WHISPER_CONCURRENCY
-          );
-          const mergedText = chunkTexts.join('\n');
-          transcriptLength = mergedText.length;
-          formattedText = formatTranscript(mergedText);
-          console.log(
-            `[Transcribe] Chunked transcription completed. Merged length: ${transcriptLength} characters`
-          );
-        } catch (splitError) {
-          console.error('[Transcribe] Chunking failed:', splitError);
-          return NextResponse.json(
-            {
-              error:
-                "We couldn't process this audio format for long recordings.",
-            },
-            { status: 400 }
-          );
-        }
+        chunkPaths = await splitForWhisper(tempFilePath, extension, fileBytes);
+        console.log(
+          `[Transcribe] Chunked into ${chunkPaths.length} segments, transcribing with concurrency ${WHISPER_CONCURRENCY}`
+        );
+        // Whisper/provider failures propagate to the outer handler as 5xx, not "bad format" 400s
+        const chunkTexts = await transcribeChunksInOrder(
+          openai,
+          chunkPaths,
+          WHISPER_CONCURRENCY
+        );
+        const mergedText = chunkTexts.join('\n');
+        transcriptLength = mergedText.length;
+        formattedText = formatTranscript(mergedText);
+        console.log(
+          `[Transcribe] Chunked transcription completed. Merged length: ${transcriptLength} characters`
+        );
       }
 
       try {
@@ -432,16 +483,8 @@ export async function POST(request: Request) {
       }
     }
 
-    const message = error instanceof Error ? error.message : '';
-    if (message === 'AUDIO_UNREADABLE') {
-      return NextResponse.json(
-        {
-          error:
-            'This recording could not be processed (corrupted or unsupported M4A). Try re-exporting as MP3 or WAV, or use a different recorder.',
-        },
-        { status: 400 }
-      );
-    }
+    const mapped = audioErrorResponse(error);
+    if (mapped) return mapped;
 
     return NextResponse.json(
       {
@@ -589,38 +632,22 @@ async function handlePresignedUrlTranscription(
           `[Transcribe R2] Transcription completed. Transcript length: ${transcriptLength} characters`
         );
       } else {
-        try {
-          const { chunkPaths: paths } = await splitAudioFileBySizeHeuristic(
-            tempFilePath,
-            extension,
-            fileBytes,
-            { outputDir: tmpdir() }
-          );
-          chunkPaths = paths;
-          console.log(
-            `[Transcribe R2] Chunked into ${chunkPaths.length} segments, transcribing with concurrency ${WHISPER_CONCURRENCY}`
-          );
-          const chunkTexts = await transcribeChunksInOrder(
-            openai,
-            chunkPaths,
-            WHISPER_CONCURRENCY
-          );
-          const mergedText = chunkTexts.join('\n');
-          transcriptLength = mergedText.length;
-          formattedText = formatTranscript(mergedText);
-          console.log(
-            `[Transcribe R2] Chunked transcription completed. Merged length: ${transcriptLength} characters`
-          );
-        } catch (splitError) {
-          console.error('[Transcribe R2] Chunking failed:', splitError);
-          return NextResponse.json(
-            {
-              error:
-                "We couldn't process this audio format for long recordings.",
-            },
-            { status: 400 }
-          );
-        }
+        chunkPaths = await splitForWhisper(tempFilePath, extension, fileBytes);
+        console.log(
+          `[Transcribe R2] Chunked into ${chunkPaths.length} segments, transcribing with concurrency ${WHISPER_CONCURRENCY}`
+        );
+        // Whisper/provider failures propagate to the outer handler as 5xx, not "bad format" 400s
+        const chunkTexts = await transcribeChunksInOrder(
+          openai,
+          chunkPaths,
+          WHISPER_CONCURRENCY
+        );
+        const mergedText = chunkTexts.join('\n');
+        transcriptLength = mergedText.length;
+        formattedText = formatTranscript(mergedText);
+        console.log(
+          `[Transcribe R2] Chunked transcription completed. Merged length: ${transcriptLength} characters`
+        );
       }
 
       try {
@@ -673,16 +700,8 @@ async function handlePresignedUrlTranscription(
       }
     }
 
-    const message = error instanceof Error ? error.message : '';
-    if (message === 'AUDIO_UNREADABLE') {
-      return NextResponse.json(
-        {
-          error:
-            'This recording could not be processed (corrupted or unsupported M4A). Try re-exporting as MP3 or WAV, or use a different recorder.',
-        },
-        { status: 400 }
-      );
-    }
+    const mapped = audioErrorResponse(error);
+    if (mapped) return mapped;
 
     return NextResponse.json(
       {

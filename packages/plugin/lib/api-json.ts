@@ -20,6 +20,21 @@ export function getApiError(data: unknown): string | undefined {
   return typeof error === "string" ? error : undefined;
 }
 
+/**
+ * Best-effort error text for a non-2xx response: the API's `error`/`details`,
+ * else `HTTP <status>` (also when the body is not JSON, e.g. a gateway page).
+ */
+export async function readApiErrorMessage(response: Response): Promise<string> {
+  try {
+    const data = (await response.json()) as { error?: unknown; details?: unknown };
+    if (typeof data?.error === "string") return data.error;
+    if (typeof data?.details === "string") return data.details;
+  } catch {
+    // fall through to the status
+  }
+  return `HTTP ${response.status}`;
+}
+
 export function parseJsonString<T>(json: string): T {
   return JSON.parse(json) as T;
 }
