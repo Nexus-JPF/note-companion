@@ -3,6 +3,15 @@ import { FileRecord, FileStatus, RecordManager } from "../../../inbox/services/r
 import { TFile, Notice } from "obsidian";
 import { Inbox } from "../../../inbox";
 import { getLatestLogTime } from "../../../inbox/services/record-pruning";
+import {
+  getAttachmentRetryCandidates,
+  isStaleContainer,
+} from "../../../inbox/retry-source";
+import {
+  isInInboxFolder,
+  normalizeInboxPath,
+} from "../../../inbox/inbox-path";
+import { safeMove } from "../../../fileUtils";
 import { tw } from "../../../lib/utils";
 import { RotateCcw, AlertCircle, X } from "lucide-react";
 import { Button } from "../../../components/ui/button";
@@ -206,6 +215,77 @@ export const RecentIssuesPanel: React.FC<{ plugin: FileOrganizer }> = ({ plugin 
       try {
         const inbox = Inbox.getInstance();
         let fileToRetry: TFile | null = null;
+
+        // Media (audio/image/PDF) fails in the empty markdown container the
+        // pipeline created for it. Retry the media file itself, and drop the
+        // stale container so it is not left behind or re-processed.
+        const containerFile =
+          record.file ??
+          (() => {
+            const f = plugin.app.vault.getAbstractFileByPath(
+              `${plugin.settings.errorFilePath}/${record.originalName}.md`
+            );
+            return f instanceof TFile ? f : null;
+          })();
+        // After a media failure the record already points at the media file;
+        // it has no container to read (and must not be read as text).
+        const recordIsMedia =
+          !!containerFile && containerFile.path === record.attachmentPath;
+        const containerContent =
+          containerFile && !recordIsMedia
+            ? await plugin.app.vault.read(containerFile).catch(() => "")
+            : "";
+        const attachmentCandidates = getAttachmentRetryCandidates({
+          attachmentPath: record.attachmentPath,
+          originalName: record.originalName,
+          attachmentsPath: plugin.settings.attachmentsPath,
+          extraFolders: [
+            plugin.settings.errorFilePath,
+            plugin.settings.bypassedFilePath,
+          ],
+          containerEmpty: containerContent.trim().length === 0,
+        });
+        let attachmentToRetry: TFile | null = null;
+        for (const candidate of attachmentCandidates) {
+          const found = plugin.app.vault.getAbstractFileByPath(candidate);
+          if (found instanceof TFile) {
+            attachmentToRetry = found;
+            break;
+          }
+        }
+
+        if (attachmentToRetry) {
+          if (
+            containerFile &&
+            !recordIsMedia &&
+            containerFile.path !== attachmentToRetry.path &&
+            isStaleContainer({
+              containerPath: containerFile.path,
+              attachmentPath: attachmentToRetry.path,
+              content: containerContent,
+            })
+          ) {
+            await plugin.app.vault.delete(containerFile);
+          }
+          // Put the media back in the inbox so the pipeline runs from the start
+          const inboxFolder = normalizeInboxPath(plugin.settings.pathToWatch);
+          if (inboxFolder && !isInInboxFolder(attachmentToRetry.path, inboxFolder)) {
+            const movedPath = await safeMove(
+              plugin.app,
+              attachmentToRetry,
+              inboxFolder
+            );
+            const moved = plugin.app.vault.getAbstractFileByPath(movedPath);
+            if (!(moved instanceof TFile)) {
+              new Notice("Failed to move file back to inbox");
+              return;
+            }
+            attachmentToRetry = moved;
+          }
+          inbox.enqueueFile(attachmentToRetry);
+          new Notice(`Retrying processing for ${record.originalName}`);
+          return;
+        }
 
         // Try to find the file
         if (record.file) {
