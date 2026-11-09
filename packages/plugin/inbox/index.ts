@@ -28,6 +28,10 @@ import {
   safeMove,
 } from "../fileUtils";
 import { getErrorMessage, getErrorStack } from "../lib/api-json";
+import {
+  filterTemplatesForAudio,
+  resolveAudioDefaultTemplate,
+} from "./audio-template";
 import { shouldShowInboxNotification } from "./notification-level";
 import { sanitizeContent } from "../fileUtils";
 import {
@@ -657,16 +661,31 @@ async function recommendClassificationStep(
     );
   }
 
-  const templateNames = await context.plugin.getTemplateNames();
+  const allTemplateNames = await context.plugin.getTemplateNames();
   if (!context.content || !context.containerFile) {
     logger.info("Skipping classification: missing content or container file");
     return context;
   }
 
-  const result = await context.plugin.classifyContentV2(
-    `${getOriginalContent(context.content)}, ${context.containerFile.name}`,
-    templateNames
+  const isAudio = VALID_AUDIO_EXTENSIONS.includes(
+    context.inboxFile?.extension
   );
+  const audioTemplate = getAudioDefaultTemplate(context);
+  let result: string | undefined;
+  if (audioTemplate && allTemplateNames.includes(audioTemplate)) {
+    result = audioTemplate;
+    logger.info("Using audio default template", { audioTemplate });
+  } else if (!context.plugin.settings.enableDocumentClassification) {
+    // Only reachable via the audio default template, which is missing from the template folder
+    logger.warn(`Audio default template "${audioTemplate}" not found; leaving the note unformatted`);
+    return context;
+  } else {
+    result = await context.plugin.classifyContentV2(
+      `${getOriginalContent(context.content)}, ${context.containerFile.name}`,
+      // youtube_* templates skip without a video link, so never offer them for audio
+      isAudio ? filterTemplatesForAudio(allTemplateNames) : allTemplateNames
+    );
+  }
   logger.info("Classification result", result);
   if (!result) return context;
   context.classification = {
@@ -1236,13 +1255,25 @@ export function enqueueFiles(files: TFile[]): void {
 export function getInboxStatus(): QueueStatus {
   return Inbox.getInstance().getQueueStats();
 }
+/** Template forced for this audio file by the "audio default template" setting, if any. */
+function getAudioDefaultTemplate(context: ProcessingContext): string | null {
+  const extension = context.inboxFile?.extension;
+  if (!extension || !VALID_AUDIO_EXTENSIONS.includes(extension)) return null;
+  // With transcription off the note is only an embed, so there is nothing to format
+  if (isMediaExtractionSkipped(context)) return null;
+  return resolveAudioDefaultTemplate(context.plugin.settings.audioDefaultTemplate);
+}
+
 // skip actions when settings below are false
 function shouldSkipAction(context: ProcessingContext, action: Action): boolean {
   switch (action) {
     case Action.CLASSIFY:
-      return !context.plugin.settings.enableDocumentClassification;
     case Action.FORMATTING:
-      return !context.plugin.settings.enableDocumentClassification;
+      // An audio default template formats recordings even when general auto-formatting is off
+      return (
+        !context.plugin.settings.enableDocumentClassification &&
+        !getAudioDefaultTemplate(context)
+      );
     case Action.RENAME:
       return !context.plugin.settings.enableFileRenaming;
     case Action.TAGGING:

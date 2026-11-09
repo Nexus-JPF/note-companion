@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type FileOrganizer from '../../index';
 import type { InboxNotificationLevel } from '../../inbox/notification-level';
+import { AUDIO_TEMPLATE_OFF, listAudioTemplateNames } from '../../inbox/audio-template';
 
 interface CustomizationTabProps {
   plugin: InstanceType<typeof FileOrganizer>;
@@ -20,6 +21,8 @@ export const CustomizationTab: React.FC<CustomizationTabProps> = ({ plugin }) =>
   const [useVaultTitles, setUseVaultTitles] = useState(plugin.settings.useVaultTitles);
   const [customFolderInstructions, setCustomFolderInstructions] = useState(plugin.settings.customFolderInstructions);
   const [enableDocumentClassification, setEnableDocumentClassification] = useState(plugin.settings.enableDocumentClassification);
+  const [audioDefaultTemplate, setAudioDefaultTemplate] = useState(plugin.settings.audioDefaultTemplate || AUDIO_TEMPLATE_OFF);
+  const audioTemplateNames = listAudioTemplateNames(plugin.app, plugin.settings.templatePaths);
   const [imageInstructions, setImageInstructions] = useState(plugin.settings.imageInstructions);
   const [customTagInstructions, setCustomTagInstructions] = useState(plugin.settings.customTagInstructions);
   const [inboxNotificationLevel, setInboxNotificationLevel] = useState<InboxNotificationLevel>(
@@ -110,6 +113,26 @@ export const CustomizationTab: React.FC<CustomizationTabProps> = ({ plugin }) =>
             value={enableDocumentClassification}
             onChange={(value) => { void handleToggleChange(value, setEnableDocumentClassification, 'enableDocumentClassification'); }}
           />
+          <div className="setting-item p-4 bg-[--background-secondary] rounded-lg border border-[--background-modifier-border] space-y-2">
+            <div className="font-medium text-[--text-normal]">Audio Default Template</div>
+            <p className="text-sm text-[--text-muted]">
+              Format every transcribed audio file with this template, even when Inbox Auto-Formatting is off.
+              Try lecture_notes for classes and talks.
+            </p>
+            <select
+              className="w-full max-w-xs px-2 py-1.5 bg-[--background-primary] border border-[--background-modifier-border] rounded text-[--text-normal]"
+              value={audioDefaultTemplate}
+              onChange={(e) => { void handleTextChange(e.target.value, setAudioDefaultTemplate, 'audioDefaultTemplate'); }}
+            >
+              <option value={AUDIO_TEMPLATE_OFF}>Off (use auto-formatting rules)</option>
+              {audioTemplateNames.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+              {audioDefaultTemplate !== AUDIO_TEMPLATE_OFF && !audioTemplateNames.includes(audioDefaultTemplate) && (
+                <option value={audioDefaultTemplate}>{audioDefaultTemplate} (missing)</option>
+              )}
+            </select>
+          </div>
           <div className="bg-[--background-secondary] p-4 rounded-lg mt-2">
             <div className="font-medium text-[--text-normal] mb-2">Document Type Templates</div>
             <div className="text-sm text-[--text-muted]">
