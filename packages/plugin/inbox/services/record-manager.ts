@@ -82,6 +82,12 @@ export interface FileRecord {
   logs: Record<Action, LogEntry>;
   status: FileStatus;
   file: TFile | null;
+  /**
+   * Vault path of the media file (audio, image, PDF) this record processes.
+   * `file` points at the markdown container the pipeline creates for it, which
+   * is empty when extraction fails, so Retry needs the media file itself.
+   */
+  attachmentPath?: string;
   folder?: string;
   /**
    * Set when the user clears this issue from the Inbox "Recent Issues" list.
@@ -301,6 +307,14 @@ export class RecordManager {
     const record = this.records.get(hash);
     if (record) {
       record.file = file;
+    }
+  }
+
+  public setAttachmentPath(hash: string, attachmentPath: string): void {
+    const record = this.records.get(hash);
+    if (record) {
+      record.attachmentPath = attachmentPath;
+      this.debounceSave();
     }
   }
 

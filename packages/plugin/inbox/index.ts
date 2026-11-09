@@ -35,6 +35,7 @@ import {
 } from "./audio-template";
 import { restoreAudioSourceInFile } from "../lib/audio-source";
 import { shouldShowInboxNotification } from "./notification-level";
+import { isStaleContainer } from "./retry-source";
 import { sanitizeContent } from "../fileUtils";
 import {
   extractYouTubeVideoId,
@@ -495,6 +496,7 @@ async function moveAttachmentFile(
     if (movedFile instanceof TFile) {
       context.attachmentFile = movedFile;
       context.inboxFile = movedFile;
+      context.recordManager.setAttachmentPath(context.hash, movedFile.path);
     }
   }
   return context;
@@ -856,6 +858,40 @@ async function cleanupStep(
   }
 }
 
+/**
+ * After a media file fails or is bypassed, drop the empty container note the
+ * pipeline created for it and point the record at the media file, so Retry
+ * re-runs the media instead of an empty note (which only bypasses again).
+ * Containers that already hold content are kept: the failure came after
+ * extraction and the note is worth keeping.
+ */
+async function settleMediaFailure(context: ProcessingContext): Promise<void> {
+  const { attachmentFile, containerFile, plugin, recordManager, hash } = context;
+  if (!attachmentFile) return;
+
+  // Rename updates the TFile in place, so this is the file's final location.
+  recordManager.setAttachmentPath(hash, attachmentFile.path);
+
+  if (!containerFile || containerFile.path === attachmentFile.path) return;
+  try {
+    if (!plugin.app.vault.getAbstractFileByPath(containerFile.path)) return;
+    const content = await plugin.app.vault.read(containerFile);
+    if (
+      isStaleContainer({
+        containerPath: containerFile.path,
+        attachmentPath: attachmentFile.path,
+        content,
+      })
+    ) {
+      await plugin.app.vault.delete(containerFile);
+      recordManager.setFile(hash, attachmentFile);
+      context.containerFile = undefined;
+    }
+  } catch (cleanupError) {
+    logger.warn("Could not remove empty container after failure", cleanupError);
+  }
+}
+
 // New helper function to handle bypassing
 async function handleBypass(
   context: ProcessingContext,
@@ -883,22 +919,7 @@ async function handleBypass(
     // Then move the file
     await safeMove(context.plugin.app, context.inboxFile, bypassedFolderPath);
 
-    if (
-      context.containerFile &&
-      context.attachmentFile &&
-      context.containerFile.path !== context.inboxFile.path
-    ) {
-      try {
-        const containerContent = await context.plugin.app.vault.read(
-          context.containerFile
-        );
-        if (!containerContent.trim()) {
-          await context.plugin.app.vault.delete(context.containerFile);
-        }
-      } catch (deleteError) {
-        logger.warn("Could not remove empty container after bypass", deleteError);
-      }
-    }
+    await settleMediaFailure(context);
 
     context.queue.bypass(context.hash);
     context.recordManager.setStatus(context.hash, "bypassed");
@@ -1219,6 +1240,8 @@ async function handleError(
       errorType = "Processing error";
       await moveFileToErrorFolder(context);
   }
+
+  await settleMediaFailure(context);
 
   // Show user notification
   if (
