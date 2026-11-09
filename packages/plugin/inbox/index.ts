@@ -29,8 +29,9 @@ import {
 } from "../fileUtils";
 import { getErrorMessage, getErrorStack } from "../lib/api-json";
 import {
+  decideTemplate,
   filterTemplatesForAudio,
-  resolveAudioDefaultTemplate,
+  getForcedAudioTemplate,
 } from "./audio-template";
 import { shouldShowInboxNotification } from "./notification-level";
 import { sanitizeContent } from "../fileUtils";
@@ -671,11 +672,16 @@ async function recommendClassificationStep(
     context.inboxFile?.extension
   );
   const audioTemplate = getAudioDefaultTemplate(context);
+  const decision = decideTemplate({
+    forcedTemplate: audioTemplate,
+    templateNames: allTemplateNames,
+    autoFormattingEnabled: context.plugin.settings.enableDocumentClassification,
+  });
   let result: string | undefined;
-  if (audioTemplate && allTemplateNames.includes(audioTemplate)) {
-    result = audioTemplate;
+  if (decision.kind === "use") {
+    result = decision.template;
     logger.info("Using audio default template", { audioTemplate });
-  } else if (!context.plugin.settings.enableDocumentClassification) {
+  } else if (decision.kind === "skip") {
     // Only reachable via the audio default template, which is missing from the template folder
     logger.warn(`Audio default template "${audioTemplate}" not found; leaving the note unformatted`);
     return context;
@@ -1258,10 +1264,12 @@ export function getInboxStatus(): QueueStatus {
 /** Template forced for this audio file by the "audio default template" setting, if any. */
 function getAudioDefaultTemplate(context: ProcessingContext): string | null {
   const extension = context.inboxFile?.extension;
-  if (!extension || !VALID_AUDIO_EXTENSIONS.includes(extension)) return null;
-  // With transcription off the note is only an embed, so there is nothing to format
-  if (isMediaExtractionSkipped(context)) return null;
-  return resolveAudioDefaultTemplate(context.plugin.settings.audioDefaultTemplate);
+  return getForcedAudioTemplate({
+    isAudioFile: !!extension && VALID_AUDIO_EXTENSIONS.includes(extension),
+    // With transcription off the note is only an embed, so there is nothing to format
+    mediaExtractionSkipped: isMediaExtractionSkipped(context),
+    setting: context.plugin.settings.audioDefaultTemplate,
+  });
 }
 
 // skip actions when settings below are false
