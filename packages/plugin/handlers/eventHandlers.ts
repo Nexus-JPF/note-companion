@@ -3,13 +3,7 @@ import FileOrganizer from "..";
 import { Inbox } from "../inbox";
 import { shouldShowInboxNotification } from "../inbox/notification-level";
 import { VALID_MEDIA_EXTENSIONS } from "../constants";
-
-function isInInboxFolder(filePath: string, pathToWatch: string): boolean {
-  if (!pathToWatch) return false;
-  return (
-    filePath === pathToWatch || filePath.startsWith(pathToWatch + "/")
-  );
-}
+import { isInInboxFolder } from "../inbox/inbox-path";
 
 export function registerEventHandlers(plugin: FileOrganizer) {
   // Read live: the recorder saves into the current inbox folder, so a changed folder must apply without a reload
