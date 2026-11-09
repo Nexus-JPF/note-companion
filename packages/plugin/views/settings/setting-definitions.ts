@@ -109,7 +109,9 @@ export function getNoteCompanionSettingDefinitions(
               name: 'Send recordings to inbox',
               desc: 'Save recordings from the Meetings recorder into the inbox, so they are transcribed, formatted and filed automatically. Requires the inbox and audio transcription.',
               visible: () =>
-                settings.enableAttachmentProcessing && settings.enableAudioTranscription,
+                settings.useInbox &&
+                settings.enableAttachmentProcessing &&
+                settings.enableAudioTranscription,
               control: { type: 'toggle', key: 'sendRecordingsToInbox' },
             },
             {

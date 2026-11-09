@@ -12,13 +12,14 @@ function isInInboxFolder(filePath: string, pathToWatch: string): boolean {
 }
 
 export function registerEventHandlers(plugin: FileOrganizer) {
-  const pathToWatch = plugin.settings.pathToWatch;
+  // Read live: the recorder saves into the current inbox folder, so a changed folder must apply without a reload
+  const getPathToWatch = () => plugin.settings.pathToWatch;
 
   plugin.registerEvent(
     plugin.app.vault.on("create", async file => {
       if (!plugin.settings.useInbox) return;
       await new Promise(resolve => window.setTimeout(resolve, 1000));
-      if (!isInInboxFolder(file.path, pathToWatch)) return;
+      if (!isInInboxFolder(file.path, getPathToWatch())) return;
       if (file instanceof TFile) {
         if (
           shouldShowInboxNotification(
@@ -37,7 +38,7 @@ export function registerEventHandlers(plugin: FileOrganizer) {
     plugin.app.vault.on("rename", async (file, _oldPath) => {
       if (!plugin.settings.useInbox) return;
       await new Promise(resolve => window.setTimeout(resolve, 1000));
-      if (!isInInboxFolder(file.path, pathToWatch)) return;
+      if (!isInInboxFolder(file.path, getPathToWatch())) return;
       if (file instanceof TFile) {
         if (
           shouldShowInboxNotification(
@@ -58,7 +59,7 @@ export function registerEventHandlers(plugin: FileOrganizer) {
     plugin.app.vault.on("modify", (file) => {
       if (!plugin.settings.useInbox) return;
       if (!(file instanceof TFile)) return;
-      if (!isInInboxFolder(file.path, pathToWatch)) return;
+      if (!isInInboxFolder(file.path, getPathToWatch())) return;
       if (!VALID_MEDIA_EXTENSIONS.includes(file.extension)) return;
       Inbox.getInstance().enqueueFiles([file]);
     })

@@ -151,6 +151,9 @@ export const MeetingRecorder: React.FC<MeetingRecorderProps> = ({ plugin }) => {
               pathToWatch: plugin.settings.pathToWatch,
               recordingsFolderPath: plugin.settings.recordingsFolderPath,
             });
+            if (destination.fallbackReason) {
+              new Notice(destination.fallbackReason, 6000);
+            }
             const baseFileName = `${dateStr} ${destination.label}.${extension}`;
             const desiredPath = `${destination.folder}/${baseFileName}`;
 

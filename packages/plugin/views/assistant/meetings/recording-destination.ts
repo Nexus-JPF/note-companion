@@ -13,6 +13,20 @@ export interface RecordingDestination {
   processedByInbox: boolean;
   /** File name stem: inbox recordings aren't necessarily meetings. */
   label: "Recording" | "Meeting";
+  /** Set when the user asked for the inbox but the recording is saved elsewhere; explains why. */
+  fallbackReason?: string;
+}
+
+function getInboxBlocker(input: RecordingDestinationInput): string | null {
+  if (!input.useInbox) return "the inbox is turned off";
+  if (!input.enableAttachmentProcessing) {
+    return "attachment processing is turned off";
+  }
+  if (!input.enableAudioTranscription) {
+    return "audio transcription is turned off";
+  }
+  if (input.pathToWatch.trim() === "") return "no inbox folder is set";
+  return null;
 }
 
 /**
@@ -23,15 +37,11 @@ export interface RecordingDestination {
 export function getRecordingDestination(
   input: RecordingDestinationInput
 ): RecordingDestination {
-  const inboxCanTranscribe =
-    input.useInbox &&
-    input.enableAttachmentProcessing &&
-    input.enableAudioTranscription &&
-    input.pathToWatch.trim() !== "";
+  const blocker = getInboxBlocker(input);
 
-  if (input.sendToInbox && inboxCanTranscribe) {
+  if (input.sendToInbox && !blocker) {
     return {
-      folder: input.pathToWatch,
+      folder: input.pathToWatch.trim(),
       processedByInbox: true,
       label: "Recording",
     };
@@ -40,5 +50,10 @@ export function getRecordingDestination(
     folder: input.recordingsFolderPath,
     processedByInbox: false,
     label: "Meeting",
+    ...(input.sendToInbox && blocker
+      ? {
+          fallbackReason: `Saved to ${input.recordingsFolderPath} instead of the inbox because ${blocker}.`,
+        }
+      : {}),
   };
 }

@@ -35,5 +35,28 @@ describe("getRecordingDestination", () => {
     const result = getRecordingDestination({ ...base, ...patch });
     expect(result.processedByInbox).toBe(false);
     expect(result.folder).toBe("Recordings");
+    // the user asked for the inbox, so they are told why it did not happen
+    expect(result.fallbackReason).toContain("instead of the inbox because");
+  });
+
+  it("explains the specific blocker", () => {
+    expect(
+      getRecordingDestination({ ...base, enableAudioTranscription: false })
+        .fallbackReason
+    ).toContain("audio transcription is turned off");
+  });
+
+  it("gives no fallback reason when the user did not ask for the inbox", () => {
+    expect(
+      getRecordingDestination({ ...base, sendToInbox: false, useInbox: false })
+        .fallbackReason
+    ).toBeUndefined();
+  });
+
+  it("trims whitespace from the inbox folder it saves to", () => {
+    expect(
+      getRecordingDestination({ ...base, pathToWatch: "  _NoteCompanion/Inbox " })
+        .folder
+    ).toBe("_NoteCompanion/Inbox");
   });
 });

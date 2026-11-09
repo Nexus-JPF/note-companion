@@ -114,12 +114,14 @@ export const CustomizationTab: React.FC<CustomizationTabProps> = ({ plugin }) =>
             value={enableDocumentClassification}
             onChange={(value) => { void handleToggleChange(value, setEnableDocumentClassification, 'enableDocumentClassification'); }}
           />
+          {plugin.settings.useInbox && enableAttachmentProcessing && enableAudioTranscription && (
           <ToggleSetting
             name="Send Recordings to Inbox"
             description="Save recordings from the Meetings recorder into the inbox, so they are transcribed, formatted and filed automatically. Requires the inbox and audio transcription."
             value={sendRecordingsToInbox}
             onChange={(value) => { void handleToggleChange(value, setSendRecordingsToInbox, 'sendRecordingsToInbox'); }}
           />
+          )}
           <div className="setting-item p-4 bg-[--background-secondary] rounded-lg border border-[--background-modifier-border] space-y-2">
             <div className="font-medium text-[--text-normal]">Audio Default Template</div>
             <p className="text-sm text-[--text-muted]">
