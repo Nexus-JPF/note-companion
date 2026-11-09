@@ -28,6 +28,7 @@ import {
   safeMove,
 } from "../fileUtils";
 import { getErrorMessage, getErrorStack } from "../lib/api-json";
+import { restoreAudioSourceInFile } from "../lib/audio-source";
 import { shouldShowInboxNotification } from "./notification-level";
 import { sanitizeContent } from "../fileUtils";
 import {
@@ -1027,11 +1028,18 @@ async function formatContentStep(
       return context;
     }
 
+    const sourceBeforeFormat = context.content;
     await context.plugin.streamFormatInCurrentNote({
       file: context.containerFile,
       content: formatContent,
       formattingInstruction: instructions,
     });
+    // The model rewrites the whole note; put back the audio embed and transcript if dropped
+    await restoreAudioSourceInFile(
+      context.plugin.app,
+      context.containerFile,
+      sourceBeforeFormat
+    );
 
     if (isYouTubeFormat && context.containerFile) {
       context.content = await finalizeYouTubeFormattedNote(
