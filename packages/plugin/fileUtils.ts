@@ -364,6 +364,36 @@ function getEnhanceTemplateContent(): string {
 10. do not use \`\`\` markdown`;
 }
 
+function getLectureNotesTemplateContent(): string {
+  return `Turn the spoken content below (a lecture, class, talk, or study recording) into clear study notes in Markdown.
+
+The input is a single transcript. Work only from what was actually said. Do not invent facts, and never mention that other transcripts, written notes, or slides were or were not provided.
+
+Structure the note exactly like this:
+
+# [A short, specific title for the topic]
+
+## Summary
+3-5 sentences on what the session covered and why it matters.
+
+## Key concepts
+For each main idea, use a "###" heading with the concept name, then a short explanation in your own words. Define terms the first time they appear. Use [[internal links]] for concepts that likely deserve their own note.
+
+## Details and examples
+Organize the remaining content by topic with "###" headings. Use bullet points for steps, comparisons, formulas, dates, names, and examples that were given.
+
+## Questions to review
+5-8 questions that test understanding of the material, each followed by a one-line answer.
+
+## Open questions
+Anything the speaker left unresolved or that needs follow-up. Omit this section if there is nothing.
+
+Rules:
+- Fix obvious transcription errors and remove filler words, but keep the speaker's meaning.
+- Keep it scannable: short paragraphs, bullets, bold for key terms.
+- If the content is not educational (for example small talk), write a concise summary and skip the sections that do not apply.`;
+}
+
 function getFlashCardsTemplateContent(): string {
   return `Please create an Obsidian note with interactive flashcards using native Obsidian HTML features. The note must include:
 
@@ -525,6 +555,7 @@ export async function checkAndCreateTemplates(
   const enhanceTemplatePath = `${settings.templatePaths}/enhance.md`;
   const researchPaperTemplatePath = `${settings.templatePaths}/research_paper.md`;
   const flashCardsTemplatePath = `${settings.templatePaths}/flash_cards.md`;
+  const lectureNotesTemplatePath = `${settings.templatePaths}/lecture_notes.md`;
 
   if (!(await app.vault.adapter.exists(meetingNoteTemplatePath))) {
     await app.vault.create(
@@ -585,6 +616,13 @@ export async function checkAndCreateTemplates(
       getFlashCardsTemplateContent()
     );
   }
+
+  if (!(await app.vault.adapter.exists(lectureNotesTemplatePath))) {
+    await app.vault.create(
+      lectureNotesTemplatePath,
+      getLectureNotesTemplateContent()
+    );
+  }
 }
 
 // Restore default templates to their original plugin versions
@@ -603,6 +641,7 @@ export async function restoreDefaultTemplates(
     enhance: `${settings.templatePaths}/enhance.md`,
     researchPaper: `${settings.templatePaths}/research_paper.md`,
     flashCards: `${settings.templatePaths}/flash_cards.md`,
+    lectureNotes: `${settings.templatePaths}/lecture_notes.md`,
   };
 
   const templateContents = {
@@ -615,6 +654,7 @@ export async function restoreDefaultTemplates(
     enhance: getEnhanceTemplateContent(),
     researchPaper: getResearchPaperTemplateContent(),
     flashCards: getFlashCardsTemplateContent(),
+    lectureNotes: getLectureNotesTemplateContent(),
   };
 
   // Ensure template folder exists

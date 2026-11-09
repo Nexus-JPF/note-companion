@@ -20,6 +20,8 @@ export class FileOrganizerSettings {
   // inbox settings
   useSimilarTags = true;
   enableDocumentClassification = false;
+  /** Template applied to inbox audio instead of AI classification ("none" = off). */
+  audioDefaultTemplate = "none";
   // not working atm
   enableFileRenaming = true;
   enableAttachmentProcessing = true;

@@ -1,4 +1,5 @@
 import type FileOrganizer from '../../index';
+import { AUDIO_TEMPLATE_OFF, listAudioTemplateNames } from '../../inbox/audio-template';
 
 /**
  * Obsidian 1.13+ declarative settings shape.
@@ -25,6 +26,16 @@ export function getNoteCompanionSettingDefinitions(
   plugin: FileOrganizer
 ): NoteCompanionSettingDefinition[] {
   const settings = plugin.settings;
+  const audioTemplateOptions: Record<string, string> = {
+    [AUDIO_TEMPLATE_OFF]: 'Off (use auto-formatting rules)',
+  };
+  for (const name of listAudioTemplateNames(plugin.app, settings.templatePaths)) {
+    audioTemplateOptions[name] = name;
+  }
+  // Keep a saved template selectable even if its file was renamed or removed
+  if (settings.audioDefaultTemplate && !(settings.audioDefaultTemplate in audioTemplateOptions)) {
+    audioTemplateOptions[settings.audioDefaultTemplate] = `${settings.audioDefaultTemplate} (missing)`;
+  }
 
   return [
     {
@@ -93,6 +104,18 @@ export function getNoteCompanionSettingDefinitions(
             {
               name: 'Inbox auto-formatting',
               control: { type: 'toggle', key: 'enableDocumentClassification' },
+            },
+            {
+              name: 'Audio default template',
+              desc: 'Format every transcribed audio file with this template, even when Inbox auto-formatting is off. Try lecture_notes for classes and talks.',
+              visible: () =>
+                settings.enableAttachmentProcessing && settings.enableAudioTranscription,
+              control: {
+                type: 'dropdown',
+                key: 'audioDefaultTemplate',
+                defaultValue: AUDIO_TEMPLATE_OFF,
+                options: audioTemplateOptions,
+              },
             },
             {
               name: 'Inbox similar tags',
