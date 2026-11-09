@@ -1,6 +1,7 @@
 import { Notice, TFile } from "obsidian";
 import FileOrganizer from "../index";
 import { logger } from "../services/logger";
+import { restoreAudioSourceInFile } from "./audio-source";
 import {
   finalizeYouTubeFormattedNote,
   getYoutubeInboxFormatSkipReasonAfterPrep,
@@ -195,6 +196,7 @@ export async function formatNoteWithTemplate(
       content: prep.formatContent,
       formattingInstruction,
     });
+    await restoreAudioSourceInFile(plugin.app, file, baseContent);
     await finalizeYouTubeFormattedNote(
       plugin.app,
       file,
@@ -208,6 +210,7 @@ export async function formatNoteWithTemplate(
       formattingInstruction,
     });
     if (newFile) {
+      await restoreAudioSourceInFile(plugin.app, newFile, baseContent);
       await finalizeYouTubeFormattedNote(
         plugin.app,
         newFile,
