@@ -1,4 +1,6 @@
+import type { Setting } from 'obsidian';
 import type FileOrganizer from '../../index';
+import { renderUsageRow } from './usage-row';
 import { AUDIO_TEMPLATE_OFF, listAudioTemplateNames } from '../../inbox/audio-template';
 
 /**
@@ -12,10 +14,13 @@ type SettingControl = {
 };
 
 export type NoteCompanionSettingDefinition = {
-  name: string;
+  /** Groups and pages are labelled by `heading`/`name`; plain rows need a name. */
+  name?: string;
   desc?: string;
   aliases?: string[];
   control?: SettingControl;
+  /** Full control over the row; may return a cleanup. Runs when the row is drawn. */
+  render?: (setting: Setting) => void | (() => void);
   visible?: () => boolean;
   type?: 'group' | 'page' | 'list';
   heading?: string;
@@ -53,6 +58,16 @@ export function getNoteCompanionSettingDefinitions(
           name: 'Enable chat web search',
           desc: 'Allow the AI chat to search the web for current information.',
           control: { type: 'toggle', key: 'enableChatWebSearch' },
+        },
+        {
+          type: 'group',
+          heading: 'Usage and plan',
+          items: [
+            {
+              name: 'Usage this month',
+              render: setting => renderUsageRow(plugin, setting),
+            },
+          ],
         },
       ],
     },

@@ -1,0 +1,70 @@
+export interface UsageSummaryInput {
+  tokenUsage: number;
+  maxTokenUsage: number;
+  audioTranscriptionMinutes?: number;
+  maxAudioTranscriptionMinutes?: number;
+  subscriptionStatus?: string;
+  currentPlan?: string;
+}
+
+export interface UsageSummary {
+  lines: string[];
+  warnings: string[];
+  /** Free tier only: paid plans have nothing to upgrade to. */
+  showUpgrade: boolean;
+}
+
+const AUDIO_WARNING_RATIO = 0.9;
+
+/** Usage resets on the 1st of the coming month. */
+export function nextResetDate(now: Date): Date {
+  return new Date(now.getFullYear(), now.getMonth() + 1, 1);
+}
+
+const formatCount = (n: number) => Math.round(n).toLocaleString("en-US");
+
+export function summarizeUsage(
+  data: UsageSummaryInput,
+  options: { now: Date; freeTierTokenLimit: number }
+): UsageSummary {
+  const isFreeTier = data.maxTokenUsage === options.freeTierTokenLimit;
+  const audioUsed = data.audioTranscriptionMinutes ?? 0;
+  const audioMax = data.maxAudioTranscriptionMinutes ?? 0;
+  const status = data.subscriptionStatus === "active" ? "active" : "inactive";
+  const reset = nextResetDate(options.now).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+  });
+
+  const lines = [
+    `Plan: ${data.currentPlan || "Free"} (${status})`,
+    `Tokens: ${formatCount(data.tokenUsage)} / ${formatCount(data.maxTokenUsage)}`,
+  ];
+  if (audioMax > 0) {
+    lines.push(
+      `Audio transcription: ${audioUsed.toFixed(1)} / ${formatCount(audioMax)} min`
+    );
+  }
+  lines.push(`Usage resets on ${reset}`);
+
+  const warnings: string[] = [];
+  if (audioMax > 0 && audioUsed >= audioMax) {
+    warnings.push(
+      "Audio transcription quota reached. Upgrade your plan or wait for the next billing cycle."
+    );
+  } else if (audioMax > 0 && audioUsed >= audioMax * AUDIO_WARNING_RATIO) {
+    const left = Math.max(0, audioMax - audioUsed);
+    warnings.push(
+      `Audio transcription is almost used up: ${left.toFixed(1)} min left this month.`
+    );
+  }
+  if (data.tokenUsage >= data.maxTokenUsage) {
+    warnings.push(
+      isFreeTier
+        ? "Token limit reached. Upgrade your plan to keep using Note Companion this month."
+        : "Token limit reached for this month. Top up credits on the dashboard if you need more before the reset."
+    );
+  }
+
+  return { lines, warnings, showUpgrade: isFreeTier };
+}
