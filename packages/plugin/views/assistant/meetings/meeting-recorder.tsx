@@ -7,6 +7,7 @@ import { tw } from "../../../lib/utils";
 import { Notice } from "obsidian";
 import { MeetingMetadataManager } from "./meeting-metadata";
 import { getAvailablePath } from "../../../fileUtils";
+import { getRecordingDestination } from "./recording-destination";
 
 interface MeetingRecorderProps {
   plugin: FileOrganizer;
@@ -141,16 +142,37 @@ export const MeetingRecorder: React.FC<MeetingRecorderProps> = ({ plugin }) => {
             const now = new Date();
             const dateStr = now.toISOString().split("T")[0];
             const extension = fileExtensionForRecorder(recorder);
-            const baseFileName = `${dateStr} Meeting.${extension}`;
-            const desiredPath = `${plugin.settings.recordingsFolderPath}/${baseFileName}`;
+            const destination = getRecordingDestination({
+              sendToInbox: plugin.settings.sendRecordingsToInbox,
+              useInbox: plugin.settings.useInbox,
+              enableAttachmentProcessing:
+                plugin.settings.enableAttachmentProcessing,
+              enableAudioTranscription: plugin.settings.enableAudioTranscription,
+              pathToWatch: plugin.settings.pathToWatch,
+              recordingsFolderPath: plugin.settings.recordingsFolderPath,
+            });
+            if (destination.fallbackReason) {
+              new Notice(destination.fallbackReason, 6000);
+            }
+            const baseFileName = `${dateStr} ${destination.label}.${extension}`;
+            const desiredPath = `${destination.folder}/${baseFileName}`;
 
-            await plugin.app.vault.adapter.mkdir(
-              plugin.settings.recordingsFolderPath
-            );
+            await plugin.app.vault.adapter.mkdir(destination.folder);
 
             const filePath = await getAvailablePath(plugin.app, desiredPath);
 
             await plugin.app.vault.createBinary(filePath, arrayBuffer);
+
+            if (destination.processedByInbox) {
+              // The inbox picks the file up, then moves, transcribes and formats it,
+              // so there is no Recordings-list entry to track.
+              new Notice(
+                "Recording saved to the inbox. It will be transcribed and turned into a note automatically."
+              );
+              setDuration(0);
+              audioChunks.current = [];
+              return;
+            }
 
             await metadataManager.loadMetadata();
 

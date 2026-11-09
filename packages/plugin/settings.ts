@@ -22,6 +22,8 @@ export class FileOrganizerSettings {
   enableDocumentClassification = false;
   /** Template applied to inbox audio instead of AI classification ("none" = off). */
   audioDefaultTemplate = "none";
+  /** Save recorder output into the inbox so it is transcribed and formatted automatically. */
+  sendRecordingsToInbox = false;
   // not working atm
   enableFileRenaming = true;
   enableAttachmentProcessing = true;
