@@ -79,6 +79,18 @@ describe("getAttachmentRetryCandidates", () => {
     expect(candidates).not.toContain(`${attachmentsPath}/memo.md`);
   });
 
+  it("also probes the extra folders for legacy records", () => {
+    const candidates = getAttachmentRetryCandidates({
+      originalName: "memo",
+      attachmentsPath,
+      extraFolders: ["_NoteCompanion/Errors", "_NoteCompanion/Bypassed"],
+      containerEmpty: true,
+    });
+    expect(candidates).toContain("_NoteCompanion/Errors/memo.m4a");
+    expect(candidates).toContain("_NoteCompanion/Bypassed/memo.m4a");
+    expect(candidates).toContain(`${attachmentsPath}/memo.m4a`);
+  });
+
   it("returns nothing for a legacy record without a name or attachments folder", () => {
     expect(
       getAttachmentRetryCandidates({ originalName: "", attachmentsPath, containerEmpty: true })

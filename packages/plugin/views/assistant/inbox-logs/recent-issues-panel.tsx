@@ -7,6 +7,10 @@ import {
   getAttachmentRetryCandidates,
   isStaleContainer,
 } from "../../../inbox/retry-source";
+import {
+  isInInboxFolder,
+  normalizeInboxPath,
+} from "../../../inbox/inbox-path";
 import { safeMove } from "../../../fileUtils";
 import { tw } from "../../../lib/utils";
 import { RotateCcw, AlertCircle, X } from "lucide-react";
@@ -223,13 +227,22 @@ export const RecentIssuesPanel: React.FC<{ plugin: FileOrganizer }> = ({ plugin 
             );
             return f instanceof TFile ? f : null;
           })();
-        const containerContent = containerFile
-          ? await plugin.app.vault.read(containerFile).catch(() => "")
-          : "";
+        // After a media failure the record already points at the media file;
+        // it has no container to read (and must not be read as text).
+        const recordIsMedia =
+          !!containerFile && containerFile.path === record.attachmentPath;
+        const containerContent =
+          containerFile && !recordIsMedia
+            ? await plugin.app.vault.read(containerFile).catch(() => "")
+            : "";
         const attachmentCandidates = getAttachmentRetryCandidates({
           attachmentPath: record.attachmentPath,
           originalName: record.originalName,
           attachmentsPath: plugin.settings.attachmentsPath,
+          extraFolders: [
+            plugin.settings.errorFilePath,
+            plugin.settings.bypassedFilePath,
+          ],
           containerEmpty: containerContent.trim().length === 0,
         });
         let attachmentToRetry: TFile | null = null;
@@ -244,6 +257,7 @@ export const RecentIssuesPanel: React.FC<{ plugin: FileOrganizer }> = ({ plugin 
         if (attachmentToRetry) {
           if (
             containerFile &&
+            !recordIsMedia &&
             containerFile.path !== attachmentToRetry.path &&
             isStaleContainer({
               containerPath: containerFile.path,
@@ -254,8 +268,8 @@ export const RecentIssuesPanel: React.FC<{ plugin: FileOrganizer }> = ({ plugin 
             await plugin.app.vault.delete(containerFile);
           }
           // Put the media back in the inbox so the pipeline runs from the start
-          const inboxFolder = plugin.settings.pathToWatch;
-          if (inboxFolder && attachmentToRetry.parent?.path !== inboxFolder) {
+          const inboxFolder = normalizeInboxPath(plugin.settings.pathToWatch);
+          if (inboxFolder && !isInInboxFolder(attachmentToRetry.path, inboxFolder)) {
             const movedPath = await safeMove(
               plugin.app,
               attachmentToRetry,

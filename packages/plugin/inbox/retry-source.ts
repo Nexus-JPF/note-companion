@@ -14,6 +14,8 @@ export interface RetrySourceInput {
   /** Basename the record was tracked under (the media file's basename). */
   originalName: string;
   attachmentsPath: string;
+  /** Other folders failed media can land in (Errors, Bypassed). */
+  extraFolders?: string[];
   /** True when the record's container note is missing or has no content. */
   containerEmpty: boolean;
 }
@@ -49,12 +51,14 @@ export function getAttachmentRetryCandidates({
   attachmentPath,
   originalName,
   attachmentsPath,
+  extraFolders = [],
   containerEmpty,
 }: RetrySourceInput): string[] {
   if (!containerEmpty) return [];
   if (attachmentPath) return [attachmentPath];
-  if (!attachmentsPath || !originalName) return [];
-  return VALID_MEDIA_EXTENSIONS.map(
-    (ext) => `${attachmentsPath}/${originalName}.${ext}`
+  if (!originalName) return [];
+  const folders = [attachmentsPath, ...extraFolders].filter(Boolean);
+  return folders.flatMap((folder) =>
+    VALID_MEDIA_EXTENSIONS.map((ext) => `${folder}/${originalName}.${ext}`)
   );
 }
