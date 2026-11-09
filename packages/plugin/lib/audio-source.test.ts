@@ -93,7 +93,14 @@ describe("restoreAudioSource", () => {
   });
 
   it("restores the transcript when the model keeps only its opening", () => {
-    const formatted = `![[Recordings/call.m4a]]\n\n# Interview\n\nOkay, perfect. Thank you so much for your time. (rest omitted)`;
+    // Keep exactly the first 80 normalized characters: the old prefix-only check
+    // would have treated this as a fully preserved transcript.
+    const transcript = extractAudioSource(SOURCE).transcripts[0].text;
+    const opening = transcript.replace(/\s+/g, " ").slice(0, 80);
+    expect(opening).toHaveLength(80);
+    expect(transcript.replace(/\s+/g, " ").length).toBeGreaterThan(80);
+
+    const formatted = `![[Recordings/call.m4a]]\n\n# Interview\n\n${opening} (rest omitted)`;
     const result = restoreAudioSource(formatted, SOURCE);
     expect(result).toContain("> [!note]- Transcript for call.m4a");
     expect(result).toContain("two weeks before I leave");
