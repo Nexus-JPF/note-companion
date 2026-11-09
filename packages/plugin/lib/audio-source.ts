@@ -20,7 +20,9 @@ const TRANSCRIPT_SECTION =
 const FRONTMATTER = /^---\n[\s\S]*?\n---\n?/;
 /** Footer written by appendBackupLinkToCurrentFile. */
 const BACKUP_FOOTER = /\n\n---\n\[\[[^\]]*Link to original file\]\]\s*$/;
-const MATCH_PREFIX_LENGTH = 80;
+/** Collapsed callout written by restoreAudioSource; parsed back so a later format can restore it again. */
+const TRANSCRIPT_CALLOUT = /^> \[!note\]-? Transcript for (.+)\n((?:>.*(?:\n|$))*)/gm;
+const CALLOUT_MARKER = /^>[ \t]?/gm;
 
 export interface TranscriptSource {
   title: string;
@@ -35,14 +37,28 @@ export interface AudioSource {
 export function extractAudioSource(content: string): AudioSource {
   const embeds = Array.from(new Set(content.match(AUDIO_EMBED) ?? []));
   const transcripts: TranscriptSource[] = [];
+  const seen = new Set<string>();
+  const add = (title: string, rawText: string) => {
+    const text = rawText.trim();
+    const key = normalize(text);
+    if (!text || seen.has(key)) return;
+    seen.add(key);
+    transcripts.push({ title: title.trim(), text });
+  };
   for (const match of content.matchAll(TRANSCRIPT_SECTION)) {
-    const text = match[2].trim();
-    if (text) transcripts.push({ title: match[1].trim(), text });
+    add(match[1], match[2]);
+  }
+  for (const match of content.matchAll(TRANSCRIPT_CALLOUT)) {
+    add(match[1], match[2].replace(CALLOUT_MARKER, ""));
   }
   return { embeds, transcripts };
 }
 
 const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
+
+/** `![[path|300]]` -> `path`, so a changed display size is not mistaken for a missing player. */
+const embedTarget = (embed: string) =>
+  embed.slice(3, -2).split("|")[0].trim().toLowerCase();
 
 function toCollapsedCallout({ title, text }: TranscriptSource): string {
   const body = text
@@ -64,7 +80,12 @@ export function restoreAudioSource(formatted: string, source: string): string {
 
   let result = formatted;
 
-  const missingEmbeds = embeds.filter(embed => !result.includes(embed));
+  const presentTargets = new Set(
+    (result.match(AUDIO_EMBED) ?? []).map(embedTarget)
+  );
+  const missingEmbeds = embeds.filter(
+    embed => !presentTargets.has(embedTarget(embed))
+  );
   if (missingEmbeds.length > 0) {
     const block = `${missingEmbeds.join("\n")}\n\n`;
     const frontmatter = result.match(FRONTMATTER)?.[0] ?? "";
@@ -76,10 +97,10 @@ export function restoreAudioSource(formatted: string, source: string): string {
   }
 
   // Ignore callout markers so an already-restored transcript counts as present
-  const normalizedResult = normalize(result.replace(/^>[ \t]?/gm, ""));
+  const normalizedResult = normalize(result.replace(CALLOUT_MARKER, ""));
+  // Whole-transcript check: keeping only the opening of a transcript is not preservation
   const missingTranscripts = transcripts.filter(
-    ({ text }) =>
-      !normalizedResult.includes(normalize(text).slice(0, MATCH_PREFIX_LENGTH))
+    ({ text }) => !normalizedResult.includes(normalize(text))
   );
   if (missingTranscripts.length > 0) {
     const footer = result.match(BACKUP_FOOTER)?.[0] ?? "";

@@ -91,4 +91,43 @@ describe("restoreAudioSource", () => {
     expect(result).not.toContain("[!note]- Transcript");
     expect(result.startsWith("![[Recordings/call.m4a]]")).toBe(true);
   });
+
+  it("restores the transcript when the model keeps only its opening", () => {
+    const formatted = `![[Recordings/call.m4a]]\n\n# Interview\n\nOkay, perfect. Thank you so much for your time. (rest omitted)`;
+    const result = restoreAudioSource(formatted, SOURCE);
+    expect(result).toContain("> [!note]- Transcript for call.m4a");
+    expect(result).toContain("two weeks before I leave");
+  });
+
+  it("keeps the transcript through two successive formatting passes", () => {
+    const first = restoreAudioSource("# Pass 1\n\nsummary one", SOURCE);
+    // second format: the already-restored note is the source, and the model drops everything
+    const second = restoreAudioSource("# Pass 2\n\nsummary two", first);
+    expect(second).toContain("![[Recordings/call.m4a]]");
+    expect(second).toContain("> [!note]- Transcript for call.m4a");
+    expect(second).toContain("> Thank you so much");
+    // and a third pass is still lossless
+    const third = restoreAudioSource("# Pass 3", second);
+    expect(third).toContain("two weeks before I leave");
+    expect(third.match(/\[!note\]- Transcript/g)).toHaveLength(1);
+  });
+
+  it("does not duplicate a player when only the display size differs", () => {
+    const formatted = "![[Recordings/call.m4a|300]]\n\n# Interview\n\nsummary";
+    const result = restoreAudioSource(formatted, SOURCE);
+    expect(result.match(/call\.m4a/g)?.length).toBe(
+      // embed (1) + transcript callout title (1)
+      2
+    );
+  });
+});
+
+describe("extractAudioSource callouts", () => {
+  it("parses the collapsed callout form back into a transcript", () => {
+    const note =
+      "![[a.mp3]]\n\n# T\n\n> [!note]- Transcript for a.mp3\n> line one\n>\n> line two\n\n---\n[[B | Link to original file]]";
+    const { transcripts } = extractAudioSource(note);
+    expect(transcripts).toHaveLength(1);
+    expect(transcripts[0].text).toBe("line one\n\nline two");
+  });
 });
