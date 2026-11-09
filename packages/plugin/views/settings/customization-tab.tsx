@@ -21,6 +21,7 @@ export const CustomizationTab: React.FC<CustomizationTabProps> = ({ plugin }) =>
   const [useVaultTitles, setUseVaultTitles] = useState(plugin.settings.useVaultTitles);
   const [customFolderInstructions, setCustomFolderInstructions] = useState(plugin.settings.customFolderInstructions);
   const [enableDocumentClassification, setEnableDocumentClassification] = useState(plugin.settings.enableDocumentClassification);
+  const [sendRecordingsToInbox, setSendRecordingsToInbox] = useState(plugin.settings.sendRecordingsToInbox);
   const [audioDefaultTemplate, setAudioDefaultTemplate] = useState(plugin.settings.audioDefaultTemplate || AUDIO_TEMPLATE_OFF);
   const audioTemplateNames = listAudioTemplateNames(plugin.app, plugin.settings.templatePaths);
   const [imageInstructions, setImageInstructions] = useState(plugin.settings.imageInstructions);
@@ -112,6 +113,12 @@ export const CustomizationTab: React.FC<CustomizationTabProps> = ({ plugin }) =>
             description="Automatically format new documents when they match a template category during inbox processing."
             value={enableDocumentClassification}
             onChange={(value) => { void handleToggleChange(value, setEnableDocumentClassification, 'enableDocumentClassification'); }}
+          />
+          <ToggleSetting
+            name="Send Recordings to Inbox"
+            description="Save recordings from the Meetings recorder into the inbox, so they are transcribed, formatted and filed automatically. Requires the inbox and audio transcription."
+            value={sendRecordingsToInbox}
+            onChange={(value) => { void handleToggleChange(value, setSendRecordingsToInbox, 'sendRecordingsToInbox'); }}
           />
           <div className="setting-item p-4 bg-[--background-secondary] rounded-lg border border-[--background-modifier-border] space-y-2">
             <div className="font-medium text-[--text-normal]">Audio Default Template</div>

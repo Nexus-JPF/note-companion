@@ -106,6 +106,13 @@ export function getNoteCompanionSettingDefinitions(
               control: { type: 'toggle', key: 'enableDocumentClassification' },
             },
             {
+              name: 'Send recordings to inbox',
+              desc: 'Save recordings from the Meetings recorder into the inbox, so they are transcribed, formatted and filed automatically. Requires the inbox and audio transcription.',
+              visible: () =>
+                settings.enableAttachmentProcessing && settings.enableAudioTranscription,
+              control: { type: 'toggle', key: 'sendRecordingsToInbox' },
+            },
+            {
               name: 'Audio default template',
               desc: 'Format every transcribed audio file with this template, even when Inbox auto-formatting is off. Try lecture_notes for classes and talks.',
               visible: () =>
