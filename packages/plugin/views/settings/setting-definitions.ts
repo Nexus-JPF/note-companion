@@ -1,5 +1,6 @@
 import type { Setting } from 'obsidian';
 import type FileOrganizer from '../../index';
+import { renderChatStepsRow } from './chat-steps-row';
 import { renderTopUpRow, renderUsageRow } from './usage-row';
 import { AUDIO_TEMPLATE_OFF, listAudioTemplateNames } from '../../inbox/audio-template';
 
@@ -21,6 +22,8 @@ export type NoteCompanionSettingDefinition = {
   control?: SettingControl;
   /** Full control over the row; may return a cleanup. Runs when the row is drawn. */
   render?: (setting: Setting) => void | (() => void);
+  /** Settings keys a render row writes itself, so the parity test knows they are covered. */
+  covers?: string[];
   visible?: () => boolean;
   type?: 'group' | 'page' | 'list';
   heading?: string;
@@ -285,8 +288,10 @@ export function getNoteCompanionSettingDefinitions(
         },
         {
           name: 'Chat tool rounds',
-          desc: 'Maximum AI tool steps per chat turn. Configure in the full settings UI.',
+          desc: 'How much the assistant can do per message before replying.',
           aliases: ['max steps', 'chat steps'],
+          covers: ['chatMaxStepsPreference'],
+          render: setting => renderChatStepsRow(plugin, setting),
         },
         {
           name: 'Enable ScreenPipe integration',
