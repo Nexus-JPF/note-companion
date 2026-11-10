@@ -31,9 +31,14 @@ export function summarizeUsage(
   const audioUsed = data.audioTranscriptionMinutes ?? 0;
   const audioMax = data.maxAudioTranscriptionMinutes ?? 0;
   const status = data.subscriptionStatus === "active" ? "active" : "inactive";
-  const reset = nextResetDate(options.now).toLocaleDateString("en-US", {
+  const resetDate = nextResetDate(options.now);
+  // Add the year when the reset falls in the next calendar year (December -> January)
+  const reset = resetDate.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
+    ...(resetDate.getFullYear() !== options.now.getFullYear()
+      ? { year: "numeric" as const }
+      : {}),
   });
 
   const lines = [

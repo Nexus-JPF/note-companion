@@ -4,9 +4,9 @@ const FREE = 100000;
 const now = new Date(2026, 10, 8); // Nov 8, 2026
 
 const paid = {
-  tokenUsage: 249319,
+  tokenUsage: 123456,
   maxTokenUsage: 5000000,
-  audioTranscriptionMinutes: 70,
+  audioTranscriptionMinutes: 42,
   maxAudioTranscriptionMinutes: 300,
   subscriptionStatus: "active",
   currentPlan: "monthly",
@@ -22,12 +22,20 @@ describe("nextResetDate", () => {
 });
 
 describe("summarizeUsage", () => {
-  it("matches the dashboard numbers for a paid plan", () => {
+  it("includes the year when the reset is in the next calendar year", () => {
+    const s = summarizeUsage(paid, {
+      now: new Date(2026, 11, 20),
+      freeTierTokenLimit: FREE,
+    });
+    expect(s.lines[s.lines.length - 1]).toBe("Usage resets on January 1, 2027");
+  });
+
+  it("formats the numbers for a paid plan", () => {
     const s = summarizeUsage(paid, { now, freeTierTokenLimit: FREE });
     expect(s.lines).toEqual([
       "Plan: monthly (active)",
-      "Tokens: 249,319 / 5,000,000",
-      "Audio transcription: 70.0 / 300 min",
+      "Tokens: 123,456 / 5,000,000",
+      "Audio transcription: 42.0 / 300 min",
       "Usage resets on December 1",
     ]);
     expect(s.warnings).toEqual([]);
