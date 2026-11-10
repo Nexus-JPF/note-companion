@@ -34,20 +34,21 @@ import {
 /** In the React screens but not yet in the declarative UI. Remove an entry when it is fixed. */
 const KNOWN_GAPS: Record<string, string> = {
   ignoreFolders:
-    "Folders excluded from AI organization. Only in the React Advanced screen; needs a list or textarea control in the declarative UI.",
-  chatMaxStepsPreference:
-    "Chat action-count preference (auto, 3 or 5). Only in the React Experiment tab; needs a dropdown that stores number or 'auto'.",
+    "Folders excluded from AI organization. Only in the React Vault Access screen (file-config-tab.tsx); needs a list or textarea control in the declarative UI.",
 };
 
 /** Written by the React screens but not a user-facing setting. */
 const NOT_USER_FACING: Record<string, string> = {
   useFolderEmbeddings:
     "Forced to false on mount by the React Customization tab; users cannot change it.",
+  hasCatalystAccess:
+    "Cached result of the server's premium check, written by catalyst-gate.tsx; not editable by users.",
 };
 
+// Every React component in this folder: a settings write in any of them counts
 const REACT_SCREENS = fs
   .readdirSync(__dirname)
-  .filter(name => name.endsWith("-tab.tsx") || name === "account-data.tsx");
+  .filter(name => name.endsWith(".tsx"));
 
 function extractReactSettingKeys(source: string): string[] {
   const keys = new Set<string>();
@@ -68,6 +69,7 @@ function collectDefinitionKeys(
 ): Set<string> {
   for (const definition of definitions) {
     if (definition.control?.key) into.add(definition.control.key);
+    for (const key of definition.covers ?? []) into.add(key);
     if (definition.items) collectDefinitionKeys(definition.items, into);
   }
   return into;
@@ -100,7 +102,7 @@ describe("settings parity (React screens vs Obsidian 1.13+ definitions)", () => 
   it("finds the React screens and extracts their setting keys", () => {
     // Guards the extraction itself: if it silently matched nothing, the
     // parity check below would pass for the wrong reason.
-    expect(REACT_SCREENS.length).toBeGreaterThanOrEqual(4);
+    expect(REACT_SCREENS.length).toBeGreaterThanOrEqual(5);
     expect(reactKeys.size).toBeGreaterThanOrEqual(30);
   });
 
