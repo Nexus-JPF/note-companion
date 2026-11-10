@@ -190,8 +190,16 @@ export async function prepareForSplit(
       durationSeconds: await getDurationSeconds(inputPath),
       cleanup: false,
     };
-  } catch {
-    // fall through: missing duration or ffprobe not runnable
+  } catch (err) {
+    // Missing duration (streamed WebM) is expected; anything else (ffprobe not
+    // runnable, bad output) is worth seeing in the logs before falling back.
+    const code = (err as { code?: unknown } | null)?.code;
+    const reason = err instanceof Error ? err.message : String(err);
+    console.warn(
+      `[split-audio] ffprobe could not provide a duration (${
+        code ? `${String(code)}: ` : ''
+      }${reason}); trying ffmpeg`
+    );
   }
 
   const direct = await getDurationViaFfmpeg(inputPath);
