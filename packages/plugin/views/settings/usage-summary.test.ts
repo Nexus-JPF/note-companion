@@ -90,9 +90,25 @@ describe("summarizeUsage", () => {
     expect(s.warnings).toEqual([]);
   });
 
+  it("treats a lifetime plan as active via the server's isActive flag", () => {
+    const s = summarizeUsage(
+      { ...paid, subscriptionStatus: "inactive", isActive: true },
+      { now, freeTierTokenLimit: FREE }
+    );
+    expect(s.lines[0]).toBe("Plan: monthly (active)");
+  });
+
+  it("shows the raw status instead of a blanket 'inactive'", () => {
+    const s = summarizeUsage(
+      { ...paid, subscriptionStatus: "past_due", isActive: false },
+      { now, freeTierTokenLimit: FREE }
+    );
+    expect(s.lines[0]).toBe("Plan: monthly (past_due)");
+  });
+
   it("marks an inactive subscription", () => {
     const s = summarizeUsage(
-      { ...paid, subscriptionStatus: "canceled" },
+      { ...paid, subscriptionStatus: "", isActive: false },
       { now, freeTierTokenLimit: FREE }
     );
     expect(s.lines[0]).toBe("Plan: monthly (inactive)");
