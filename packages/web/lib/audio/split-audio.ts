@@ -138,6 +138,97 @@ async function getDurationSeconds(inputPath: string): Promise<number> {
   return duration;
 }
 
+const FFMPEG_DURATION = /Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/;
+
+/** Parses the `Duration: hh:mm:ss.xx` line of `ffmpeg -i`; null for `N/A` or missing. */
+export function parseFfmpegDuration(output: string): number | null {
+  const match = output.match(FFMPEG_DURATION);
+  if (!match) return null;
+  const seconds =
+    Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+}
+
+/** Duration via `ffmpeg -i` (which prints stream info to stderr and exits non-zero without an output). */
+async function getDurationViaFfmpeg(inputPath: string): Promise<number | null> {
+  try {
+    const { stderr } = await execFileAsync(getFfmpegPath(), [
+      '-hide_banner',
+      '-i',
+      inputPath,
+    ]);
+    return parseFfmpegDuration(stderr);
+  } catch (err) {
+    if (isBinaryUnavailable(err)) throw err;
+    return parseFfmpegDuration(String((err as { stderr?: unknown }).stderr ?? ''));
+  }
+}
+
+export interface PreparedSplitInput {
+  path: string;
+  durationSeconds: number;
+  /** True when `path` is a temporary remuxed copy the caller must delete. */
+  cleanup: boolean;
+}
+
+/**
+ * Finds the real duration of a recording, tolerating files with no duration in
+ * the header. Browser `MediaRecorder` WebM is written as a stream, so ffprobe
+ * reports no duration even though the file decodes fine; a stream-copy remux
+ * (fast, no re-encode) writes a proper header. Order: ffprobe, then ffmpeg on
+ * the original, then ffmpeg on a remuxed copy. ffprobe being unavailable is
+ * not fatal because ffmpeg can read the duration itself.
+ */
+export async function prepareForSplit(
+  inputPath: string,
+  extension: string,
+  outputDir: string
+): Promise<PreparedSplitInput> {
+  try {
+    return {
+      path: inputPath,
+      durationSeconds: await getDurationSeconds(inputPath),
+      cleanup: false,
+    };
+  } catch (err) {
+    // Missing duration (streamed WebM) is expected; anything else (ffprobe not
+    // runnable, bad output) is worth seeing in the logs before falling back.
+    const code = (err as { code?: unknown } | null)?.code;
+    const reason = err instanceof Error ? err.message : String(err);
+    console.warn(
+      `[split-audio] ffprobe could not provide a duration (${
+        code ? `${String(code)}: ` : ''
+      }${reason}); trying ffmpeg`
+    );
+  }
+
+  const direct = await getDurationViaFfmpeg(inputPath);
+  if (direct) {
+    return { path: inputPath, durationSeconds: direct, cleanup: false };
+  }
+
+  const remuxedPath = join(outputDir, `remux_${Date.now()}.${extension}`);
+  try {
+    await execFileAsync(getFfmpegPath(), [
+      '-y',
+      '-i',
+      inputPath,
+      '-vn',
+      '-c',
+      'copy',
+      remuxedPath,
+    ]);
+    const durationSeconds = await getDurationViaFfmpeg(remuxedPath);
+    if (!durationSeconds) {
+      throw new Error('Could not determine audio duration');
+    }
+    return { path: remuxedPath, durationSeconds, cleanup: true };
+  } catch (err) {
+    await fsPromises.unlink(remuxedPath).catch(() => {});
+    throw err;
+  }
+}
+
 /**
  * Runs ffmpeg to extract a segment with stream copy.
  * Returns the path to the created chunk file.
@@ -201,11 +292,37 @@ export async function splitAudioFileBySizeHeuristic(
   inputBytes: number,
   opts: SplitAudioOptions = {}
 ): Promise<SplitAudioResult> {
+  const prepared = await prepareForSplit(
+    inputPath,
+    extension,
+    opts.outputDir ?? tmpdir()
+  );
+  try {
+    return await splitWithKnownDuration(
+      prepared.path,
+      prepared.durationSeconds,
+      extension,
+      inputBytes,
+      opts
+    );
+  } finally {
+    if (prepared.cleanup) {
+      await fsPromises.unlink(prepared.path).catch(() => {});
+    }
+  }
+}
+
+async function splitWithKnownDuration(
+  inputPath: string,
+  durationSeconds: number,
+  extension: string,
+  inputBytes: number,
+  opts: SplitAudioOptions
+): Promise<SplitAudioResult> {
   const overlapSeconds = opts.overlapSeconds ?? OVERLAP_SECONDS;
   const outputDir = opts.outputDir ?? tmpdir();
   const baseName = `chunk_${Date.now()}`;
 
-  const durationSeconds = await getDurationSeconds(inputPath);
   if (durationSeconds <= 0) {
     throw new Error('Invalid or zero duration');
   }
