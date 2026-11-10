@@ -1,6 +1,6 @@
 import type { Setting } from 'obsidian';
 import type FileOrganizer from '../../index';
-import { renderUsageRow } from './usage-row';
+import { renderTopUpRow, renderUsageRow } from './usage-row';
 import { AUDIO_TEMPLATE_OFF, listAudioTemplateNames } from '../../inbox/audio-template';
 
 /**
@@ -66,6 +66,10 @@ export function getNoteCompanionSettingDefinitions(
             {
               name: 'Usage this month',
               render: setting => renderUsageRow(plugin, setting),
+            },
+            {
+              name: 'Top up',
+              render: setting => renderTopUpRow(plugin, setting),
             },
           ],
         },
