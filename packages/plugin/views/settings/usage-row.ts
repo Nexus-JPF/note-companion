@@ -2,6 +2,7 @@ import type { Setting } from "obsidian";
 import type FileOrganizer from "../../index";
 import { FREE_TIER_TOKEN_LIMIT } from "../../constants";
 import { summarizeUsage } from "./usage-summary";
+import { TOP_UP_OPTIONS, startTopUp } from "./top-up";
 
 /**
  * Renders the "Usage and plan" row of the declarative settings tab.
@@ -83,4 +84,25 @@ export function renderUsageRow(
   return () => {
     disposed = true;
   };
+}
+
+/** One-time purchases (extra minutes or credits); checkout opens in the browser. */
+export function renderTopUpRow(plugin: FileOrganizer, setting: Setting): void {
+  setting
+    .setName("Top up")
+    .setDesc(
+      "One-time purchases that add to your current plan. Checkout opens in your browser."
+    );
+  for (const option of TOP_UP_OPTIONS) {
+    setting.addButton(button =>
+      button.setButtonText(option.label).onClick(async () => {
+        button.setDisabled(true);
+        try {
+          await startTopUp(plugin, option.kind);
+        } finally {
+          button.setDisabled(false);
+        }
+      })
+    );
+  }
 }
