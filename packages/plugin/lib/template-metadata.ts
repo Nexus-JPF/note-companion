@@ -16,7 +16,7 @@ const TEMPLATE_HINTS: Record<string, string> = {
   flash_cards:
     "Interactive flashcards using Obsidian details/summary blocks.",
   lecture_notes:
-    "Study notes from a lecture or class recording: summary, key concepts, details, review questions.",
+    "Study notes from a lecture or class recording: summary, key concepts, details, review questions, assignments.",
   enhance:
     "Improve headings, lists, and structure without rewriting the content.",
 };
