@@ -1,14 +1,19 @@
 ---
-title: 'Boost Obsidian Productivity by Mastering Inline AI vs. Chat Panel Workflows'
+title: 'Inline AI vs Chat Panel in Obsidian: When to Use Each'
 slug: 'boost-obsidian-productivity-inline-vs-chat-panel'
 date: '2026-11-07'
 category: 'Product'
 tags: ['obsidian', 'ai', 'workflow', 'note-taking', 'pkm']
-excerpt: 'Unlock faster, more organized Obsidian vaults by using the right mix of inline AI prompts and chat panels—see how intentional mode-switching saves hours monthly.'
-image: '/blog/images/boost-obsidian-productivity-inline-vs-chat-panel.png'
+excerpt: 'Inline AI for quick in-note edits; a chat panel for vault-wide questions. Note Companion is the chat side, with @ mentions for notes, folders, and tags.'
+image: '/blog/images/boost-obsidian-productivity-inline-vs-chat-panel.webp'
+faq:
+  - question: 'When should I use inline AI versus a chat panel in Obsidian?'
+    answer: 'Use inline AI for quick, note-level edits where the result stays in the current note. Use a chat panel for brainstorming, multi-turn questions, or anything that needs notes from across your vault.'
+  - question: 'Does Note Companion have inline AI prompts?'
+    answer: 'No. Note Companion is a side panel with a vault chat and an Organizer. In chat you can @ mention notes, folders, and tags. Select text in a note and run Add selection to chat to bring it into the conversation. For in-note inline editing, use a separate inline AI plugin alongside it.'
+  - question: 'What can I @ mention in Note Companion chat?'
+    answer: 'Notes, folders, and tags. Dates are not @ mention types.'
 ---
-
-# Boost Obsidian Productivity by Mastering Inline AI vs. Chat Panel Workflows
 
 ## Inline Prompts and Chat Panels: The Two Sides of AI in Obsidian
 
@@ -18,6 +23,8 @@ Inline AI operates directly in the note you’re editing. Whether it’s summari
 
 While both are powerful, most users default to one or the other—missing out on the compounding benefits of switching modes with intention. Let’s dig into how (and when) each approach shines.
 
+**Short answer:** Use inline AI when the result should appear in the note you’re editing. Use a chat panel when you need multi-turn questions or content from across the vault. Note Companion is built for the chat-panel side (plus an Organizer); use another plugin for true inline prompts.
+
 ## Inline AI: Speed and Context Without Distraction
 
 Inline AI is your go-to for quick, localized changes. Picture this: you’re drafting `research/2024-06-01-literature-review.md` and want a crisp summary right after a dense block quote. Without leaving your train of thought, you:
@@ -26,7 +33,7 @@ Inline AI is your go-to for quick, localized changes. Picture this: you’re dra
 - Trigger your AI plugin’s inline prompt (shortcut or command).
 - Review and tweak the summary that appears directly in your note.
 
-This approach is frictionless. There’s no mental overhead from changing windows or losing your writing focus. Over a month, replacing constant context-switching with inline tweaks can reclaim hours you’d otherwise waste.
+This approach is frictionless. There’s no mental overhead from changing windows or losing your writing focus. Replacing constant context-switching with inline tweaks means less friction as you write.
 
 **Inline AI shines for:**
 - Summarizing or expanding on points as you go
@@ -55,6 +62,8 @@ Plugins like Note Companion’s vault chat let you reference notes or tags direc
 - Planning multi-step tasks or projects
 - Collaborating with AI over multiple turns, using @ mentions for targeted pulls
 
+For more on vault-aware chat, see [Why vault-native AI outperforms generic chatbots](/blog/why-vault-native-ai-outperforms-generic-chatbots-for-note-taking) and [Using AI to connect ideas across your vault](/blog/using-ai-to-connect-ideas-across-your-vault).
+
 ## Workflow Walkthrough: Integrating Both Modes Effectively
 
 To build a workflow that leverages both styles, try this step-by-step approach:
@@ -62,7 +71,7 @@ To build a workflow that leverages both styles, try this step-by-step approach:
 1. **Map your typical note tasks:** List out which actions are quick edits (summaries, expansions, clarifications) and which are big-picture (brainstorming, synthesis, cross-vault queries).
 2. **Assign modes:** Use inline AI for any task where the result lives in the current note and you want to stay in flow. Use chat panels for anything that needs back-and-forth or draws from across your vault.
 3. **Set up quick triggers:** Assign hotkeys or commands for both inline AI and opening the chat panel, so switching modes is seamless.
-4. **Leverage @ mentions in chat:** When in a chat panel (especially with Note Companion), call in specific notes, tags, or dates for targeted discussions—e.g., `@inbox/2024-06-05-lab-results.md` or `@#research`.
+4. **Leverage @ mentions in chat:** In Note Companion’s chat, type `@` to mention a note, folder, or tag (not dates), e.g. `@lab-results` or a research tag, so the model gets that context.
 5. **Review your workflow weekly:** Notice where you’re defaulting to one mode out of habit. Are you using the chat panel for a quick summary? Inline AI for a multi-question brainstorm? Adjust accordingly for efficiency.
 
 ## Checklist: Build Your AI Interaction Rhythm
@@ -80,26 +89,15 @@ Tom, a biomedical researcher, managed a sprawling Obsidian vault with folders li
 After reflecting, Tom split his approach:
 
 - **Inline AI:** Used for writing abstracts or summarizing findings in place, such as turning messy experiment notes in `inbox/2024-06-05-lab-results.md` into concise highlights.
-- **Chat panel:** Opened when planning new grants or exploring relationships across studies, using `@#research` and `@[[Grant Proposal Ideas]]` in Note Companion’s chat to gather relevant notes for synthesis.
+- **Chat panel:** Opened when planning new grants or exploring relationships across studies, @ mentioning a research tag and the Grant Proposal Ideas note in Note Companion’s chat to gather relevant notes for synthesis.
 
-Within a few weeks, Tom found his notes easier to navigate and his project planning more coherent. He saved time on repetitive context switches and uncovered connections—like overlapping methodologies across experiments—that he’d previously missed.
+Within a few weeks, Tom found his notes easier to navigate and his project planning more coherent. He cut down on repetitive context switches and uncovered connections—like overlapping methodologies across experiments—that he’d previously missed.
 
 ## Why Small Habit Shifts Add Up Over Time
 
-Shifting between inline AI and chat panels based on task type may seem minor, but the productivity gains stack up. Reducing even a few minutes of context-switching daily means hours saved each month. More importantly, you’ll feel less mental friction, making Obsidian a more enjoyable and powerful workspace.
+Shifting between inline AI and chat panels based on task type may seem minor, but the productivity gains stack up. Less context-switching day to day makes Obsidian feel smoother and more enjoyable. More importantly, you’ll feel less mental friction, making Obsidian a more enjoyable and powerful workspace.
 
-Note Companion and similar tools supercharge this by letting you pull in targeted content via @ mentions, making chat sessions more actionable and less abstract. But the real magic is in your workflow, not the tool itself.
-
-## FAQ
-
-### Q: Can I automate when to use inline AI versus chat panels?
-A: While some plugins let you customize triggers or suggest modes, the real key is intentional habit. Use inline for note-level edits and chat for exploration—review your usage weekly.
-
-### Q: Are there risks to mixing both modes in one session?
-A: Not at all. Many users find that toggling between modes as needed (e.g., drafting inline, then opening chat for synthesis) keeps work moving. Just avoid using both for the same task to prevent duplication.
-
-### Q: Does Note Companion support both interaction styles?
-A: Yes—inline prompts for direct edits and a chat panel for vault-wide Q&A. The chat’s @ mention feature is especially useful for referencing specific notes or tags without leaving the conversation.
+Note Companion covers the chat-panel side: @ mention notes, folders, or tags to pull them into the conversation. Pair it with an inline AI plugin if you also want in-note prompts. The real gains come from matching the mode to the task.
 
 ## Unlocking a Smarter Vault
 
