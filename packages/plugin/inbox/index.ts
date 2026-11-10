@@ -35,6 +35,8 @@ import {
 } from "./audio-template";
 import { restoreAudioSourceInFile } from "../lib/audio-source";
 import { shouldShowInboxNotification } from "./notification-level";
+import { resolveStudyTemplate, studyNoteLabel } from "./study-note";
+import { createStudyNote } from "../lib/create-study-note";
 import { isStaleContainer } from "./retry-source";
 import { sanitizeContent } from "../fileUtils";
 import {
@@ -469,6 +471,13 @@ export class Inbox {
         recommendTagsStep,
         Action.TAGGING,
         Action.ERROR_TAGGING
+      );
+      // Last, so the lecture note already has its final name and folder
+      await executeStep(
+        context,
+        createStudyNoteStep,
+        Action.STUDY_NOTE,
+        Action.ERROR_STUDY_NOTE
       );
       await executeStep(
         context,
@@ -1303,6 +1312,47 @@ function getAudioDefaultTemplate(context: ProcessingContext): string | null {
   });
 }
 
+/** Study-note template for this file ("study note from recordings" setting): audio that was transcribed, or null. */
+function getStudyTemplate(context: ProcessingContext): string | null {
+  const extension = context.inboxFile?.extension;
+  if (!extension || !VALID_AUDIO_EXTENSIONS.includes(extension)) return null;
+  if (isMediaExtractionSkipped(context)) return null;
+  return resolveStudyTemplate(context.plugin.settings.studyNoteTemplate);
+}
+
+/**
+ * Creates the flashcards (or other study note) for a recording. A failure here
+ * must never fail the file: the lecture note is already saved, so the problem
+ * is reported and the pipeline carries on.
+ */
+async function createStudyNoteStep(
+  context: ProcessingContext
+): Promise<ProcessingContext> {
+  const template = getStudyTemplate(context);
+  if (!template || !context.containerFile) return context;
+  try {
+    const note = await createStudyNote(context.plugin, context.containerFile, template);
+    if (note) {
+      logger.info("Created study note", { path: note.path, template });
+    }
+  } catch (error) {
+    const reason = getErrorMessage(error);
+    logger.warn("Could not create study note", { template, reason });
+    if (
+      shouldShowInboxNotification(
+        context.plugin.settings.inboxNotificationLevel,
+        "warning"
+      )
+    ) {
+      new Notice(
+        `Could not create ${studyNoteLabel(template).toLowerCase()} for ${context.containerFile.basename}: ${reason}. The note itself was saved.`,
+        8000
+      );
+    }
+  }
+  return context;
+}
+
 // skip actions when settings below are false
 function shouldSkipAction(context: ProcessingContext, action: Action): boolean {
   switch (action) {
@@ -1321,6 +1371,8 @@ function shouldSkipAction(context: ProcessingContext, action: Action): boolean {
       return !context.plugin.settings.enableFolderRecommendation;
     case Action.FETCH_YOUTUBE:
       return !context.plugin.settings.enableYouTubeTranscriptFetching;
+    case Action.STUDY_NOTE:
+      return !getStudyTemplate(context);
     default:
       return false;
   }
@@ -1357,6 +1409,7 @@ function formatErrorMessage(
     [Action.ERROR_CONTAINER]: "Failed to create container",
     [Action.ERROR_APPEND]: "Failed to append attachment",
     [Action.ERROR_COMPLETE]: "Failed to complete processing",
+    [Action.ERROR_STUDY_NOTE]: "Failed to create study note",
   };
 
   const userFriendlyAction = actionMap[action] || action.toString();
@@ -1392,7 +1445,7 @@ function calculateProgress(record: FileRecord): number {
     (log) => log.completed && !log.skipped
   ).length;
 
-  return Math.round((completedSteps / totalSteps) * 100);
+  return Math.min(100, Math.round((completedSteps / totalSteps) * 100));
 }
 
 async function executeStep(

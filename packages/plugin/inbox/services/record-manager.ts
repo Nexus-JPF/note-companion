@@ -58,6 +58,9 @@ export enum Action {
   FETCH_YOUTUBE = "Fetching YouTube transcript...",
   FETCH_YOUTUBE_DONE = "YouTube transcript fetched",
   ERROR_FETCH_YOUTUBE = "Failed to fetch YouTube transcript",
+  STUDY_NOTE = "Creating study note...",
+  STUDY_NOTE_DONE = "Study note created",
+  ERROR_STUDY_NOTE = "Failed to create study note",
 }
 
 export interface LogEntry {
@@ -532,6 +535,7 @@ export class RecordManager {
       [Action.CONTAINER_DONE]: Action.CONTAINER,
       [Action.APPEND_DONE]: Action.APPEND,
       [Action.FETCH_YOUTUBE_DONE]: Action.FETCH_YOUTUBE,
+      [Action.STUDY_NOTE_DONE]: Action.STUDY_NOTE,
     };
     return reverseMap[completedStep];
   }

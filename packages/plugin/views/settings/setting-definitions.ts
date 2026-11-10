@@ -3,6 +3,7 @@ import type FileOrganizer from '../../index';
 import { renderChatStepsRow } from './chat-steps-row';
 import { renderTopUpRow, renderUsageRow } from './usage-row';
 import { AUDIO_TEMPLATE_OFF, listAudioTemplateNames } from '../../inbox/audio-template';
+import { STUDY_NOTE_OFF } from '../../inbox/study-note';
 
 /**
  * Obsidian 1.13+ declarative settings shape.
@@ -43,6 +44,14 @@ export function getNoteCompanionSettingDefinitions(
   // Keep a saved template selectable even if its file was renamed or removed
   if (settings.audioDefaultTemplate && !(settings.audioDefaultTemplate in audioTemplateOptions)) {
     audioTemplateOptions[settings.audioDefaultTemplate] = `${settings.audioDefaultTemplate} (missing)`;
+  }
+
+  const studyNoteOptions: Record<string, string> = { [STUDY_NOTE_OFF]: 'Off' };
+  for (const name of listAudioTemplateNames(plugin.app, settings.templatePaths)) {
+    studyNoteOptions[name] = name;
+  }
+  if (settings.studyNoteTemplate && !(settings.studyNoteTemplate in studyNoteOptions)) {
+    studyNoteOptions[settings.studyNoteTemplate] = `${settings.studyNoteTemplate} (missing)`;
   }
 
   return [
@@ -146,6 +155,18 @@ export function getNoteCompanionSettingDefinitions(
                 key: 'audioDefaultTemplate',
                 defaultValue: AUDIO_TEMPLATE_OFF,
                 options: audioTemplateOptions,
+              },
+            },
+            {
+              name: 'Study note from recordings',
+              desc: 'After a recording is transcribed and formatted, also create a second note from it with this template and link the two. Try flash_cards. Uses one extra AI call per recording.',
+              visible: () =>
+                settings.enableAttachmentProcessing && settings.enableAudioTranscription,
+              control: {
+                type: 'dropdown',
+                key: 'studyNoteTemplate',
+                defaultValue: STUDY_NOTE_OFF,
+                options: studyNoteOptions,
               },
             },
             {
