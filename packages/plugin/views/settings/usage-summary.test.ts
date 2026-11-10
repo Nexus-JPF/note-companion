@@ -78,7 +78,7 @@ describe("summarizeUsage", () => {
       { ...paid, tokenUsage: 5000000 },
       { now, freeTierTokenLimit: FREE }
     );
-    expect(paidHit.warnings[0]).toContain("Top up credits");
+    expect(paidHit.warnings[0]).toContain("Use Top up below");
   });
 
   it("omits the audio line and warnings when there is no audio allowance", () => {

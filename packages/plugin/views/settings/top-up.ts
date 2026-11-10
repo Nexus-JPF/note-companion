@@ -15,7 +15,7 @@ export interface TopUpOption {
 export const TOP_UP_OPTIONS: TopUpOption[] = [
   { kind: "minutes", label: "Top up 300 minutes ($10)" },
   { kind: "credits-standard", label: "Top up 5M credits ($15)" },
-  { kind: "credits-large", label: "Top up 12M credits ($30)" },
+  { kind: "credits-large", label: "Top up 12M credits ($30) — better value" },
 ];
 
 export function getTopUpRequest(kind: TopUpKind): {
@@ -29,6 +29,16 @@ export function getTopUpRequest(kind: TopUpKind): {
       return { path: "/api/top-up", body: { tier: "standard" } };
     case "credits-large":
       return { path: "/api/top-up", body: { tier: "large" } };
+  }
+}
+
+/** Only open real https checkout pages (defense in depth for a server-supplied URL). */
+export function isSafeCheckoutUrl(url: unknown): url is string {
+  if (typeof url !== "string") return false;
+  try {
+    return new URL(url).protocol === "https:";
+  } catch {
+    return false;
   }
 }
 
@@ -89,10 +99,10 @@ export async function startTopUp(
       await plugin.saveSettings();
     }
 
-    if (data.url) {
+    if (isSafeCheckoutUrl(data.url)) {
       window.open(data.url, "_blank");
     } else {
-      new Notice("Top-up failed: no checkout link was returned.", 5000);
+      new Notice("Top-up failed: no valid checkout link was returned.", 5000);
     }
   } catch (error) {
     console.error("Top-up error:", error);
