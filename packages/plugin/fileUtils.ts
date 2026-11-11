@@ -369,7 +369,7 @@ function getLectureNotesTemplateContent(): string {
 
 The input is a single transcript. Work only from what was actually said. Do not invent facts, and never mention that other transcripts, written notes, or slides were or were not provided.
 
-Structure the note exactly like this:
+Structure the note like this, translating the section headings into the language of the transcript (for French: Résumé, Concepts clés, Détails et exemples, Questions à réviser, Questions ouvertes, Devoirs):
 
 # [A short, specific title for the topic]
 
@@ -377,7 +377,7 @@ Structure the note exactly like this:
 3-5 sentences on what the session covered and why it matters.
 
 ## Key concepts
-For each main idea, use a "###" heading with the concept name, then a short explanation in your own words. Define terms the first time they appear. Use [[internal links]] for concepts that likely deserve their own note.
+For each main idea, use a "###" heading with the concept name, then a short explanation in your own words. Define terms the first time they appear.
 
 ## Details and examples
 Organize the remaining content by topic with "###" headings. Use bullet points for steps, comparisons, formulas, dates, names, and examples that were given.
@@ -386,9 +386,14 @@ Organize the remaining content by topic with "###" headings. Use bullet points f
 5-8 questions that test understanding of the material, each followed by a one-line answer.
 
 ## Open questions
-Anything the speaker left unresolved or that needs follow-up. Omit this section if there is nothing.
+Anything the speaker left unresolved or that needs follow-up. Do not put homework or readings here. Omit this section if there is nothing.
+
+## Assignments
+Homework, readings, deadlines and things the speaker asked the audience to prepare, as a checklist ("- [ ] ..."). Omit this section if none were mentioned.
 
 Rules:
+- Headings are plain text: never put [[links]] in any heading. In the body, wrap at most a few terms that clearly deserve their own note in [[internal links]].
+- Write the whole note, headings included, in the language the speaker used. Do not translate it into English.
 - Fix obvious transcription errors and remove filler words, but keep the speaker's meaning.
 - Keep it scannable: short paragraphs, bullets, bold for key terms.
 - If the content is not educational (for example small talk), write a concise summary and skip the sections that do not apply.`;
