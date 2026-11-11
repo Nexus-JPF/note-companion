@@ -461,3 +461,14 @@
   font-size: 12px;
   font-weight: bold;
 }
+
+/* Settings rows with several wide buttons (Top up): let the controls drop below
+   the name and wrap, instead of overflowing and squeezing the name to nothing. */
+.nc-wrap-controls {
+  flex-wrap: wrap;
+}
+.nc-wrap-controls .setting-item-control {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
