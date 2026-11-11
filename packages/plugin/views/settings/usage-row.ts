@@ -88,6 +88,8 @@ export function renderUsageRow(
 
 /** One-time purchases (extra minutes or credits); checkout opens in the browser. */
 export function renderTopUpRow(plugin: FileOrganizer, setting: Setting): void {
+  // Three wide buttons do not fit beside the name: wrap them below it (see styles.css)
+  setting.settingEl.addClass("nc-wrap-controls");
   setting
     .setName("Top up")
     .setDesc(
