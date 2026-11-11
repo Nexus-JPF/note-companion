@@ -24,6 +24,8 @@ export class FileOrganizerSettings {
   audioDefaultTemplate = "none";
   /** Save recorder output into the inbox so it is transcribed and formatted automatically. */
   sendRecordingsToInbox = false;
+  /** Template used to also create a study note (e.g. flash_cards) from each transcribed recording ("none" = off). */
+  studyNoteTemplate = "none";
   // not working atm
   enableFileRenaming = true;
   enableAttachmentProcessing = true;

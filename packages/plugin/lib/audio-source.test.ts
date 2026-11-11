@@ -1,4 +1,9 @@
-import { extractAudioSource, restoreAudioSource } from "./audio-source";
+import {
+  appendBeforeBackupFooter,
+  extractAudioSource,
+  restoreAudioSource,
+  stripAudioSource,
+} from "./audio-source";
 
 const SOURCE = `![[Recordings/call.m4a]]
 
@@ -136,5 +141,26 @@ describe("extractAudioSource callouts", () => {
     const { transcripts } = extractAudioSource(note);
     expect(transcripts).toHaveLength(1);
     expect(transcripts[0].text).toBe("line one\n\nline two");
+  });
+});
+
+describe("stripAudioSource and appendBeforeBackupFooter", () => {
+  const note =
+    "---\ntags: [x]\n---\n![[a.m4a]]\n\n# Title\n\nBody text.\n\n> [!note]- Transcript for a\n> spoken words\n\n---\n[[Backup Link to original file]]";
+
+  it("removes frontmatter, embeds, transcript callout and footer", () => {
+    expect(stripAudioSource(note)).toBe("# Title\n\nBody text.");
+  });
+  it("removes a heading-style transcript section", () => {
+    const heading = "![[a.m4a]]\n\n## Transcript for a\n\nspoken words\n";
+    expect(stripAudioSource(heading)).toBe("");
+  });
+  it("appends above the footer when there is one", () => {
+    const out = appendBeforeBackupFooter(note, "**Flashcards:** [[X]]");
+    expect(out.indexOf("**Flashcards:** [[X]]")).toBeLessThan(out.indexOf("Link to original file"));
+    expect(out.endsWith("[[Backup Link to original file]]")).toBe(true);
+  });
+  it("appends at the end otherwise", () => {
+    expect(appendBeforeBackupFooter("Body\n", "Link")).toBe("Body\n\nLink");
   });
 });

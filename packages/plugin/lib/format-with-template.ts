@@ -2,6 +2,7 @@ import { Notice, TFile } from "obsidian";
 import FileOrganizer from "../index";
 import { logger } from "../services/logger";
 import { restoreAudioSourceInFile } from "./audio-source";
+import { keepsAudioSourceInNewFile } from "../inbox/study-note";
 import {
   finalizeYouTubeFormattedNote,
   getYoutubeInboxFormatSkipReasonAfterPrep,
@@ -210,7 +211,10 @@ export async function formatNoteWithTemplate(
       formattingInstruction,
     });
     if (newFile) {
-      await restoreAudioSourceInFile(plugin.app, newFile, baseContent);
+      // A flashcards note stands alone: no audio player or transcript copied into it
+      if (keepsAudioSourceInNewFile(templateName)) {
+        await restoreAudioSourceInFile(plugin.app, newFile, baseContent);
+      }
       await finalizeYouTubeFormattedNote(
         plugin.app,
         newFile,

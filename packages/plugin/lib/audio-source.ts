@@ -112,6 +112,28 @@ export function restoreAudioSource(formatted: string, source: string): string {
   return result;
 }
 
+/**
+ * The note's own content without the audio embeds, transcript sections or
+ * callouts, backup footer and frontmatter: what a student reads, minus the raw source.
+ */
+export function stripAudioSource(content: string): string {
+  return content
+    .replace(FRONTMATTER, "")
+    .replace(BACKUP_FOOTER, "")
+    .replace(TRANSCRIPT_SECTION, "")
+    .replace(TRANSCRIPT_CALLOUT, "")
+    .replace(AUDIO_EMBED, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Appends `block` at the end of the note, above the "Link to original file" footer if there is one. */
+export function appendBeforeBackupFooter(content: string, block: string): string {
+  const footer = content.match(BACKUP_FOOTER)?.[0] ?? "";
+  const body = footer ? content.slice(0, content.length - footer.length) : content;
+  return `${body.trimEnd()}\n\n${block}${footer}`;
+}
+
 /** Atomically restores the audio source in a formatted note (no-op if intact). */
 export async function restoreAudioSourceInFile(
   app: App,

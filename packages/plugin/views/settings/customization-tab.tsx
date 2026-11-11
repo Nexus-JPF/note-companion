@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type FileOrganizer from '../../index';
 import type { InboxNotificationLevel } from '../../inbox/notification-level';
 import { AUDIO_TEMPLATE_OFF, listAudioTemplateNames } from '../../inbox/audio-template';
+import { STUDY_NOTE_OFF } from '../../inbox/study-note';
 
 interface CustomizationTabProps {
   plugin: InstanceType<typeof FileOrganizer>;
@@ -23,6 +24,7 @@ export const CustomizationTab: React.FC<CustomizationTabProps> = ({ plugin }) =>
   const [enableDocumentClassification, setEnableDocumentClassification] = useState(plugin.settings.enableDocumentClassification);
   const [sendRecordingsToInbox, setSendRecordingsToInbox] = useState(plugin.settings.sendRecordingsToInbox);
   const [audioDefaultTemplate, setAudioDefaultTemplate] = useState(plugin.settings.audioDefaultTemplate || AUDIO_TEMPLATE_OFF);
+  const [studyNoteTemplate, setStudyNoteTemplate] = useState(plugin.settings.studyNoteTemplate || STUDY_NOTE_OFF);
   const audioTemplateNames = listAudioTemplateNames(plugin.app, plugin.settings.templatePaths);
   const [imageInstructions, setImageInstructions] = useState(plugin.settings.imageInstructions);
   const [customTagInstructions, setCustomTagInstructions] = useState(plugin.settings.customTagInstructions);
@@ -142,6 +144,28 @@ export const CustomizationTab: React.FC<CustomizationTabProps> = ({ plugin }) =>
               )}
             </select>
           </div>
+          {enableAttachmentProcessing && enableAudioTranscription && (
+          <div className="setting-item p-4 bg-[--background-secondary] rounded-lg border border-[--background-modifier-border] space-y-2">
+            <div className="font-medium text-[--text-normal]">Study Note From Recordings</div>
+            <p className="text-sm text-[--text-muted]">
+              After a recording is transcribed and formatted, also create a second note from it with this template
+              and link the two. Try flash_cards. Uses one extra AI call per recording.
+            </p>
+            <select
+              className="w-full max-w-xs px-2 py-1.5 bg-[--background-primary] border border-[--background-modifier-border] rounded text-[--text-normal]"
+              value={studyNoteTemplate}
+              onChange={(e) => { void handleTextChange(e.target.value, setStudyNoteTemplate, 'studyNoteTemplate'); }}
+            >
+              <option value={STUDY_NOTE_OFF}>Off</option>
+              {audioTemplateNames.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+              {studyNoteTemplate !== STUDY_NOTE_OFF && !audioTemplateNames.includes(studyNoteTemplate) && (
+                <option value={studyNoteTemplate}>{studyNoteTemplate} (missing)</option>
+              )}
+            </select>
+          </div>
+          )}
           <div className="bg-[--background-secondary] p-4 rounded-lg mt-2">
             <div className="font-medium text-[--text-normal] mb-2">Document Type Templates</div>
             <div className="text-sm text-[--text-muted]">

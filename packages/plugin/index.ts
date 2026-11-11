@@ -413,7 +413,7 @@ export default class FileOrganizer extends Plugin {
    * Also removes # from tags in frontmatter (frontmatter tags should not have #)
    * Also fixes YouTube embeds to use thumbnail image URLs instead of watch URLs
    */
-  private cleanupTagsInContent(content: string): string {
+  cleanupTagsInContent(content: string): string {
     // Fix YouTube embeds to use Obsidian's embed syntax
     // Convert [![YouTube Video](https://www.youtube.com/watch?v=VIDEO_ID)](https://www.youtube.com/watch?v=VIDEO_ID)
     // Or [![YouTube Video](https://img.youtube.com/vi/VIDEO_ID/...)](https://www.youtube.com/watch?v=VIDEO_ID)
