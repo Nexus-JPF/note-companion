@@ -416,6 +416,7 @@ created: "{{current date in YYYY-MM-DD format}}"
 - Extract key concepts, facts, definitions, relationships, and important information from the content
 - Identify all testable knowledge points: definitions, concepts, facts, formulas, relationships, processes, dates, names, theories, principles, etc.
 - Extract 3-7 main topics or themes from the content for the topics array in frontmatter
+- Write the frontmatter values, questions and answers in the language of the content. Do not translate them into English.
 - **CRITICAL: Randomize the order of flashcards - mix different topics, difficulty levels, and question types together. Do NOT follow the original content order or group by topic. Create a varied, shuffled study experience.**
 - Create 10-30 flashcards depending on content length and density
 - Prioritize information that is:

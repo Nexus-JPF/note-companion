@@ -144,6 +144,7 @@ export const CustomizationTab: React.FC<CustomizationTabProps> = ({ plugin }) =>
               )}
             </select>
           </div>
+          {enableAttachmentProcessing && enableAudioTranscription && (
           <div className="setting-item p-4 bg-[--background-secondary] rounded-lg border border-[--background-modifier-border] space-y-2">
             <div className="font-medium text-[--text-normal]">Study Note From Recordings</div>
             <p className="text-sm text-[--text-muted]">
@@ -164,6 +165,7 @@ export const CustomizationTab: React.FC<CustomizationTabProps> = ({ plugin }) =>
               )}
             </select>
           </div>
+          )}
           <div className="bg-[--background-secondary] p-4 rounded-lg mt-2">
             <div className="font-medium text-[--text-normal] mb-2">Document Type Templates</div>
             <div className="text-sm text-[--text-muted]">
