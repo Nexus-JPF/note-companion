@@ -257,6 +257,7 @@ Note Companion supports multiple AI providers:
 ### Manual Testing
 
 - Obsidian plugin requires manual testing in Obsidian environment
+- Before a plugin release, go through [docs/release-checklist.md](docs/release-checklist.md)
 - Test with various themes and configurations
 - Verify cross-platform compatibility
 

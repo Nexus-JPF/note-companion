@@ -411,6 +411,19 @@ R2 Upload → Backend Notification → Processing → Polling → Display
 - Error handling
 - Performance metrics
 
+#### Changing the inbox pipeline (CRITICAL)
+
+The list above is simplified. The real step order is in `processInboxFile` (`packages/plugin/inbox/index.ts`); read it before changing a step. Later steps read a note that earlier steps have already changed, so a step that assumes the note looks the way it did when the container was created breaks on real files.
+
+Before adding or changing a step:
+
+1. **List what runs before it and what each of those steps appends to the note.** Today that includes the audio embed and transcript (extract), the formatted body (format), the `---` / "Link to original file" backup footer (formatting backup), attachment links (append), and inline `#tags` appended at the very end of the note, after the footer (tagging).
+2. **Never assume your marker is the last thing in the note.** Anything you match "at the end" will be followed by whatever later steps append.
+3. **Write appended text through the shared functions in `packages/plugin/lib/note-footer.ts`**, so the code that writes and the code that reads cannot drift apart. New appended text goes there too, and into `buildNoteLikeThePipeline` in `packages/plugin/lib/inbox-note-shape.test.ts`.
+4. **Build test fixtures from real output** (those functions, or a note pasted from a real run), not hand-written notes. A hand-written fixture repeats the author's assumption and cannot disprove it.
+5. **A step after formatting must not fail the file** unless the file is useless without it: catch, warn, carry on (see `createStudyNoteStep`).
+6. **Run a real file through the inbox before calling the change done, and say in the PR what you ran.** Passing unit tests do not show the pipeline works: the Flashcards back-link bug passed every unit test and only showed on a real lecture.
+
 ---
 
 ### 5. AI SDK Integration (Vercel AI SDK)
