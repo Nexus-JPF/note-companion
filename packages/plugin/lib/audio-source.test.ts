@@ -164,3 +164,25 @@ describe("stripAudioSource and appendBeforeBackupFooter", () => {
     expect(appendBeforeBackupFooter("Body\n", "Link")).toBe("Body\n\nLink");
   });
 });
+
+describe("backup footer followed by tags (real inbox notes)", () => {
+  // The tagging step appends inline tags after the footer, so real notes end like this
+  const tagged =
+    "# Title\n\nBody text.\n\n> [!note]- Transcript for a\n> spoken words\n\n---\n[[Backups/x | Link to original file]]\n#vaccines\n#adaptive-immunity";
+
+  it("puts an appended block above the footer, not after the tags", () => {
+    const out = appendBeforeBackupFooter(tagged, "**Flashcards:** [[X]]");
+    expect(out.indexOf("**Flashcards:** [[X]]")).toBeLessThan(out.indexOf("Link to original file"));
+    expect(out.endsWith("#vaccines\n#adaptive-immunity")).toBe(true);
+  });
+  it("strips the footer and its tags from the study source", () => {
+    expect(stripAudioSource(tagged)).toBe("# Title\n\nBody text.");
+  });
+  it("restores a missing transcript above the footer and tags", () => {
+    const formatted = "# Title\n\nBody.\n\n---\n[[Backups/x | Link to original file]]\n#vaccines";
+    const source = "![[a.m4a]]\n\n## Transcript for a\n\nspoken words here";
+    const out = restoreAudioSource(formatted, source);
+    expect(out.indexOf("Transcript for a")).toBeLessThan(out.indexOf("Link to original file"));
+    expect(out.endsWith("#vaccines")).toBe(true);
+  });
+});
