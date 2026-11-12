@@ -63,6 +63,7 @@ import { migrateImageOcrSettings } from "./inbox/migrate-image-instructions";
 import { extractLargestJpegFromPdf } from "./lib/extract-embedded-jpeg-from-pdf";
 import { renderPdfPageToPng } from "./lib/pdf-page-to-image";
 import { logger } from "./services/logger";
+import { backupFooter, inlineTagAppendix } from "./lib/note-footer";
 import { layoutPdfTextItems } from "./lib/pdf-text-layout";
 import { obsidianFetch } from "./lib/obsidian-fetch";
 import {
@@ -333,7 +334,7 @@ export default class FileOrganizer extends Plugin {
   async appendBackupLinkToCurrentFile(currentFile: TFile, backupFile: TFile) {
     // Remove .md extension from path for Obsidian wikilink
     const backupPath = backupFile.path.replace(/\.md$/, "");
-    const backupLink = `\n\n---\n[[${backupPath} | Link to original file]]`;
+    const backupLink = backupFooter(backupPath);
 
     await this.app.vault.append(currentFile, backupLink);
   }
@@ -1786,12 +1787,8 @@ export default class FileOrganizer extends Plugin {
       return;
     }
 
-    // If we find no '#' symbol at all, add a blank line before appending the first tag
-    if (!fileContent.includes("#")) {
-      await this.app.vault.append(file, `\n\n${formattedTag}`);
-    } else {
-      await this.app.vault.append(file, `\n${formattedTag}`);
-    }
+    // The first tag in a note with no '#' gets a blank line before it
+    await this.app.vault.append(file, inlineTagAppendix(fileContent, formattedTag));
   }
 
   async ensureAssistantView(): Promise<AssistantViewWrapper | null> {

@@ -1,4 +1,5 @@
 import type { App, TFile } from "obsidian";
+import { BACKUP_LINK_LABEL } from "./note-footer";
 
 /**
  * Keeps an audio note tied to its source after the AI rewrites it.
@@ -18,12 +19,14 @@ const AUDIO_EMBED = new RegExp(
 const TRANSCRIPT_SECTION =
   /^## Transcript for (.+)\n+([\s\S]*?)(?=\n## |(?![\s\S]))/gm;
 const FRONTMATTER = /^---\n[\s\S]*?\n---\n?/;
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /**
  * Footer written by appendBackupLinkToCurrentFile, plus any inline #tag lines
  * the tagging step appended after it (appendTag adds them at the end of the note).
  */
-const BACKUP_FOOTER =
-  /\n\n---\n\[\[[^\]]*Link to original file\]\](?:\s+#[^\s#]+)*\s*$/;
+const BACKUP_FOOTER = new RegExp(
+  `\\n\\n---\\n\\[\\[[^\\]]*${escapeRegExp(BACKUP_LINK_LABEL)}\\]\\](?:\\s+#[^\\s#]+)*\\s*$`
+);
 /** Collapsed callout written by restoreAudioSource; parsed back so a later format can restore it again. */
 const TRANSCRIPT_CALLOUT = /^> \[!note\]-? Transcript for (.+)\n((?:>.*(?:\n|$))*)/gm;
 const CALLOUT_MARKER = /^>[ \t]?/gm;
