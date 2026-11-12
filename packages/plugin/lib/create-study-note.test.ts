@@ -10,7 +10,7 @@ jest.mock("../services/logger", () => ({ logger: { info: jest.fn(), warn: jest.f
 import { createStudyNote } from "./create-study-note";
 
 const NOTES = `# Vaccines\n\n${"Vaccines train the adaptive immune system. ".repeat(20)}`;
-const LECTURE = `![[lecture.m4a]]\n\n${NOTES}\n\n---\n[[Backup Link to original file]]`;
+const LECTURE = `![[lecture.m4a]]\n\n${NOTES}\n\n---\n[[Backup | Link to original file]]\n#vaccines\n#immunology`;
 const CARDS = '---\ntotal: 2\n---\n\n<details class="flashcard"><summary>Q</summary>A</details>';
 
 function setup(opts: { content?: string; existing?: string[]; instructions?: string; generated?: string } = {}) {

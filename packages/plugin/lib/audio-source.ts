@@ -18,8 +18,12 @@ const AUDIO_EMBED = new RegExp(
 const TRANSCRIPT_SECTION =
   /^## Transcript for (.+)\n+([\s\S]*?)(?=\n## |(?![\s\S]))/gm;
 const FRONTMATTER = /^---\n[\s\S]*?\n---\n?/;
-/** Footer written by appendBackupLinkToCurrentFile. */
-const BACKUP_FOOTER = /\n\n---\n\[\[[^\]]*Link to original file\]\]\s*$/;
+/**
+ * Footer written by appendBackupLinkToCurrentFile, plus any inline #tag lines
+ * the tagging step appended after it (appendTag adds them at the end of the note).
+ */
+const BACKUP_FOOTER =
+  /\n\n---\n\[\[[^\]]*Link to original file\]\](?:\s+#[^\s#]+)*\s*$/;
 /** Collapsed callout written by restoreAudioSource; parsed back so a later format can restore it again. */
 const TRANSCRIPT_CALLOUT = /^> \[!note\]-? Transcript for (.+)\n((?:>.*(?:\n|$))*)/gm;
 const CALLOUT_MARKER = /^>[ \t]?/gm;
