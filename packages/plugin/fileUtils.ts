@@ -423,7 +423,8 @@ created: "{{current date in YYYY-MM-DD format}}"
 - Extract 3-7 main topics or themes from the content for the topics array in frontmatter
 - Write the frontmatter values, questions and answers in the language of the content. Do not translate them into English.
 - **CRITICAL: Randomize the order of flashcards - mix different topics, difficulty levels, and question types together. Do NOT follow the original content order or group by topic. Create a varied, shuffled study experience.**
-- Create 10-30 flashcards depending on content length and density
+- **One card per distinct fact.** First list the distinct testable facts in the content, then write one card for each. Never pad: if two candidate cards test the same fact, keep only the better one. A short recording may need only 5-10 cards and a long lecture up to 30. Fewer good cards beat more repetitive ones.
+- **Use only facts stated in the content.** Do not add outside knowledge, examples or explanations, even if they are true. If something is not in the content, there is no card for it.
 - Prioritize information that is:
   - Fundamental to understanding the topic
   - Frequently referenced or important
@@ -442,15 +443,16 @@ created: "{{current date in YYYY-MM-DD format}}"
   - The <summary> tag must have class="flashcard-question" and contain the question
   - The answer must be wrapped in <div class="flashcard-answer">
   - Leave a blank line after </summary> and before </details> for proper spacing
-  - Answers can include markdown formatting (bold, italic, lists, links, etc.)
+  - Answers can include markdown formatting (bold, italic, lists, etc.)
   - Answers can span multiple paragraphs
 
-- Questions should test understanding, not just recall
+- Each question tests exactly one fact: one definition, one reason, one number or one step. Do not bundle several facts or a comparison into one card; if the content compares two things, make one card for each. The only exception is a short ordered process, which can be one card phrased as "In what order...?" or "What are the steps of...?"
+- Prefer "why" and "how" questions over bare definitions when the content explains a reason
 - Answers should be complete but concise (typically 1-4 sentences, but can be longer if needed)
-- Include context and examples when helpful
+- Include context or an example only when it appears in the content
 - Use clear, specific language
 - Make questions specific and focused (avoid overly broad questions)
-- Include [[internal links]] to related notes or concepts when relevant
+- Do not add [[internal links]], "see also" or "related" lines to cards
 - Use **bold** for key terms in answers
 - Group related information in answers using lists or structured formatting
 
@@ -476,26 +478,23 @@ created: "2025-01-09"
 
 Mitochondria are organelles that produce ATP (adenosine triphosphate) through cellular respiration. They are often called the "powerhouse of the cell" because they generate most of the cell's energy supply.
 
-Related: See also [[Chloroplasts]] for plant cell energy production.
-
 </div>
 
 </details>
 
 <details class="flashcard">
-<summary class="flashcard-question">What is the difference between DNA and RNA?</summary>
+<summary class="flashcard-question">Which base does RNA use in place of thymine?</summary>
 
 <div class="flashcard-answer">
 
-- **DNA**: Double-stranded, contains thymine, stores genetic information
-- **RNA**: Single-stranded, contains uracil, involved in protein synthesis
+**Uracil**. DNA contains thymine, while RNA contains uracil.
 
 </div>
 
 </details>
 
 <details class="flashcard">
-<summary class="flashcard-question">How does photosynthesis work?</summary>
+<summary class="flashcard-question">What are the two stages of photosynthesis, in order?</summary>
 
 <div class="flashcard-answer">
 
@@ -518,8 +517,8 @@ Important Notes:
 - Output the actual HTML tags directly (NOT inside markdown code blocks)
 - Each flashcard should be separated by a blank line for readability
 - **RANDOMIZE THE ORDER: Mix topics, difficulty levels, and question types - do not follow source material order**
-- Include [[internal links]] to related concepts when relevant
-- Answers can include markdown formatting like **bold**, *italic*, lists, and [[internal links]]
+- Do not repeat a fact across cards, and do not add [[internal links]] or "related" lines
+- Answers can include markdown formatting like **bold**, *italic* and lists
 - If content is very long, focus on the most important concepts
 - If content is technical, ensure definitions are clear
 - Maintain the original meaning and accuracy of the source material
