@@ -423,7 +423,7 @@ created: "{{current date in YYYY-MM-DD format}}"
 - Extract 3-7 main topics or themes from the content for the topics array in frontmatter
 - Write the frontmatter values, questions and answers in the language of the content. Do not translate them into English.
 - **CRITICAL: Randomize the order of flashcards - mix different topics, difficulty levels, and question types together. Do NOT follow the original content order or group by topic. Create a varied, shuffled study experience.**
-- **One card per distinct fact.** First identify the distinct testable facts in the content, privately: never print that list. Then write one card for each. Never pad: if two candidate cards test the same fact, keep only the better one. Aim for about one card per two or three sentences of the content, and fewer if it repeats itself. Fewer good cards beat more repetitive ones.
+- **One card per distinct fact.** First identify the distinct testable facts in the content, privately: never print that list. Then write one card for each. Never pad: if two candidate cards test the same fact, keep only the better one. Aim for about one card per two or three sentences of the content, and fewer if it repeats itself, but never more than 30 cards however long the content is. Fewer good cards beat more repetitive ones.
 - **Use only facts stated in the content.** Do not add outside knowledge, examples or explanations, even if they are true. If something is not in the content, there is no card for it.
 - Prioritize information that is:
   - Fundamental to understanding the topic
@@ -446,7 +446,7 @@ created: "{{current date in YYYY-MM-DD format}}"
   - Answers can include markdown formatting (bold, italic, lists, etc.)
   - Answers can span multiple paragraphs
 
-- Each question tests exactly one fact: one definition, one reason, one number or one step. Do not bundle several facts or a comparison into one card. If the content compares two things, ask about each one's distinguishing fact, not every property of each, and never write a card that only restates facts other cards already test. Describe a concept in one card (what it is); add a second card for it only for a separate fact, such as how fast it acts. Never ask for "the characteristic of X" when the answer is a single adjective. The only exception is a short ordered process, which can be one card phrased as "In what order...?" or "What are the steps of...?"
+- Each question tests exactly one fact: one definition, one reason, one number or one step. Do not bundle several facts or a comparison into one card. If the content compares two things, ask about each one's distinguishing fact, not every property of each, and never write a card that only restates facts other cards already test. Describe a concept in one card (what it is); add a second card for it only for a separate fact, such as where it occurs or what it causes. Never ask for "the characteristic of X" when the answer is a single adjective. The only exception is a short ordered process, which can be one card phrased as "In what order...?" or "What are the steps of...?"
 - Prefer "why" and "how" questions over bare definitions when the content explains a reason
 - Answers should be complete but concise (typically 1-4 sentences, but can be longer if needed)
 - Include context or an example only when it appears in the content
