@@ -20,9 +20,9 @@ faq:
 
 ## Rethinking Meetings in Obsidian: Why Summaries Matter More Than Ever
 
-Switching from Notion or Roam to Obsidian often means leaving behind slick block references and databases for a more flexible, file-based approach. While this opens up new customization opportunities, it also means you need reliable workflows for capturing and distilling meeting knowledge—especially if you’re used to searching, tagging, and referencing meeting content in different ways.
+Switching from Notion or Roam to Obsidian often means leaving behind slick block references and databases for a more flexible, file-based approach. While this opens up new customization opportunities, it also means you need reliable workflows for capturing and distilling meeting knowledge, especially if you’re used to searching, tagging, and referencing meeting content in different ways.
 
-Meetings flood you with information: spoken ideas, decisions, and next steps. Without a workflow, these insights end up buried in raw transcripts or scattered notes. The goal is to quickly convert conversations into actionable, connected knowledge—without the overhead of manual reorganization.
+Meetings flood you with information: spoken ideas, decisions, and next steps. Without a workflow, these insights end up buried in raw transcripts or scattered notes. The goal is to quickly convert conversations into actionable, connected knowledge, without the overhead of manual reorganization.
 
 This guide lays out a practical, Obsidian-first workflow that transforms meeting audio into focused summaries, action lists, and tightly linked notes, making your vault a true knowledge hub, not just a text graveyard.
 
@@ -49,7 +49,7 @@ Before you dive into your next meeting, invest ten minutes to build a vault stru
 
 This separation makes it easy to spot which meetings need attention and which are ready for review.
 
-## Step 1: Capture—From Audio to Raw Transcript
+## Step 1: Capture: From Audio to Raw Transcript
 
 Your first challenge is getting meeting content into your vault. Here’s a streamlined approach:
 
@@ -61,14 +61,14 @@ See also [making large-file transcription reliable](/blog/making-large-file-tran
 
 Keep the notes themselves in your vault. If you use Note Companion to transcribe, the audio is sent to its transcription service unless you self-host.
 
-## Step 2: Process—Turning Transcripts into Actionable Notes
+## Step 2: Process: Turning Transcripts into Actionable Notes
 
 Raw transcripts are rarely useful on their own. The real value comes from distilling the important details and action items. Here’s how to do it efficiently:
 
 ### Manual Processing
 
 - **Highlight:** As you read, use Obsidian’s highlight syntax (`==important==`) or comments to mark key statements and decisions.
-- **Summarize:** Create a new note in `meetings/` from your template. Under the **Summary** section, boil the discussion down to bullet points—focus on outcomes, not chatter.
+- **Summarize:** Create a new note in `meetings/` from your template. Under the **Summary** section, boil the discussion down to bullet points: focus on outcomes, not chatter.
 - **Action Items:** Add a checklist for tasks and assignments.
 - **Link:** Use wikilinks (e.g., `[[Q3 Marketing Plan]]`, `[[Alice Johnson]]`) to connect the meeting to projects and people.
 
@@ -91,7 +91,7 @@ Raw transcripts are rarely useful on their own. The real value comes from distil
 - [ ] Mark to test SEO tool and report findings
 ```
 
-## Step 3: Connect—Linking, Tagging, and Contextualizing
+## Step 3: Connect: Linking, Tagging, and Contextualizing
 
 Don’t let meeting notes become isolated. Obsidian’s linking and tag features make it easy to weave meetings into your broader PKM system:
 
@@ -137,4 +137,4 @@ Alex finds this system less cluttered than Roam, while still supporting quick ca
 
 ---
 
-Migrating to Obsidian doesn’t mean giving up robust meeting workflows. With a little setup and the right tools, you’ll turn chaotic transcripts into clear, actionable notes—making every meeting a lasting asset in your PKM vault.
+Migrating to Obsidian doesn’t mean giving up robust meeting workflows. With a little setup and the right tools, you’ll turn chaotic transcripts into clear, actionable notes, making every meeting a lasting asset in your PKM vault.
