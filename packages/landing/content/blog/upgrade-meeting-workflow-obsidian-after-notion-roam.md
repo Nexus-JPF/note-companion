@@ -1,14 +1,22 @@
 ---
-title: 'Upgrade Your Meeting Workflow: Transcription and Summarization in Obsidian After Notion or Roam'
+title: 'Obsidian Meeting Notes After Notion or Roam'
 slug: 'upgrade-meeting-workflow-obsidian-after-notion-roam'
 date: '2026-11-14'
 category: 'Guides'
 tags: ['obsidian', 'pkm', 'meetings', 'transcription', 'summarization']
-excerpt: 'Move beyond basic capture: streamline meeting transcription and summaries in Obsidian for fast review, easy search, and actionable follow-up—even after migrating.'
-image: '/blog/images/upgrade-meeting-workflow-obsidian-after-notion-roam.png'
+excerpt: 'Transcribe meeting audio in Obsidian, then file a summary and action items. A workflow after Notion or Roam, plus what Note Companion does.'
+image: '/blog/images/upgrade-meeting-workflow-obsidian-after-notion-roam.webp'
+faq:
+  - question: 'Can I use this Obsidian meeting workflow if I only have notes, not audio?'
+    answer: >-
+      Yes. Capture the notes in an inbox folder, then summarize outcomes and action items in a processed meeting note. Transcription is optional.
+  - question: 'What if I have a backlog of old transcripts from Notion or Roam?'
+    answer: >-
+      Import them into your inbox folder and process a few at a time. You do not need to transcribe them again if you already have the text.
+  - question: 'How do I handle confidential meeting content in Obsidian?'
+    answer: >-
+      Obsidian stores notes on your device. Note Companion sends audio to its servers for transcription (OpenAI by default, or your own endpoint if you self-host). If recordings must stay off third-party servers, self-host the backend and review the privacy policy.
 ---
-
-# Upgrade Your Meeting Workflow: Transcription and Summarization in Obsidian After Notion or Roam
 
 ## Rethinking Meetings in Obsidian: Why Summaries Matter More Than Ever
 
@@ -18,11 +26,13 @@ Meetings flood you with information: spoken ideas, decisions, and next steps. Wi
 
 This guide lays out a practical, Obsidian-first workflow that transforms meeting audio into focused summaries, action lists, and tightly linked notes, making your vault a true knowledge hub, not just a text graveyard.
 
+**Short answer:** Record the meeting, transcribe the audio into a note, then write a short summary and action list in a processed meeting note you can link and tag. In Note Companion, drop audio into `_NoteCompanion/Inbox` to transcribe and file it, or use Enhance note in the Meetings tab. Transcription runs on Note Companion's servers unless you self-host.
+
 ## Setting Up: Folders, Templates, and Naming That Work
 
 Before you dive into your next meeting, invest ten minutes to build a vault structure that minimizes friction and mirrors some of the best parts of your old workflow.
 
-- **Inbox for raw material:** Create `inbox/`, your drop zone for unprocessed transcripts and audio. This replaces the "quick capture" flow from Notion and Roam, but with a clear separation between capture and processing.
+- **Inbox for raw material:** Create `inbox/`, your drop zone for unprocessed transcripts and audio. This replaces the "quick capture" flow from Notion and Roam, but with a clear separation between capture and processing. For habits that keep that folder from overflowing, see [tame your Obsidian inbox](/blog/tame-obsidian-inbox-across-devices-ai-organization).
 - **Meetings folder:** Set up `meetings/` for finalized notes and summaries. This gives you a single location for all processed meetings.
 - **Templates for consistency:** Use the Templates core plugin to build a meeting note template. Include:
   - Date
@@ -34,8 +44,8 @@ Before you dive into your next meeting, invest ten minutes to build a vault stru
   - Tags
 
 **Example file naming:**
-- Raw: `inbox/2024-06-02-product-standup-transcript.md`
-- Processed: `meetings/2024-06-02-product-standup.md`
+- Raw: `inbox/2026-06-02-product-standup-transcript.md`
+- Processed: `meetings/2026-06-02-product-standup.md`
 
 This separation makes it easy to spot which meetings need attention and which are ready for review.
 
@@ -44,10 +54,12 @@ This separation makes it easy to spot which meetings need attention and which ar
 Your first challenge is getting meeting content into your vault. Here’s a streamlined approach:
 
 1. **Record** the meeting using your preferred tool (Zoom, Teams, Otter, or even your phone).
-2. **Transcribe:** Use a tool that exports text files, or try a plugin like Note Companion. It can transcribe audio and deposit the output straight into your `inbox/` folder, ready for processing.
+2. **Transcribe:** Export a text file from your recorder, or use Note Companion. Drop the audio into `_NoteCompanion/Inbox` (the default watch folder) and it will transcribe, rename and file the note. Recordings made in the Meetings tab go to `Recordings/` unless you turn on "Send recordings to inbox."
 3. **Quick review:** Glance over the raw file to confirm the main content is captured. Optionally, include a link to the original recording for reference.
 
-This keeps your workflow local, secure, and organized from the start.
+See also [making large-file transcription reliable](/blog/making-large-file-transcription-reliable-for-end-users).
+
+Keep the notes themselves in your vault. If you use Note Companion to transcribe, the audio is sent to its transcription service unless you self-host.
 
 ## Step 2: Process—Turning Transcripts into Actionable Notes
 
@@ -62,10 +74,9 @@ Raw transcripts are rarely useful on their own. The real value comes from distil
 
 ### Fast-Track with AI
 
-AI can dramatically reduce processing time:
-- Note Companion’s Organizer can suggest topics, tags, and even draft a summary directly from your transcript.
-- Use its suggestions as a first draft, then tailor for accuracy and clarity.
-- AI can also propose file locations, helping you move from `inbox/` to `meetings/` with confidence.
+- Drop the audio into `_NoteCompanion/Inbox` and Note Companion transcribes, renames and files the note.
+- On an open transcript, the Organizer suggests tags and a folder, and applies nothing until you click.
+- To get a structured summary (discussion points, action items, decisions), use **Enhance note** in the Meetings tab, then edit the result.
 
 **Sample processed meeting note:**
 
@@ -87,15 +98,15 @@ Don’t let meeting notes become isolated. Obsidian’s linking and tag features
 - **Wikilinks:** Link to related projects (`[[Client Redesign]]`), people (`[[Jordan Lee]]`), or research topics.
 - **Tags:** Apply consistent tags like `#meeting`, `#action-item`, or project-specific tags for fast filtering.
 - **Backlinks:** Use Obsidian’s backlinks pane to see all meetings tied to a topic or contact.
-- **Periodic reviews:** Schedule a weekly review of your `inbox/` to keep the flow moving and ensure nothing slips through the cracks.
+- **Periodic reviews:** Schedule a weekly review of your `inbox/` to keep the flow moving and ensure nothing slips through the cracks. A fuller ritual is in [from inbox chaos to vault clarity](/blog/from-inbox-chaos-to-vault-clarity-weekly-review-obsidian-rituals).
 
-## Real-World Example: Migrating Research Meetings from Roam
+## Real-World Example: Migrating Research Meetings from Roam (made-up example)
 
 Consider Alex, a PhD student who used Roam’s block references and daily notes to log lab meetings and research huddles. After switching to Obsidian, Alex wants to replicate fast capture while gaining better long-term organization.
 
 Here’s Alex’s approach:
 - Records meetings via Zoom and saves the audio to a synced folder.
-- Uses Note Companion to transcribe each recording, dropping the text in `inbox/` as `inbox/2024-05-30-lab-meeting-transcript.md`.
+- Uses Note Companion by dropping each Zoom recording into `_NoteCompanion/Inbox`, which transcribes it and files the note.
 - Highlights key findings and tasks in the transcript.
 - Creates a new note in `meetings/` using the meeting template, summarizes findings, and adds action items.
 - Links the meeting note to ongoing research projects like `[[Protein Expression Study]]` and tags it with `#lab-meeting`.
@@ -106,7 +117,7 @@ Alex finds this system less cluttered than Roam, while still supporting quick ca
 ## Checklist: Streamlined Meeting Workflow in Obsidian
 
 - [ ] Record meeting audio
-- [ ] Transcribe audio (with Note Companion or other tool)
+- [ ] Drop audio into `_NoteCompanion/Inbox` for Note Companion transcription, or export text from another tool
 - [ ] Save raw transcript to `inbox/`
 - [ ] Highlight and annotate key points
 - [ ] Create processed meeting note in `meetings/`
@@ -119,21 +130,10 @@ Alex finds this system less cluttered than Roam, while still supporting quick ca
 ## Tips for a Frictionless Migration
 
 - Embrace folders and tags: They replace databases and blocks for organizing and retrieving meeting knowledge.
-- Automate where it saves time: Use Note Companion or similar plugins for transcription and summary suggestions, but always review before archiving.
+- Automate where it saves time: use Note Companion to transcribe inbox audio, and review any Meetings-tab enhancement before you treat it as final.
 - Standardize with templates: Consistency makes reviewing and searching much easier.
 - Don’t let transcripts pile up: A weekly review habit keeps your `inbox/` clear and your meeting notes actionable.
 - Connect your notes: The more you link meetings to projects and people, the more valuable your vault becomes over time.
-
-## FAQ
-
-### Q: Can I use this workflow if I only have meeting notes, not audio?
-Absolutely! Start by capturing your notes directly in `inbox/`, then process and summarize them following the same steps. Transcription plugins are optional.
-
-### Q: What if I have a backlog of old transcripts from Notion or Roam?
-Batch-import them into `inbox/` and schedule regular processing sessions. Tackle a few at a time to avoid overwhelm.
-
-### Q: How do I handle confidential meeting content in Obsidian?
-Obsidian keeps your notes local, but if you’re using plugins, check their privacy policies. Note Companion processes everything within your vault, so sensitive transcriptions stay private.
 
 ---
 
