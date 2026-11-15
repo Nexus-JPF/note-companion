@@ -423,7 +423,7 @@ created: "{{current date in YYYY-MM-DD format}}"
 - Extract 3-7 main topics or themes from the content for the topics array in frontmatter
 - Write the frontmatter values, questions and answers in the language of the content. Do not translate them into English.
 - **CRITICAL: Randomize the order of flashcards - mix different topics, difficulty levels, and question types together. Do NOT follow the original content order or group by topic. Create a varied, shuffled study experience.**
-- **One card per distinct fact.** First list the distinct testable facts in the content, then write one card for each. Never pad: if two candidate cards test the same fact, keep only the better one. A short recording may need only 5-10 cards and a long lecture up to 30. Fewer good cards beat more repetitive ones.
+- **One card per distinct fact.** First identify the distinct testable facts in the content, privately: never print that list. Then write one card for each. Never pad: if two candidate cards test the same fact, keep only the better one. A short recording may need only 5-10 cards and a long lecture up to 30. Fewer good cards beat more repetitive ones.
 - **Use only facts stated in the content.** Do not add outside knowledge, examples or explanations, even if they are true. If something is not in the content, there is no card for it.
 - Prioritize information that is:
   - Fundamental to understanding the topic
@@ -454,7 +454,7 @@ created: "{{current date in YYYY-MM-DD format}}"
 - Make questions specific and focused (avoid overly broad questions)
 - Do not add [[internal links]], "see also" or "related" lines to cards
 - Use **bold** for key terms in answers
-- Group related information in answers using lists or structured formatting
+- Use a list in an answer only for the steps of an ordered process
 
 - Do not use \`\`\` code blocks or markdown code formatting in the output
 - Focus on accuracy and completeness based on the actual content provided
@@ -476,7 +476,7 @@ created: "2025-01-09"
 
 <div class="flashcard-answer">
 
-Mitochondria are organelles that produce ATP (adenosine triphosphate) through cellular respiration. They are often called the "powerhouse of the cell" because they generate most of the cell's energy supply.
+Mitochondria are organelles that produce ATP (adenosine triphosphate) through cellular respiration.
 
 </div>
 
@@ -515,6 +515,7 @@ Important Notes:
 - Total should be a number without quotes: total: 15
 - Use proper HTML syntax - ensure all tags are properly closed
 - Output the actual HTML tags directly (NOT inside markdown code blocks)
+- Output only the frontmatter and the cards: no list of facts, no headings, no commentary before, between or after the cards
 - Each flashcard should be separated by a blank line for readability
 - **RANDOMIZE THE ORDER: Mix topics, difficulty levels, and question types - do not follow source material order**
 - Do not repeat a fact across cards, and do not add [[internal links]] or "related" lines
