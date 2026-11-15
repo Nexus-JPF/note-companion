@@ -30,7 +30,7 @@ This guide lays out a practical, Obsidian-first workflow that transforms meeting
 
 ## Setting Up: Folders, Templates, and Naming That Work
 
-Before you dive into your next meeting, invest ten minutes to build a vault structure that minimizes friction and mirrors some of the best parts of your old workflow.
+Before you dive into your next meeting, take a few minutes to build a vault structure that minimizes friction and mirrors some of the best parts of your old workflow.
 
 - **Inbox for raw material:** Create `inbox/`, your drop zone for unprocessed transcripts and audio. This replaces the "quick capture" flow from Notion and Roam, but with a clear separation between capture and processing. For habits that keep that folder from overflowing, see [tame your Obsidian inbox](/blog/tame-obsidian-inbox-across-devices-ai-organization).
 - **Meetings folder:** Set up `meetings/` for finalized notes and summaries. This gives you a single location for all processed meetings.
@@ -117,8 +117,7 @@ Alex finds this system less cluttered than Roam, while still supporting quick ca
 ## Checklist: Streamlined Meeting Workflow in Obsidian
 
 - [ ] Record meeting audio
-- [ ] Drop audio into `_NoteCompanion/Inbox` for Note Companion transcription, or export text from another tool
-- [ ] Save raw transcript to `inbox/`
+- [ ] Drop audio into `_NoteCompanion/Inbox` for Note Companion transcription, or export text from another tool; if you're not using Note Companion, save the raw transcript to your own `inbox/` folder
 - [ ] Highlight and annotate key points
 - [ ] Create processed meeting note in `meetings/`
 - [ ] Summarize key outcomes
