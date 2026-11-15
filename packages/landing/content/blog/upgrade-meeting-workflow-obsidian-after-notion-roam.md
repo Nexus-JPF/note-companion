@@ -49,7 +49,7 @@ Before you dive into your next meeting, invest ten minutes to build a vault stru
 
 This separation makes it easy to spot which meetings need attention and which are ready for review.
 
-## Step 1: Capture: From Audio to Raw Transcript
+## Step 1: Capture Audio as a Raw Transcript
 
 Your first challenge is getting meeting content into your vault. Here’s a streamlined approach:
 
@@ -61,7 +61,7 @@ See also [making large-file transcription reliable](/blog/making-large-file-tran
 
 Keep the notes themselves in your vault. If you use Note Companion to transcribe, the audio is sent to its transcription service unless you self-host.
 
-## Step 2: Process: Turning Transcripts into Actionable Notes
+## Step 2: Turn Transcripts into Actionable Notes
 
 Raw transcripts are rarely useful on their own. The real value comes from distilling the important details and action items. Here’s how to do it efficiently:
 
@@ -91,7 +91,7 @@ Raw transcripts are rarely useful on their own. The real value comes from distil
 - [ ] Mark to test SEO tool and report findings
 ```
 
-## Step 3: Connect: Linking, Tagging, and Contextualizing
+## Step 3: Link, Tag and Add Context
 
 Don’t let meeting notes become isolated. Obsidian’s linking and tag features make it easy to weave meetings into your broader PKM system:
 
