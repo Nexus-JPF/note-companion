@@ -57,6 +57,34 @@ export function buildStudySource(noteContent: string): string {
 export const hasEnoughToStudy = (source: string): boolean =>
   source.trim().length >= MIN_STUDY_SOURCE_CHARS;
 
+/** The source is a formatted note that already repeats itself (summary, details, review questions), so one card per this many words. */
+const WORDS_PER_CARD = 45;
+const MIN_CARDS = 5;
+const MAX_CARDS = 30;
+
+/**
+ * Upper bound on flashcards for a source. The model does not hold itself to a
+ * ratio in the template (it padded a 90 s lecture to 20 cards every run), so
+ * the plugin works the number out and states it as a hard limit.
+ */
+export function maxFlashcards(source: string): number {
+  const words = source.split(/\s+/).filter(Boolean).length;
+  return Math.min(MAX_CARDS, Math.max(MIN_CARDS, Math.round(words / WORDS_PER_CARD)));
+}
+
+/**
+ * Template instructions plus, for the flashcards template only, a hard card
+ * limit computed from the source. Done here rather than in the template file
+ * so vaults that still hold an older copy of flash_cards.md get it too.
+ */
+export function withStudyLimits(instructions: string, template: string, source: string): string {
+  const name = template.replace(/\.md$/i, "").trim().toLowerCase();
+  if (name !== "flash_cards") return instructions;
+  return `${instructions}\n\nHARD LIMIT for this content: write at most ${maxFlashcards(
+    source
+  )} cards, and fewer if the content has fewer distinct facts. Before you finish, drop any card that repeats a fact another card already tests, then set total to the number of cards you wrote.`;
+}
+
 const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---(\n|$)/;
 
 /** Adds `source: "[[lecture]]"` to the frontmatter (creating it if needed); keeps an existing `source`. */

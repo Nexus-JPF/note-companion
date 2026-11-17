@@ -8,6 +8,7 @@ import {
   studyNoteBasename,
   studyNoteLink,
   withSourceProperty,
+  withStudyLimits,
 } from "../inbox/study-note";
 import { measureFormatContentTokens } from "../inbox/services/youtube-service";
 
@@ -44,7 +45,7 @@ export async function createStudyNote(
 
   const generated = await plugin.formatStream(
     source,
-    instructions,
+    withStudyLimits(instructions, template, source),
     plugin.getServerUrl(),
     settings.API_KEY,
     () => {}
