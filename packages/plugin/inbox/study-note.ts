@@ -78,7 +78,7 @@ export function maxFlashcards(source: string): number {
  * so vaults that still hold an older copy of flash_cards.md get it too.
  */
 export function withStudyLimits(instructions: string, template: string, source: string): string {
-  const name = template.replace(/\.md$/i, "").trim().toLowerCase();
+  const name = (template.split("/").pop() ?? "").replace(/\.md$/i, "").trim().toLowerCase();
   if (name !== "flash_cards") return instructions;
   return `${instructions}\n\nHARD LIMIT for this content: write at most ${maxFlashcards(
     source

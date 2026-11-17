@@ -113,7 +113,7 @@ describe("maxFlashcards", () => {
 
 describe("withStudyLimits", () => {
   it("appends the hard limit for the flashcards template, with or without .md", () => {
-    for (const template of ["flash_cards", "flash_cards.md", "Flash_Cards"]) {
+    for (const template of ["flash_cards", "flash_cards.md", "Flash_Cards", "Templates/flash_cards.md"]) {
       const out = withStudyLimits("make cards", template, words(590));
       expect(out.startsWith("make cards")).toBe(true);
       expect(out).toContain("at most 13 cards");
