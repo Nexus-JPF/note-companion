@@ -42,6 +42,18 @@ function setup(opts: { content?: string; existing?: string[]; instructions?: str
 }
 
 describe("createStudyNote", () => {
+  it("sends the hard card limit to the model for flashcards only", async () => {
+    const flash = setup();
+    await createStudyNote(flash.plugin, flash.source, "flash_cards");
+    const sentInstructions = (flash.formatStream.mock.calls[0] as unknown[])[1] as string;
+    expect(sentInstructions).toMatch(/^make cards/);
+    expect(sentInstructions).toMatch(/at most \d+ cards/);
+
+    const quiz = setup();
+    await createStudyNote(quiz.plugin, quiz.source, "practice_quiz");
+    expect((quiz.formatStream.mock.calls[0] as unknown[])[1]).toBe("make cards");
+  });
+
   it("creates the note next to the lecture, links both ways and sends only the study text", async () => {
     const { plugin, files, source, formatStream } = setup();
     const created = await createStudyNote(plugin, source, "flash_cards");

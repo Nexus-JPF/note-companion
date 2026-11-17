@@ -2,11 +2,13 @@ import {
   buildStudySource,
   hasEnoughToStudy,
   keepsAudioSourceInNewFile,
+  maxFlashcards,
   resolveStudyTemplate,
   studyNoteBasename,
   studyNoteLabel,
   studyNoteLink,
   withSourceProperty,
+  withStudyLimits,
 } from "./study-note";
 
 const LONG_NOTES = `# Vaccines\n\n## Summary\n${"Vaccines train the adaptive immune system. ".repeat(20)}`;
@@ -92,5 +94,33 @@ describe("studyNoteLink and keepsAudioSourceInNewFile", () => {
     expect(keepsAudioSourceInNewFile("lecture_notes")).toBe(true);
     expect(keepsAudioSourceInNewFile("flash_cards")).toBe(false);
     expect(keepsAudioSourceInNewFile("flash_cards.md")).toBe(false);
+  });
+});
+
+const words = (n: number) => Array.from({ length: n }, (_, i) => `w${i}`).join(" ");
+
+describe("maxFlashcards", () => {
+  it("is about one card per 45 words", () => {
+    expect(maxFlashcards(words(590))).toBe(13);
+  });
+
+  it("never goes below 5 or above 30", () => {
+    expect(maxFlashcards(words(30))).toBe(5);
+    expect(maxFlashcards("")).toBe(5);
+    expect(maxFlashcards(words(20000))).toBe(30);
+  });
+});
+
+describe("withStudyLimits", () => {
+  it("appends the hard limit for the flashcards template, with or without .md", () => {
+    for (const template of ["flash_cards", "flash_cards.md", "Flash_Cards", "Templates/flash_cards.md"]) {
+      const out = withStudyLimits("make cards", template, words(590));
+      expect(out.startsWith("make cards")).toBe(true);
+      expect(out).toContain("at most 13 cards");
+    }
+  });
+
+  it("leaves every other template untouched", () => {
+    expect(withStudyLimits("make a quiz", "practice_quiz", words(590))).toBe("make a quiz");
   });
 });
