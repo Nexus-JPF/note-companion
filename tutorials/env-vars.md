@@ -14,7 +14,7 @@
 - `MODEL_NAME`: Default model for organizer, classify, tag, extract, etc. Defaults to `"gpt-5.6-luna"`.
 - `RESPONSES_MODEL_NAME`: Model for OpenAI Responses API (chat + web search only). Defaults to `MODEL_NAME`.
 
-**Cost split (OpenAI, per 1M tokens):** `gpt-4.1-mini` ($0.40 / $1.60) is the cheapest all-in-one option. For a quality/cost split, use `MODEL_NAME=gpt-5.4-nano` ($0.20 / $1.25) for bulk work and `RESPONSES_MODEL_NAME=gpt-5.4-mini` ($0.75 / $4.50) for chat — expect ~1.5–3× chat cost vs 4.1-mini once reasoning tokens are included.
+**Cost split (OpenAI, per 1M tokens, standard tier):** the default `gpt-5.6-luna` ($0.20 / $1.20) is the cheapest all-in-one option. For better chat quality, keep it for bulk work and set `RESPONSES_MODEL_NAME=gpt-5.4-mini` ($0.75 / $4.50) for chat; reasoning tokens bill as output, so chat costs more than the list price suggests. Avoid `gpt-4.1-mini` and `gpt-5.4-nano`: both are deprecated (shutdown Jan 14, 2027 and Apr 1, 2027). Prices from OpenAI's pricing page, checked 2026-11-22.
 
 ### Chat web search
 

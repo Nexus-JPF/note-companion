@@ -44,7 +44,7 @@ The project is a **monorepo** with four main packages:
 ## AI Model Recommendations
 
 **Use these models for specific tasks:**
-- **o3-mini** - For complex reasoning and architectural decisions
+- **gpt-5.6-sol** - For complex reasoning and architectural decisions
 - **claude-sonnet-5-5** - For PDF extraction, document processing, and content analysis
 
 ---
