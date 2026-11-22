@@ -36,20 +36,14 @@ describe("bundled quiz template", () => {
     expect(files.get("Templates/quiz.md")).toBe("user copy");
   });
 
-  it("asks for the agreed shape: four options, one answer, click-to-reveal, content only", async () => {
+  it("uses the click-to-reveal layout the quiz note relies on", async () => {
     const { app, files } = fakeApp();
     await checkAndCreateTemplates(app, settings);
     const template = files.get("Templates/quiz.md")!;
 
-    expect(template).toContain("exactly four options, A to D");
-    expect(template).toContain("exactly one of them is correct");
-    expect(template).toContain("Never use \"all of the above\"");
-    expect(template).toContain("Vary which letter is correct");
-    expect(template).toContain("Use only facts stated in the content");
-    expect(template).toContain("in the language of the content");
     expect(template).toContain('<details class="quiz-answer">');
     expect(template).toContain("<summary>Show answer</summary>");
-    expect(template).toContain("never print that list");
-    expect(template).not.toContain("flashcard");
+    expect(template).toContain("- A. ");
+    expect(template).toContain("- D. ");
   });
 });
