@@ -8,27 +8,13 @@
 - `OPENAI_API_KEY`: The API key for OpenAI integration.
 - `ANTHROPIC_API_KEY`: To use the Anthropic models
 
-### Amazon Bedrock
-
-To use Amazon Bedrock models, you need to configure AWS credentials:
-
-- `AWS_ACCESS_KEY_ID`: Your AWS access key ID
-- `AWS_SECRET_ACCESS_KEY`: Your AWS secret access key
-- `AWS_REGION`: The AWS region where Bedrock is enabled (e.g., "us-east-1")
-
-Note: Make sure your AWS account has access to the Bedrock models and the IAM user has the `AmazonBedrockFullAccess` policy.
-
-Available Bedrock Models:
-- `anthropic.claude-3-sonnet-20240229-v1:0`: Latest Claude 3 Sonnet model
-- Additional models can be found in the AWS Bedrock console
-
 ### Models
 
 - `MODEL_PROVIDER`: AI provider for server endpoints. Defaults to `"openai"`.
-- `MODEL_NAME`: Default model for organizer, classify, tag, extract, etc. Defaults to `"gpt-4.1-mini"`.
+- `MODEL_NAME`: Default model for organizer, classify, tag, extract, etc. Defaults to `"gpt-5.6-luna"`.
 - `RESPONSES_MODEL_NAME`: Model for OpenAI Responses API (chat + web search only). Defaults to `MODEL_NAME`.
 
-**Cost split (OpenAI, per 1M tokens):** `gpt-4.1-mini` ($0.40 / $1.60) is the cheapest all-in-one default. For a quality/cost split, use `MODEL_NAME=gpt-5.4-nano` ($0.20 / $1.25) for bulk work and `RESPONSES_MODEL_NAME=gpt-5.4-mini` ($0.75 / $4.50) for chat — expect ~1.5–3× chat cost vs 4.1-mini once reasoning tokens are included.
+**Cost split (OpenAI, per 1M tokens, standard tier):** the default `gpt-5.6-luna` ($0.20 / $1.20) is the cheapest all-in-one option. For better chat quality, keep it for bulk work and set `RESPONSES_MODEL_NAME=gpt-5.4-mini` ($0.75 / $4.50) for chat; reasoning tokens bill as output, so chat costs more than the list price suggests. Avoid `gpt-4.1-mini` and `gpt-5.4-nano`: both are deprecated (shutdown Jan 14, 2027 and Apr 1, 2027). Prices from OpenAI's pricing page, checked 2026-11-22.
 
 ### Chat web search
 
