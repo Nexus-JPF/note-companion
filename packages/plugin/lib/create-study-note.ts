@@ -5,6 +5,7 @@ import { appendBeforeBackupFooter } from "./audio-source";
 import {
   buildStudySource,
   findStudyNoteLinkTarget,
+  studyNoteSource,
   hasEnoughToStudy,
   studyNoteBasename,
   studyNoteLink,
@@ -86,7 +87,8 @@ export async function createStudyNote(
 
 /**
  * The study note of this format already linked from the source note, or null
- * when there is no link or it points at a file that no longer exists.
+ * when there is no link, it points at a file that no longer exists, or that
+ * file was not generated from this note.
  */
 export async function findExistingStudyNote(
   plugin: FileOrganizer,
@@ -97,5 +99,8 @@ export async function findExistingStudyNote(
   const target = findStudyNoteLinkTarget(await app.vault.read(sourceFile), template);
   if (!target) return null;
   const file = app.metadataCache.getFirstLinkpathDest(target, sourceFile.path);
-  return file ?? null;
+  if (!file) return null;
+  // The link resolves by name across the vault, so make sure the file really
+  // was generated from this note before offering to overwrite it.
+  return studyNoteSource(await app.vault.read(file)) === sourceFile.basename ? file : null;
 }

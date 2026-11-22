@@ -131,11 +131,39 @@ describe("createStudyNote", () => {
   });
 });
 
+describe("createStudyNote failures leave notes untouched", () => {
+  it("creates no file when generation rejects", async () => {
+    const { plugin, source, files, formatStream } = setup();
+    formatStream.mockRejectedValueOnce(new Error("server down"));
+    await expect(createStudyNote(plugin, source, "flash_cards")).rejects.toThrow("server down");
+    expect(files.size).toBe(1);
+  });
+
+  it("keeps the old study note when a regenerate fails", async () => {
+    const { plugin, source, files, formatStream } = setup();
+    const first = await createStudyNote(plugin, source, "flash_cards");
+    const before = files.get(first!.path);
+    formatStream.mockRejectedValueOnce(new Error("server down"));
+    await expect(createStudyNote(plugin, source, "flash_cards", { replace: first! })).rejects.toThrow("server down");
+    expect(files.get(first!.path)).toBe(before);
+  });
+});
+
 describe("findExistingStudyNote", () => {
   it("finds the study note the lecture links to", async () => {
     const { plugin, source } = setup();
     const created = await createStudyNote(plugin, source, "flash_cards");
     expect((await findExistingStudyNote(plugin, source, "flash_cards"))?.path).toBe(created!.path);
+  });
+
+  it("is null when the linked file was not generated from this note", async () => {
+    const { plugin, source, files } = setup();
+    await createStudyNote(plugin, source, "flash_cards");
+    files.set("Lectures/Immunity - Flashcards.md", "Hand-written, no source property");
+    expect(await findExistingStudyNote(plugin, source, "flash_cards")).toBeNull();
+
+    files.set("Lectures/Immunity - Flashcards.md", '---\nsource: "[[Another lecture]]"\n---\n\nx');
+    expect(await findExistingStudyNote(plugin, source, "flash_cards")).toBeNull();
   });
 
   it("is null for a lecture with no link, another format, or a link to a deleted file", async () => {

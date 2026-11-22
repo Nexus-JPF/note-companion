@@ -2,7 +2,7 @@ import type { TFile } from "obsidian";
 import type FileOrganizer from "../index";
 import { logger } from "../services/logger";
 import { getErrorMessage } from "./api-json";
-import { buildStudySource, hasEnoughToStudy, studyNoteLabel } from "../inbox/study-note";
+import { buildStudySource, hasEnoughToStudy, studyNoteLabel, studyNoteSource } from "../inbox/study-note";
 import { createStudyNote, findExistingStudyNote } from "./create-study-note";
 
 /** What the user can do when a study note of the chosen format already exists. */
@@ -23,6 +23,8 @@ export interface StudyNoteUi {
 const running = new Set<string>();
 
 export const NOT_ENOUGH_TO_STUDY = "Not enough text in this note to make a study note.";
+export const ALREADY_A_STUDY_NOTE =
+  "This is already a study note. Run the command on the note it was made from.";
 
 /**
  * "Create study note from this note": pick a format, then create the study
@@ -35,12 +37,17 @@ export async function runStudyNoteCommand(
   ui: StudyNoteUi
 ): Promise<void> {
   if (running.has(file.path)) {
-    ui.notice(`A study note is already being created for ${file.basename}.`);
+    ui.notice(`A study note is already in progress for ${file.basename}.`);
     return;
   }
   running.add(file.path);
   try {
-    if (!hasEnoughToStudy(buildStudySource(await plugin.app.vault.read(file)))) {
+    const content = await plugin.app.vault.read(file);
+    if (studyNoteSource(content)) {
+      ui.notice(ALREADY_A_STUDY_NOTE);
+      return;
+    }
+    if (!hasEnoughToStudy(buildStudySource(content))) {
       ui.notice(NOT_ENOUGH_TO_STUDY);
       return;
     }

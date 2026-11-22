@@ -55,8 +55,8 @@ class ExistingModal extends Modal {
   onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
-    this.setTitle(`${this.label} already exist`);
-    contentEl.createEl("p", { text: `This note already has ${this.existing.basename}.` });
+    this.setTitle("Study note already exists");
+    contentEl.createEl("p", { text: `This note already has ${this.label.toLowerCase()}: ${this.existing.basename}.` });
     contentEl.createEl("p", {
       text: "Regenerating replaces that note and discards any changes you made to it.",
       cls: "setting-item-description",

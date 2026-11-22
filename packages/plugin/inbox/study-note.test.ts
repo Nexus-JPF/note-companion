@@ -5,6 +5,7 @@ import {
   keepsAudioSourceInNewFile,
   maxFlashcards,
   resolveStudyTemplate,
+  studyNoteSource,
   studyNoteBasename,
   studyNoteLabel,
   studyNoteLink,
@@ -150,5 +151,24 @@ describe("findStudyNoteLinkTarget", () => {
 
   it("drops an alias from the target", () => {
     expect(findStudyNoteLinkTarget(note("**Flashcards:** [[L - Flashcards|cards]]"), "flash_cards")).toBe("L - Flashcards");
+  });
+});
+
+describe("findStudyNoteLinkTarget with subpaths", () => {
+  it("drops a heading or block subpath", () => {
+    expect(findStudyNoteLinkTarget("**Flashcards:** [[L - Flashcards#Part 1]]", "flash_cards")).toBe("L - Flashcards");
+    expect(findStudyNoteLinkTarget("**Flashcards:** [[L - Flashcards#^abc|cards]]", "flash_cards")).toBe("L - Flashcards");
+  });
+});
+
+describe("studyNoteSource", () => {
+  it("reads the property withSourceProperty writes", () => {
+    expect(studyNoteSource(withSourceProperty("---\ntotal: 3\n---\n\nCards", "Immunity"))).toBe("Immunity");
+  });
+
+  it("is null for a note without a wikilink source", () => {
+    expect(studyNoteSource("# Lecture\n\nBody")).toBeNull();
+    expect(studyNoteSource('---\nsource: "https://example.com/a"\n---\n\nClip')).toBeNull();
+    expect(studyNoteSource('---\ntotal: 3\n---\n\nsource: "[[In body]]"')).toBeNull();
   });
 });

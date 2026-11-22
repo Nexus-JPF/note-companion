@@ -101,6 +101,13 @@ export function studyNoteLink(template: string, studyBasename: string): string {
   return `**${studyNoteLabel(template)}:** [[${studyBasename}]]`;
 }
 
+/** Basename in a `source: "[[lecture]]"` frontmatter property: the note this one was generated from. */
+export function studyNoteSource(noteContent: string): string | null {
+  const block = noteContent.match(FRONTMATTER_BLOCK)?.[1];
+  const match = block?.match(/^source\s*:\s*["']?\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]["']?\s*$/m);
+  return match ? match[1].trim() : null;
+}
+
 /** Formats the on-demand command offers. The label comes from the template name. */
 export const STUDY_FORMATS: ReadonlyArray<{ template: string; label: string }> = [
   { template: "flash_cards", label: studyNoteLabel("flash_cards") },
@@ -110,12 +117,12 @@ const escapeForRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\
 
 /**
  * Basename the lecture note links to for this format (from its
- * `**Label:** [[...]]` line), or null when it has no such line. The link may
+ * `**Label:** [[...]]` line, without any alias or heading), or null when it has no such line. The link may
  * be stale: check the file still exists before treating it as present.
  */
 export function findStudyNoteLinkTarget(noteContent: string, template: string): string | null {
   const label = escapeForRegExp(studyNoteLabel(template));
-  const match = noteContent.match(new RegExp(`^\\*\\*${label}:\\*\\* \\[\\[([^\\]|]+)(?:\\|[^\\]]*)?\\]\\]`, "m"));
+  const match = noteContent.match(new RegExp(`^\\*\\*${label}:\\*\\* \\[\\[([^\\]|#]+)(?:[#|][^\\]]*)?\\]\\]`, "m"));
   return match ? match[1].trim() : null;
 }
 

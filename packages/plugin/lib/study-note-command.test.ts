@@ -6,7 +6,7 @@ jest.mock("./create-study-note", () => ({
 }));
 
 import { createStudyNote, findExistingStudyNote } from "./create-study-note";
-import { NOT_ENOUGH_TO_STUDY, runStudyNoteCommand, type StudyNoteUi } from "./study-note-command";
+import { ALREADY_A_STUDY_NOTE, NOT_ENOUGH_TO_STUDY, runStudyNoteCommand, type StudyNoteUi } from "./study-note-command";
 
 const create = createStudyNote as jest.Mock;
 const findExisting = findExistingStudyNote as jest.Mock;
@@ -51,6 +51,15 @@ describe("runStudyNoteCommand", () => {
     await runStudyNoteCommand(plugin, file, ui);
 
     expect(ui.notice).toHaveBeenCalledWith(NOT_ENOUGH_TO_STUDY);
+    expect(ui.pickFormat).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("refuses to run on a study note itself", async () => {
+    const { ui, plugin } = setup({ content: `---\nsource: "[[Immunity]]"\n---\n\n${NOTES}` });
+    await runStudyNoteCommand(plugin, file, ui);
+
+    expect(ui.notice).toHaveBeenCalledWith(ALREADY_A_STUDY_NOTE);
     expect(ui.pickFormat).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
   });
@@ -111,7 +120,7 @@ describe("runStudyNoteCommand", () => {
 
     const second = setup();
     await runStudyNoteCommand(second.plugin, file, second.ui);
-    expect(second.ui.notice).toHaveBeenCalledWith("A study note is already being created for Immunity.");
+    expect(second.ui.notice).toHaveBeenCalledWith("A study note is already in progress for Immunity.");
     expect(second.ui.pickFormat).not.toHaveBeenCalled();
 
     release();
