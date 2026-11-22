@@ -25,7 +25,6 @@
     "fix-lifetime-users": "pnpm dotenv -c -- tsx scripts/fix-lifetime-user.ts"
   },
   "dependencies": {
-    "@ai-sdk/amazon-bedrock": "catalog:",
     "@ai-sdk/anthropic": "catalog:",
     "@ai-sdk/deepseek": "catalog:",
     "@ai-sdk/google": "catalog:",
