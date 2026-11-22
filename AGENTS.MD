@@ -45,7 +45,7 @@ The project is a **monorepo** with four main packages:
 
 **Use these models for specific tasks:**
 - **o3-mini** - For complex reasoning and architectural decisions
-- **claude-3-5-sonnet-20241022** - For PDF extraction, document processing, and content analysis
+- **claude-sonnet-5-5** - For PDF extraction, document processing, and content analysis
 
 ---
 
@@ -1127,7 +1127,7 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 # AI Services
 ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
-MODEL_NAME=claude-3-opus-20240229
+MODEL_NAME=claude-sonnet-5-5
 
 # Payments (Stripe)
 STRIPE_SECRET_KEY=

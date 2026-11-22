@@ -301,7 +301,7 @@ GROQ_API_KEY=gsk_...your_key_here...
 
 # Example: Using Anthropic
 MODEL_PROVIDER=anthropic
-MODEL_NAME=claude-3-5-sonnet-20241022
+MODEL_NAME=claude-sonnet-5-5
 ANTHROPIC_API_KEY=sk-ant-...your_key_here...
 
 # Example: Using Google
