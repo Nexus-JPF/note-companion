@@ -131,6 +131,19 @@ describe("createStudyNote", () => {
   });
 });
 
+describe("createStudyNote link line", () => {
+  it("replaces a stale link line instead of adding a second one", async () => {
+    const stale = LECTURE.replace(NOTES, `${NOTES}\n\n**Flashcards:** [[Old name]]`);
+    const { plugin, source, files } = setup({ content: stale });
+    await createStudyNote(plugin, source, "flash_cards");
+
+    const lecture = files.get("Lectures/Immunity.md")!;
+    expect(lecture.match(/\*\*Flashcards:\*\*/g)).toHaveLength(1);
+    expect(lecture).toContain("**Flashcards:** [[Immunity - Flashcards]]");
+    expect(lecture).not.toContain("Old name");
+  });
+});
+
 describe("createStudyNote failures leave notes untouched", () => {
   it("creates no file when generation rejects", async () => {
     const { plugin, source, files, formatStream } = setup();

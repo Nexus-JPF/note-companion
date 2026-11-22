@@ -1,4 +1,4 @@
-import { extractAudioSource, stripAudioSource } from "../lib/audio-source";
+import { appendBeforeBackupFooter, extractAudioSource, stripAudioSource } from "../lib/audio-source";
 import { resolveAudioDefaultTemplate } from "./audio-template";
 
 /**
@@ -46,7 +46,7 @@ export function studyNoteBasename(sourceBasename: string, template: string): str
  * the transcript is used. May be empty or short; check with hasEnoughToStudy.
  */
 export function buildStudySource(noteContent: string): string {
-  const body = stripAudioSource(noteContent);
+  const body = stripStudyNoteLinks(stripAudioSource(noteContent));
   if (body.length >= THIN_NOTE_CHARS) return body;
   const transcript = extractAudioSource(noteContent)
     .transcripts.map(({ text }) => text)
@@ -115,15 +115,48 @@ export const STUDY_FORMATS: ReadonlyArray<{ template: string; label: string }> =
 
 const escapeForRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+/** The `**Label:** [[target]]` part of a link line for one label, capturing the target without alias or heading. */
+const linkLinePattern = (label: string, flags: string) =>
+  new RegExp(`^\\*\\*${escapeForRegExp(label)}:\\*\\* \\[\\[([^\\]|#]+)(?:[#|][^\\]]*)?\\]\\]`, flags);
+
 /**
  * Basename the lecture note links to for this format (from its
- * `**Label:** [[...]]` line, without any alias or heading), or null when it has no such line. The link may
- * be stale: check the file still exists before treating it as present.
+ * `**Label:** [[...]]` line, without any alias or heading), or null when it has no such line.
+ * The link may be stale: check the file still exists before treating it as present.
  */
 export function findStudyNoteLinkTarget(noteContent: string, template: string): string | null {
-  const label = escapeForRegExp(studyNoteLabel(template));
-  const match = noteContent.match(new RegExp(`^\\*\\*${label}:\\*\\* \\[\\[([^\\]|#]+)(?:[#|][^\\]]*)?\\]\\]`, "m"));
+  const match = noteContent.match(linkLinePattern(studyNoteLabel(template), "m"));
   return match ? match[1].trim() : null;
+}
+
+/**
+ * The note with its link line for this format pointing at the study note: an
+ * existing line (even a stale one) is replaced in place, otherwise a line is
+ * added above the backup footer. Never leaves two lines for one format.
+ */
+export function withStudyNoteLink(noteContent: string, template: string, studyBasename: string): string {
+  if (findStudyNoteLinkTarget(noteContent, template) === studyBasename) return noteContent;
+  const link = studyNoteLink(template, studyBasename);
+  const existing = linkLinePattern(studyNoteLabel(template), "m");
+  return existing.test(noteContent)
+    ? noteContent.replace(existing, link)
+    : appendBeforeBackupFooter(noteContent, link);
+}
+
+/** The text with every study-note link line removed: it is navigation, not content to study. */
+export function stripStudyNoteLinks(text: string): string {
+  return STUDY_FORMATS.reduce(
+    (out, { label }) =>
+      out.replace(new RegExp(`^\\*\\*${escapeForRegExp(label)}:\\*\\* \\[\\[[^\\n]*$\\n?`, "gm"), ""),
+    text
+  )
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** True when `noteContent` links to the study note `basename` for any format. */
+export function linksToStudyNote(noteContent: string, studyBasename: string): boolean {
+  return STUDY_FORMATS.some(({ template }) => findStudyNoteLinkTarget(noteContent, template) === studyBasename);
 }
 
 /**

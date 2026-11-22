@@ -15,7 +15,15 @@ const NOTES = `# Vaccines\n\n${"Vaccines train the adaptive immune system. ".rep
 const file = { path: "L/Immunity.md", basename: "Immunity" } as never;
 const study = { path: "L/Immunity - Flashcards.md", basename: "Immunity - Flashcards" } as never;
 
-function setup(opts: { content?: string; template?: string | null; choice?: "open" | "regenerate" | null } = {}) {
+function setup(
+  opts: {
+    content?: string;
+    template?: string | null;
+    choice?: "open" | "regenerate" | null;
+    /** Other notes by link target, for resolving a `source` property. */
+    others?: Record<string, string>;
+  } = {}
+) {
   const hide = jest.fn();
   const ui = {
     pickFormat: jest.fn(async () => (opts.template === undefined ? "flash_cards" : opts.template)),
@@ -24,7 +32,15 @@ function setup(opts: { content?: string; template?: string | null; choice?: "ope
     progress: jest.fn(() => hide),
     open: jest.fn(async () => {}),
   } satisfies StudyNoteUi;
-  const plugin = { app: { vault: { read: async () => opts.content ?? NOTES } } } as never;
+  const others = opts.others ?? {};
+  const plugin = {
+    app: {
+      vault: { read: async (f: { path: string }) => (f.path in others ? others[f.path] : opts.content ?? NOTES) },
+      metadataCache: {
+        getFirstLinkpathDest: (target: string) => (target in others ? { path: target, basename: target } : null),
+      },
+    },
+  } as never;
   return { ui, plugin, hide };
 }
 
@@ -56,12 +72,27 @@ describe("runStudyNoteCommand", () => {
   });
 
   it("refuses to run on a study note itself", async () => {
-    const { ui, plugin } = setup({ content: `---\nsource: "[[Immunity]]"\n---\n\n${NOTES}` });
-    await runStudyNoteCommand(plugin, file, ui);
+    const { ui, plugin } = setup({
+      content: `---\nsource: "[[Immunity]]"\n---\n\n${NOTES}`,
+      others: { Immunity: `${NOTES}\n\n**Flashcards:** [[Immunity - Flashcards]]` },
+    });
+    const studyFile = { path: "L/Immunity - Flashcards.md", basename: "Immunity - Flashcards" } as never;
+    await runStudyNoteCommand(plugin, studyFile, ui);
 
     expect(ui.notice).toHaveBeenCalledWith(ALREADY_A_STUDY_NOTE);
     expect(ui.pickFormat).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it("still runs on a note that only has a source property of its own", async () => {
+    const { ui, plugin } = setup({
+      content: `---\nsource: "[[Book]]"\n---\n\n${NOTES}`,
+      others: { Book: "A book note that links to nothing" },
+    });
+    await runStudyNoteCommand(plugin, file, ui);
+
+    expect(ui.pickFormat).toHaveBeenCalled();
+    expect(create).toHaveBeenCalled();
   });
 
   it("does nothing when the picker is dismissed", async () => {

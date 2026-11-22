@@ -1,14 +1,13 @@
 import { normalizePath, TFile } from "obsidian";
 import type FileOrganizer from "../index";
 import { logger } from "../services/logger";
-import { appendBeforeBackupFooter } from "./audio-source";
 import {
   buildStudySource,
   findStudyNoteLinkTarget,
   studyNoteSource,
+  withStudyNoteLink,
   hasEnoughToStudy,
   studyNoteBasename,
-  studyNoteLink,
   withSourceProperty,
   withStudyLimits,
 } from "../inbox/study-note";
@@ -77,10 +76,7 @@ export async function createStudyNote(
     withSourceProperty(content, sourceFile.basename)
   );
 
-  const link = studyNoteLink(template, created.basename);
-  await app.vault.process(sourceFile, data =>
-    data.includes(`[[${created.basename}]]`) ? data : appendBeforeBackupFooter(data, link)
-  );
+  await app.vault.process(sourceFile, data => withStudyNoteLink(data, template, created.basename));
 
   return created;
 }
