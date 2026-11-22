@@ -118,7 +118,7 @@ With this system, Sarah's chaos of daily research becomes a well-organized, inte
 - [ ] Create an `evergreen/` folder to store atomic, concept-driven notes
 - [ ] Define tags for daily notes (e.g., `#meeting`, `#experiment`, `#reading`)
 - [ ] Schedule regular reviews to promote daily insights to evergreen notes
-- [ ] Use Note Companion or similar AI tools for inbox processing and smart suggestion
+- [ ] Use Note Companion to file notes in `_NoteCompanion/Inbox`, or to suggest tags and a folder for an open note.
 - [ ] Consistently interlink evergreen notes for a robust knowledge graph
 
 ---
