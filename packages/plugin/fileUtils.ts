@@ -13,6 +13,7 @@ export const DEFAULT_TEMPLATE_NAMES = [
   "enhance.md",
   "research_paper.md",
   "flash_cards.md",
+  "quiz.md",
 ] as const;
 
 // Helper functions to get default template content
@@ -399,6 +400,107 @@ Rules:
 - If the content is not educational (for example small talk), write a concise summary and skip the sections that do not apply.`;
 }
 
+function getQuizTemplateContent(): string {
+  return `Please create an Obsidian note with a multiple-choice quiz, using native Obsidian markdown and HTML. The note must include:
+
+1. Frontmatter (at the top) with the following properties:
+
+---
+
+total: {{number of questions created}}
+
+topics: ["{{topic 1}}", "{{topic 2}}", "{{topic 3}}"]
+
+created: "{{current date in YYYY-MM-DD format}}"
+
+---
+
+2. The questions, below the frontmatter. Format every question exactly like this:
+
+**1. {{question}}**
+
+- A. {{option}}
+- B. {{option}}
+- C. {{option}}
+- D. {{option}}
+
+<details class="quiz-answer">
+<summary>Show answer</summary>
+
+**{{correct letter}}.** {{one or two sentences saying why}}
+
+</details>
+
+**Instructions:**
+
+- **One question per distinct fact.** First identify the distinct testable facts in the content, privately: never print that list. Then write one question for each. Never pad: if two candidate questions test the same fact, keep only the better one. Fewer good questions beat more repetitive ones.
+- **Use only facts stated in the content.** The correct option and the explanation must come from the content. Do not add outside knowledge, even if it is true.
+- Each question tests exactly one fact: one definition, one reason, one number or one step. Do not bundle several facts into one question.
+- Prefer "why" and "how" questions over bare definitions when the content explains a reason.
+- Write exactly four options, A to D, and exactly one of them is correct.
+- The three wrong options must be plausible to someone who has not studied, but the content must show that they are wrong. Base them on real confusions in the content, such as a neighbouring concept, a reversed relationship or a wrong number. Never use jokes or obviously absurd options.
+- Never use "all of the above", "none of the above" or "both A and B" as an option.
+- Vary which letter is correct from question to question. Do not follow a pattern and do not put the correct answer first every time.
+- Keep the four options similar in length and style, so the correct one does not stand out.
+- Do not give the answer away in the question, and do not repeat the same fact in two questions.
+- The explanation says why the correct option is right in one or two sentences. It does not repeat all four options.
+- Number the questions from 1, in order. Mix topics and difficulty rather than following the order of the content.
+- Extract 3-7 main topics or themes from the content for the topics array in frontmatter.
+- Write the frontmatter values, questions, options and explanations in the language of the content. Do not translate them into English.
+- Do not add [[internal links]], "see also" or "related" lines.
+- Do not use code blocks or markdown code formatting in the output.
+- Total is a number without quotes and equals the number of questions you wrote. Created is a string in quotes in the format "YYYY-MM-DD". Topics is an array: topics: ["Topic 1", "Topic 2", "Topic 3"].
+
+**Example Output Format:**
+
+---
+
+total: 2
+
+topics: ["Molecular Biology", "Cell Biology"]
+
+created: "2025-01-09"
+
+---
+
+**1. Which base does RNA use in place of thymine?**
+
+- A. Adenine
+- B. Uracil
+- C. Cytosine
+- D. Guanine
+
+<details class="quiz-answer">
+<summary>Show answer</summary>
+
+**B.** RNA contains uracil where DNA contains thymine.
+
+</details>
+
+**2. What is the main function of mitochondria?**
+
+- A. They store the genetic material of the cell
+- B. They build proteins from amino acids
+- C. They digest worn-out cell parts
+- D. They produce ATP through cellular respiration
+
+<details class="quiz-answer">
+<summary>Show answer</summary>
+
+**D.** Mitochondria are the organelles that produce ATP through cellular respiration.
+
+</details>
+
+Important Notes:
+- ALWAYS include the frontmatter with total, topics and created date.
+- Output only the frontmatter and the questions: no list of facts, no headings, no commentary before, between or after the questions.
+- Output the actual HTML tags directly (NOT inside markdown code blocks) and make sure every tag is closed.
+- Leave a blank line after the summary tag and before the closing details tag, and a blank line between questions.
+- If content is very long, focus on the most important concepts.
+- Maintain the original meaning and accuracy of the source material.
+- This format works natively in Obsidian without requiring any plugins: the answer is revealed by clicking "Show answer".`;
+}
+
 function getFlashCardsTemplateContent(): string {
   return `Please create an Obsidian note with interactive flashcards using native Obsidian HTML features. The note must include:
 
@@ -561,6 +663,7 @@ export async function checkAndCreateTemplates(
   const enhanceTemplatePath = `${settings.templatePaths}/enhance.md`;
   const researchPaperTemplatePath = `${settings.templatePaths}/research_paper.md`;
   const flashCardsTemplatePath = `${settings.templatePaths}/flash_cards.md`;
+  const quizTemplatePath = `${settings.templatePaths}/quiz.md`;
   const lectureNotesTemplatePath = `${settings.templatePaths}/lecture_notes.md`;
 
   if (!(await app.vault.adapter.exists(meetingNoteTemplatePath))) {
@@ -623,6 +726,10 @@ export async function checkAndCreateTemplates(
     );
   }
 
+  if (!(await app.vault.adapter.exists(quizTemplatePath))) {
+    await app.vault.create(quizTemplatePath, getQuizTemplateContent());
+  }
+
   if (!(await app.vault.adapter.exists(lectureNotesTemplatePath))) {
     await app.vault.create(
       lectureNotesTemplatePath,
@@ -647,6 +754,7 @@ export async function restoreDefaultTemplates(
     enhance: `${settings.templatePaths}/enhance.md`,
     researchPaper: `${settings.templatePaths}/research_paper.md`,
     flashCards: `${settings.templatePaths}/flash_cards.md`,
+    quiz: `${settings.templatePaths}/quiz.md`,
     lectureNotes: `${settings.templatePaths}/lecture_notes.md`,
   };
 
@@ -660,6 +768,7 @@ export async function restoreDefaultTemplates(
     enhance: getEnhanceTemplateContent(),
     researchPaper: getResearchPaperTemplateContent(),
     flashCards: getFlashCardsTemplateContent(),
+    quiz: getQuizTemplateContent(),
     lectureNotes: getLectureNotesTemplateContent(),
   };
 

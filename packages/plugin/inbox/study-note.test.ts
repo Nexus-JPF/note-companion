@@ -8,6 +8,8 @@ import {
   hasEnoughToStudy,
   keepsAudioSourceInNewFile,
   maxFlashcards,
+  maxQuizQuestions,
+  STUDY_FORMATS,
   resolveStudyTemplate,
   studyNoteSource,
   studyNoteBasename,
@@ -96,10 +98,15 @@ describe("studyNoteLink and keepsAudioSourceInNewFile", () => {
       "**Flashcards:** [[L - Flashcards]]"
     );
   });
-  it("keeps audio in a new file for every template except flash_cards", () => {
+  it("keeps audio in a new file for every template except the study formats", () => {
     expect(keepsAudioSourceInNewFile("lecture_notes")).toBe(true);
     expect(keepsAudioSourceInNewFile("flash_cards")).toBe(false);
     expect(keepsAudioSourceInNewFile("flash_cards.md")).toBe(false);
+    expect(keepsAudioSourceInNewFile("quiz")).toBe(false);
+    expect(keepsAudioSourceInNewFile("Quiz.md")).toBe(false);
+  });
+  it("links a quiz by its label", () => {
+    expect(studyNoteLink("quiz", "L - Quiz")).toBe("**Quiz:** [[L - Quiz]]");
   });
 });
 
@@ -232,5 +239,34 @@ describe("linksToStudyNote", () => {
     expect(linksToStudyNote(note, "L - Flashcards")).toBe(true);
     expect(linksToStudyNote(note, "Other")).toBe(false);
     expect(linksToStudyNote("Body", "L - Flashcards")).toBe(false);
+  });
+});
+
+describe("maxQuizQuestions", () => {
+  it("is about one question per 90 words, between 3 and 15", () => {
+    expect(maxQuizQuestions(words(673))).toBe(7);
+    expect(maxQuizQuestions(words(20))).toBe(3);
+    expect(maxQuizQuestions("")).toBe(3);
+    expect(maxQuizQuestions(words(20000))).toBe(15);
+  });
+});
+
+describe("withStudyLimits for the quiz", () => {
+  it("appends a question limit, with or without .md and a folder", () => {
+    for (const template of ["quiz", "quiz.md", "Templates/Quiz.md"]) {
+      const out = withStudyLimits("make a quiz", template, words(673));
+      expect(out.startsWith("make a quiz")).toBe(true);
+      expect(out).toContain("at most 7 questions");
+      expect(out).not.toContain("cards");
+    }
+  });
+});
+
+describe("STUDY_FORMATS", () => {
+  it("offers flashcards and quiz with their labels", () => {
+    expect(STUDY_FORMATS).toEqual([
+      { template: "flash_cards", label: "Flashcards" },
+      { template: "quiz", label: "Quiz" },
+    ]);
   });
 });

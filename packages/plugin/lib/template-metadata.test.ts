@@ -15,6 +15,7 @@ describe("template-metadata", () => {
   it("returns hints for non-youtube default templates", () => {
     expect(getTemplateDisplayHint("meeting_note")).toContain("Discussion");
     expect(getTemplateDisplayHint("enhance.md")).toContain("headings");
+    expect(getTemplateDisplayHint("quiz")).toContain("Multiple-choice");
   });
 
   it("returns undefined for unknown or custom templates without hints", () => {
