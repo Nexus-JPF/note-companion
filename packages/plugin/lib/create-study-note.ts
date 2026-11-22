@@ -4,6 +4,7 @@ import { logger } from "../services/logger";
 import { appendBeforeBackupFooter } from "./audio-source";
 import {
   buildStudySource,
+  findStudyNoteLinkTarget,
   hasEnoughToStudy,
   studyNoteBasename,
   studyNoteLink,
@@ -21,7 +22,8 @@ import { measureFormatContentTokens } from "../inbox/services/youtube-service";
 export async function createStudyNote(
   plugin: FileOrganizer,
   sourceFile: TFile,
-  template: string
+  template: string,
+  options: { replace?: TFile } = {}
 ): Promise<TFile | null> {
   const { app, settings } = plugin;
 
@@ -53,6 +55,12 @@ export async function createStudyNote(
   const content = plugin.cleanupTagsInContent(generated).trim();
   if (!content) throw new Error("the AI returned an empty note");
 
+  if (options.replace) {
+    // Regenerate in place so the link and any backlinks stay valid.
+    await app.vault.modify(options.replace, withSourceProperty(content, sourceFile.basename));
+    return options.replace;
+  }
+
   const basename = studyNoteBasename(sourceFile.basename, template);
   const folder = sourceFile.parent?.path ?? "";
   const pathFor = (suffix: string) =>
@@ -74,4 +82,20 @@ export async function createStudyNote(
   );
 
   return created;
+}
+
+/**
+ * The study note of this format already linked from the source note, or null
+ * when there is no link or it points at a file that no longer exists.
+ */
+export async function findExistingStudyNote(
+  plugin: FileOrganizer,
+  sourceFile: TFile,
+  template: string
+): Promise<TFile | null> {
+  const { app } = plugin;
+  const target = findStudyNoteLinkTarget(await app.vault.read(sourceFile), template);
+  if (!target) return null;
+  const file = app.metadataCache.getFirstLinkpathDest(target, sourceFile.path);
+  return file ?? null;
 }

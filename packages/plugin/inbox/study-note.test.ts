@@ -1,5 +1,6 @@
 import {
   buildStudySource,
+  findStudyNoteLinkTarget,
   hasEnoughToStudy,
   keepsAudioSourceInNewFile,
   maxFlashcards,
@@ -122,5 +123,32 @@ describe("withStudyLimits", () => {
 
   it("leaves every other template untouched", () => {
     expect(withStudyLimits("make a quiz", "practice_quiz", words(590))).toBe("make a quiz");
+  });
+});
+
+describe("findStudyNoteLinkTarget", () => {
+  const note = (tail: string) => `# Lecture\n\nBody.\n\n${tail}\n\n---\n[[Backup | Link to original file]]\n#tag`;
+
+  it("reads the target of the link line the pipeline writes", () => {
+    const line = studyNoteLink("flash_cards", "Lecture - Flashcards");
+    expect(findStudyNoteLinkTarget(note(line), "flash_cards")).toBe("Lecture - Flashcards");
+    expect(findStudyNoteLinkTarget(note(line), "flash_cards.md")).toBe("Lecture - Flashcards");
+  });
+
+  it("ignores other formats, other lines and notes without a link", () => {
+    const quiz = studyNoteLink("quiz", "Lecture - Quiz");
+    expect(findStudyNoteLinkTarget(note(quiz), "flash_cards")).toBeNull();
+    expect(findStudyNoteLinkTarget(note("Flashcards: [[x]]"), "flash_cards")).toBeNull();
+    expect(findStudyNoteLinkTarget("# Lecture", "flash_cards")).toBeNull();
+  });
+
+  it("finds each format when a note carries both", () => {
+    const both = note(`${studyNoteLink("flash_cards", "L - Flashcards")}\n${studyNoteLink("quiz", "L - Quiz")}`);
+    expect(findStudyNoteLinkTarget(both, "flash_cards")).toBe("L - Flashcards");
+    expect(findStudyNoteLinkTarget(both, "quiz")).toBe("L - Quiz");
+  });
+
+  it("drops an alias from the target", () => {
+    expect(findStudyNoteLinkTarget(note("**Flashcards:** [[L - Flashcards|cards]]"), "flash_cards")).toBe("L - Flashcards");
   });
 });

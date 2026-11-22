@@ -101,6 +101,24 @@ export function studyNoteLink(template: string, studyBasename: string): string {
   return `**${studyNoteLabel(template)}:** [[${studyBasename}]]`;
 }
 
+/** Formats the on-demand command offers. The label comes from the template name. */
+export const STUDY_FORMATS: ReadonlyArray<{ template: string; label: string }> = [
+  { template: "flash_cards", label: studyNoteLabel("flash_cards") },
+];
+
+const escapeForRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Basename the lecture note links to for this format (from its
+ * `**Label:** [[...]]` line), or null when it has no such line. The link may
+ * be stale: check the file still exists before treating it as present.
+ */
+export function findStudyNoteLinkTarget(noteContent: string, template: string): string | null {
+  const label = escapeForRegExp(studyNoteLabel(template));
+  const match = noteContent.match(new RegExp(`^\\*\\*${label}:\\*\\* \\[\\[([^\\]|]+)(?:\\|[^\\]]*)?\\]\\]`, "m"));
+  return match ? match[1].trim() : null;
+}
+
 /**
  * Templates whose output stands alone. When the manual "new file" format
  * creates one, the source audio and transcript must not be copied into it.
