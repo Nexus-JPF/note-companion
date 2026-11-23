@@ -22,12 +22,23 @@ function getSubscriptionPrice(subscription: any): string | null {
 }
 
 async function deleteUserSubscriptionData(userId: string) {
+  // Catalyst means "currently paying", so cancelling a subscription clears it.
+  // A lifetime licence is a one-time purchase that outlives any subscription,
+  // so an owner who cancels an older subscription keeps access.
+  const [existing] = await db
+    .select({ billingCycle: UserUsageTable.billingCycle })
+    .from(UserUsageTable)
+    .where(eq(UserUsageTable.userId, userId))
+    .limit(1);
+  const isLifetime = existing?.billingCycle === "lifetime";
+
   await db
     .update(UserUsageTable)
     .set({
       subscriptionStatus: "canceled",
       paymentStatus: "canceled",
       billingCycle: "none", // Set to 'none' when subscription is canceled to satisfy NOT NULL constraint
+      ...(isLifetime ? {} : { hasCatalystAccess: false }),
     })
     .where(eq(UserUsageTable.userId, userId));
 }
