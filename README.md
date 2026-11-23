@@ -57,7 +57,7 @@ Open **Settings → Note Companion** and choose one of the paths below.
 
 ### Path 1 — Note Companion Cloud (default)
 
-1. Create an account at [notecompanion.ai](https://notecompanion.ai) or sign up / sign in from the plugin's **General** tab
+1. Create an account at [notecompanion.ai](https://www.notecompanion.ai/?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=setup) or sign up / sign in from the plugin's **General** tab
 2. Copy your **license key** from the web dashboard (**API Keys**) and paste it into **Settings → Note Companion → General → License Key**
 3. Click **Activate**
 
@@ -183,8 +183,8 @@ Want full control and local infrastructure?
 ## Support / feedback
 
 - **GitHub Issues**: [Report bugs or request features](https://github.com/Nexus-JPF/note-companion/issues)
-- **Documentation**: [notecompanion.ai/docs](https://notecompanion.ai/docs)
-- **Website**: [notecompanion.ai](https://notecompanion.ai)
+- **Guides and tutorials**: [notecompanion.ai/blog](https://www.notecompanion.ai/blog?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=guides)
+- **Website**: [notecompanion.ai](https://www.notecompanion.ai/?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=website)
 - **Obsidian Forum**: [Share feedback and discuss](https://forum.obsidian.md) _(add forum thread link when available)_
 
 ---
@@ -202,7 +202,7 @@ If you want to build or contribute, start here: **[CONTRIBUTING.md](CONTRIBUTING
 - **Payment required for cloud service**: The plugin requires a paid subscription to use the cloud-hosted service
 - **7-day free trial**: New subscriptions include a 7-day trial period
 - **Self-hosting option available**: You can run your own instance for free (see [Self-Hosting](#self-hosting) above)
-- **Account creation**: Using the cloud service requires creating an account at [notecompanion.ai](https://notecompanion.ai)
+- **Account creation**: Using the cloud service requires creating an account at [notecompanion.ai](https://www.notecompanion.ai/?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=account)
 
 ### Network Usage
 
