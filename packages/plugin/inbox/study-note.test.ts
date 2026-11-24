@@ -7,6 +7,7 @@ import {
   findStudyNoteLinkTarget,
   hasEnoughToStudy,
   keepsAudioSourceInNewFile,
+  countSkippedQuizQuestions,
   finishStudyContent,
   maxFlashcards,
   maxQuizQuestions,
@@ -396,5 +397,17 @@ describe("shuffleQuizOptions", () => {
     expect(finishStudyContent(cards, "flash_cards")).toBe(cards);
     const out = finishStudyContent(REAL_QUIZ, "Templates/quiz.md", seeded(2));
     expect(readQuiz(out).map(q => q.correct)).toEqual(before.map(q => q.correct));
+  });
+});
+
+describe("countSkippedQuizQuestions", () => {
+  it("is zero when every question matches the template shape or the content is not a quiz", () => {
+    expect(countSkippedQuizQuestions(REAL_QUIZ)).toBe(0);
+    expect(countSkippedQuizQuestions('<details class="flashcard"><summary>Q</summary>A</details>')).toBe(0);
+  });
+
+  it("counts the questions the shuffle cannot read", () => {
+    const broken = REAL_QUIZ.replace("- D. L’immunité sans mémoire\n", "").replace("- B. Ils détruisent", "- B Ils détruisent");
+    expect(countSkippedQuizQuestions(broken)).toBe(2);
   });
 });

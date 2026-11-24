@@ -159,6 +159,16 @@ export function shuffleQuizOptions(content: string, random: () => number = Math.
   });
 }
 
+/**
+ * Quiz questions the shuffle could not read (their shape differs from the
+ * template's), which therefore keep the model's own option order. Zero for
+ * content that is not a quiz. Logged so a change in the model's output shows up.
+ */
+export function countSkippedQuizQuestions(content: string): number {
+  const blocks = (content.match(/<details class="quiz-answer"/g) ?? []).length;
+  return Math.max(0, blocks - [...content.matchAll(QUIZ_QUESTION)].length);
+}
+
 /** Template-specific tidy-up of generated study content. Only the quiz needs one today. */
 export function finishStudyContent(
   content: string,

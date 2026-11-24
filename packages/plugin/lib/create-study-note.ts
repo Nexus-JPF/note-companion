@@ -3,6 +3,7 @@ import type FileOrganizer from "../index";
 import { logger } from "../services/logger";
 import {
   buildStudySource,
+  countSkippedQuizQuestions,
   finishStudyContent,
   findStudyNoteLinkTarget,
   studyNoteSource,
@@ -53,7 +54,12 @@ export async function createStudyNote(
     settings.API_KEY,
     () => {}
   );
-  const content = finishStudyContent(plugin.cleanupTagsInContent(generated).trim(), template);
+  const cleaned = plugin.cleanupTagsInContent(generated).trim();
+  const skipped = countSkippedQuizQuestions(cleaned);
+  if (skipped > 0) {
+    logger.warn("Quiz questions left in the model's option order", { file: sourceFile.path, skipped });
+  }
+  const content = finishStudyContent(cleaned, template);
   if (!content) throw new Error("the AI returned an empty note");
 
   if (options.replace) {

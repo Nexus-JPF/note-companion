@@ -436,7 +436,7 @@ created: "{{current date in YYYY-MM-DD format}}"
 - Write exactly four options, A to D, and exactly one of them is correct.
 - Each wrong option must be something the content says about a different concept, or a reversed relationship, or a different number that appears in the content. Never invent an absurd option, and never make an option wrong with an absolute word such as "always", "only", "never" or "all". A student who has not studied should find every option believable.
 - Never use "all of the above", "none of the above" or "both A and B" as an option.
-- Do not worry about the order of the options or which letter is correct: the plugin reorders the options afterwards.
+- Try to vary which letter is correct; the plugin also reorders the options afterwards, so do not worry about the order. Never refer to another option by its letter (for example "unlike option B") in an explanation, because the letters change.
 - Keep the four options similar in length and style, so the correct one does not stand out.
 - Do not give the answer away in the question, and do not repeat the same fact in two questions.
 - The explanation says why the correct option is right in one or two sentences. It does not repeat all four options.
