@@ -375,10 +375,10 @@ Structure the note like this, translating the section headings into the language
 # [A short, specific title for the topic]
 
 ## Summary
-3-5 sentences on what the session covered and why it matters.
+3-5 sentences on what the session covered, and why it matters only if the speaker said why.
 
 ## Key concepts
-For each main idea, use a "###" heading with the concept name, then a short explanation in your own words. Define terms the first time they appear.
+For each main idea, use a "###" heading with the concept name, then a short explanation in your own words. Give a definition only for terms the speaker defined, the first time they appear.
 
 ## Details and examples
 Organize the remaining content by topic with "###" headings. Use bullet points for steps, formulas, dates, names, and examples that were given. If the speaker compared things, a small table is fine, but only with the rows and values the speaker actually stated.
