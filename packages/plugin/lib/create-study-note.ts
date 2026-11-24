@@ -3,6 +3,7 @@ import type FileOrganizer from "../index";
 import { logger } from "../services/logger";
 import {
   buildStudySource,
+  finishStudyContent,
   findStudyNoteLinkTarget,
   studyNoteSource,
   withStudyNoteLink,
@@ -52,7 +53,7 @@ export async function createStudyNote(
     settings.API_KEY,
     () => {}
   );
-  const content = plugin.cleanupTagsInContent(generated).trim();
+  const content = finishStudyContent(plugin.cleanupTagsInContent(generated).trim(), template);
   if (!content) throw new Error("the AI returned an empty note");
 
   if (options.replace) {

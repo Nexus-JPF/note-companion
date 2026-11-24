@@ -406,13 +406,9 @@ function getQuizTemplateContent(): string {
 1. Frontmatter (at the top) with the following properties:
 
 ---
-
 total: {{number of questions created}}
-
 topics: ["{{topic 1}}", "{{topic 2}}", "{{topic 3}}"]
-
 created: "{{current date in YYYY-MM-DD format}}"
-
 ---
 
 2. The questions, below the frontmatter. Format every question exactly like this:
@@ -425,7 +421,7 @@ created: "{{current date in YYYY-MM-DD format}}"
 - D. {{option}}
 
 <details class="quiz-answer">
-<summary>Show answer</summary>
+<summary>{{"Show answer" in the language of the content}}</summary>
 
 **{{correct letter}}.** {{one or two sentences saying why}}
 
@@ -438,9 +434,9 @@ created: "{{current date in YYYY-MM-DD format}}"
 - Each question tests exactly one fact: one definition, one reason, one number or one step. Do not bundle several facts into one question.
 - Prefer "why" and "how" questions over bare definitions when the content explains a reason.
 - Write exactly four options, A to D, and exactly one of them is correct.
-- The three wrong options must be plausible to someone who has not studied, but the content must show that they are wrong. Base them on real confusions in the content, such as a neighbouring concept, a reversed relationship or a wrong number. Never use jokes or obviously absurd options.
+- Each wrong option must be something the content says about a different concept, or a reversed relationship, or a different number that appears in the content. Never invent an absurd option, and never make an option wrong with an absolute word such as "always", "only", "never" or "all". A student who has not studied should find every option believable.
 - Never use "all of the above", "none of the above" or "both A and B" as an option.
-- Vary which letter is correct from question to question. Do not follow a pattern and do not put the correct answer first every time.
+- Do not worry about the order of the options or which letter is correct: the plugin reorders the options afterwards.
 - Keep the four options similar in length and style, so the correct one does not stand out.
 - Do not give the answer away in the question, and do not repeat the same fact in two questions.
 - The explanation says why the correct option is right in one or two sentences. It does not repeat all four options.
@@ -454,13 +450,9 @@ created: "{{current date in YYYY-MM-DD format}}"
 **Example Output Format:**
 
 ---
-
 total: 2
-
 topics: ["Molecular Biology", "Cell Biology"]
-
 created: "2025-01-09"
-
 ---
 
 **1. Which base does RNA use in place of thymine?**
@@ -493,6 +485,7 @@ created: "2025-01-09"
 
 Important Notes:
 - ALWAYS include the frontmatter with total, topics and created date.
+- Translate "Show answer" into the language of the content (for example "Afficher la réponse" in French), and use the same label for every question.
 - Output only the frontmatter and the questions: no list of facts, no headings, no commentary before, between or after the questions.
 - Output the actual HTML tags directly (NOT inside markdown code blocks) and make sure every tag is closed.
 - Leave a blank line after the summary tag and before the closing details tag, and a blank line between questions.

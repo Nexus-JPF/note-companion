@@ -7,10 +7,12 @@ import {
   findStudyNoteLinkTarget,
   hasEnoughToStudy,
   keepsAudioSourceInNewFile,
+  finishStudyContent,
   maxFlashcards,
   maxQuizQuestions,
   STUDY_FORMATS,
   resolveStudyTemplate,
+  shuffleQuizOptions,
   studyNoteSource,
   studyNoteBasename,
   studyNoteLabel,
@@ -268,5 +270,131 @@ describe("STUDY_FORMATS", () => {
       { template: "flash_cards", label: "Flashcards" },
       { template: "quiz", label: "Quiz" },
     ]);
+  });
+});
+
+// Output of a real run on the French vaccine lecture (3.6.47): the correct answer is B or C in every question.
+const REAL_QUIZ = `---
+total: 3
+topics: ["Vaccination", "Immunité innée et adaptative"]
+created: "2026-11-24"
+---
+
+**1. Quelle branche de l’immunité les vaccins entraînent-ils principalement ?**
+
+- A. L’immunité innée
+- B. L’immunité adaptative
+- C. L’immunité générale
+- D. L’immunité sans mémoire
+
+<details class="quiz-answer">
+<summary>Show answer</summary>
+
+**B.** Les vaccins entraînent principalement l’immunité adaptative, qui est spécifique et possède une mémoire.
+
+</details>
+
+**2. Qu’est-ce qu’un vaccin ?**
+
+- A. Une préparation qui détruit directement toutes les cellules infectées
+- B. Une préparation qui présente un aperçu inoffensif d’un agent pathogène
+- C. Une réponse rapide et générale du système immunitaire
+- D. Une protéine qui se lie à un antigène précis
+
+<details class="quiz-answer">
+<summary>Show answer</summary>
+
+**B.** Un vaccin présente au corps un aperçu inoffensif d’un agent pathogène afin de préparer le système immunitaire.
+
+</details>
+
+**3. Quel est le rôle des lymphocytes B ?**
+
+- A. Ils présentent les antigènes aux lymphocytes auxiliaires
+- B. Ils détruisent les cellules infectées
+- C. Ils produisent des anticorps liés à des antigènes précis
+- D. Ils coordonnent toute la réponse immunitaire
+
+<details class="quiz-answer">
+<summary>Show answer</summary>
+
+**C.** Les lymphocytes B fabriquent des anticorps qui se lient à un antigène précis de l’agent pathogène.
+
+</details>
+`;
+
+/** Each question as { options by letter, correct letter, correct text }, read from the note the way a student would. */
+function readQuiz(content: string) {
+  return [...content.matchAll(/((?:- [A-D]\. [^\n]*\n){3}- [A-D]\. [^\n]*)[\s\S]*?\n\*\*([A-D])\./g)].map(m => {
+    const options = m[1].split("\n").map(line => line.replace(/^- [A-D]\. /, ""));
+    return { options, letter: m[2], correct: options["ABCD".indexOf(m[2])] };
+  });
+}
+
+/** Deterministic, well-mixed random numbers for the tests (mulberry32). */
+const seeded = (seed: number) => () => {
+  seed = (seed + 0x6d2b79f5) | 0;
+  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
+describe("shuffleQuizOptions", () => {
+  const before = readQuiz(REAL_QUIZ);
+
+  it("keeps every option and the correct answer, and leaves the rest of the note alone", () => {
+    const after = readQuiz(shuffleQuizOptions(REAL_QUIZ, seeded(1)));
+    expect(after).toHaveLength(before.length);
+    after.forEach((q, i) => {
+      expect([...q.options].sort()).toEqual([...before[i].options].sort());
+      expect(q.correct).toBe(before[i].correct);
+    });
+
+    const text = shuffleQuizOptions(REAL_QUIZ, seeded(1));
+    expect(text.split("\n").filter(l => !/^- [A-D]\. /.test(l) && !/^\*\*[A-D]\./.test(l)))
+      .toEqual(REAL_QUIZ.split("\n").filter(l => !/^- [A-D]\. /.test(l) && !/^\*\*[A-D]\./.test(l)));
+    expect(text).toContain("<summary>Show answer</summary>");
+  });
+
+  it("keeps the explanation text after the letter", () => {
+    const text = shuffleQuizOptions(REAL_QUIZ, seeded(7));
+    expect(text).toContain("Les vaccins entraînent principalement l’immunité adaptative, qui est spécifique");
+    expect(text).toMatch(/\*\*[A-D]\.\*\* Les lymphocytes B fabriquent/);
+  });
+
+  it("spreads the correct letter over A-D instead of leaving it on B and C", () => {
+    const many = Array.from({ length: 8 }, (_, i) =>
+      REAL_QUIZ.split("**1.")[1].split("**2.")[0].replace(/^/, `**${i + 1}.`)
+    ).join("\n");
+    const letters = readQuiz(shuffleQuizOptions(many, seeded(3))).map(q => q.letter);
+    for (const letter of ["A", "B", "C", "D"]) {
+      expect(letters.filter(l => l === letter)).toHaveLength(2);
+    }
+  });
+
+  it("uses all four letters across a real 3-question quiz at least twice over many seeds", () => {
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 30; seed++) {
+      readQuiz(shuffleQuizOptions(REAL_QUIZ, seeded(seed))).forEach(q => seen.add(q.letter));
+    }
+    expect([...seen].sort()).toEqual(["A", "B", "C", "D"]);
+  });
+
+  it("leaves a question that does not match the template shape untouched, and still shuffles the rest", () => {
+    const broken = REAL_QUIZ.replace("- D. L’immunité sans mémoire\n", "");
+    const after = shuffleQuizOptions(broken, seeded(5));
+    expect(after).toContain("- A. L’immunité innée\n- B. L’immunité adaptative\n- C. L’immunité générale\n");
+    expect(readQuiz(after).slice(-2).map(q => q.correct)).toEqual(before.slice(-2).map(q => q.correct));
+  });
+
+  it("is a no-op for content that is not a quiz", () => {
+    expect(shuffleQuizOptions("# Notes\n\n- A. not a quiz")).toBe("# Notes\n\n- A. not a quiz");
+  });
+
+  it("is applied to the quiz template only", () => {
+    const cards = '<details class="flashcard"><summary>Q</summary>A</details>';
+    expect(finishStudyContent(cards, "flash_cards")).toBe(cards);
+    const out = finishStudyContent(REAL_QUIZ, "Templates/quiz.md", seeded(2));
+    expect(readQuiz(out).map(q => q.correct)).toEqual(before.map(q => q.correct));
   });
 });
