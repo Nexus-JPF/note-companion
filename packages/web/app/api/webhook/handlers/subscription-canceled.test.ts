@@ -1,31 +1,26 @@
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { handleSubscriptionCanceled } from './subscription-canceled';
 
 const mockUpdateSet = jest.fn();
-let mockExistingRow: { billingCycle: string } | undefined;
 
-jest.mock('@/drizzle/schema', () => ({
-  UserUsageTable: {
-    userId: 'userId',
-    billingCycle: 'billingCycle',
-  },
-  db: {
-    select: jest.fn(() => ({
-      from: () => ({
-        where: () => ({
-          limit: () => Promise.resolve(mockExistingRow ? [mockExistingRow] : []),
-        }),
-      }),
-    })),
-    update: jest.fn(() => ({
-      set: (s: any) => {
-        mockUpdateSet(s);
-        return { where: jest.fn().mockResolvedValue(undefined) };
-      },
-    })),
-  },
-}));
-
-jest.mock('drizzle-orm', () => ({ eq: jest.fn() }));
+jest.mock('@/drizzle/schema', () => {
+  const { pgTable, text, boolean } = jest.requireActual('drizzle-orm/pg-core');
+  return {
+    UserUsageTable: pgTable('user_usage', {
+      userId: text('userId'),
+      billingCycle: text('billingCycle'),
+      hasCatalystAccess: boolean('hasCatalystAccess'),
+    }),
+    db: {
+      update: jest.fn(() => ({
+        set: (s: any) => {
+          mockUpdateSet(s);
+          return { where: jest.fn().mockResolvedValue(undefined) };
+        },
+      })),
+    },
+  };
+});
 
 jest.mock('../utils', () => ({
   updateUserSubscriptionData: jest.fn().mockResolvedValue(undefined),
@@ -45,6 +40,8 @@ jest.mock('stripe', () =>
   }))
 );
 
+const render = (expr: any) => new PgDialect().sqlToQuery(expr);
+
 const canceledEvent = (metadata: Record<string, string>) =>
   ({
     id: 'evt_1',
@@ -62,53 +59,33 @@ const canceledEvent = (metadata: Record<string, string>) =>
 describe('handleSubscriptionCanceled', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockExistingRow = { billingCycle: 'monthly' };
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('clears catalyst access for a cancelled monthly subscriber', async () => {
-    const result = await handleSubscriptionCanceled(
-      canceledEvent({ userId: 'user_1' })
-    );
-    expect(result.success).toBe(true);
-    expect(mockUpdateSet).toHaveBeenCalledWith(
-      expect.objectContaining({
-        subscriptionStatus: 'canceled',
-        paymentStatus: 'canceled',
-        billingCycle: 'none',
-        hasCatalystAccess: false,
-      })
-    );
-  });
-
-  it('clears catalyst access for a cancelled yearly subscriber', async () => {
-    mockExistingRow = { billingCycle: 'yearly' };
-    await handleSubscriptionCanceled(canceledEvent({ userId: 'user_1' }));
-    expect(mockUpdateSet).toHaveBeenCalledWith(
-      expect.objectContaining({ hasCatalystAccess: false })
-    );
-  });
-
-  it('keeps catalyst access for a lifetime owner who cancels an old subscription', async () => {
-    mockExistingRow = { billingCycle: 'lifetime' };
+  it('marks the row cancelled in one UPDATE that clears catalyst access', async () => {
     const result = await handleSubscriptionCanceled(
       canceledEvent({ userId: 'user_1' })
     );
     expect(result.success).toBe(true);
     expect(mockUpdateSet).toHaveBeenCalledTimes(1);
-    expect(mockUpdateSet.mock.calls[0][0]).not.toHaveProperty(
-      'hasCatalystAccess'
+
+    const set = mockUpdateSet.mock.calls[0][0];
+    expect(set.subscriptionStatus).toBe('canceled');
+    expect(set.paymentStatus).toBe('canceled');
+    expect(render(set.hasCatalystAccess).sql).toBe(
+      `CASE WHEN "user_usage"."billingCycle" = 'lifetime' THEN "user_usage"."hasCatalystAccess" ELSE false END`
     );
   });
 
-  it('still clears access when the user has no usage row yet', async () => {
-    mockExistingRow = undefined;
+  it('does not overwrite a lifetime billing cycle with none', async () => {
     await handleSubscriptionCanceled(canceledEvent({ userId: 'user_1' }));
-    expect(mockUpdateSet).toHaveBeenCalledWith(
-      expect.objectContaining({ hasCatalystAccess: false })
+    const { sql, params } = render(mockUpdateSet.mock.calls[0][0].billingCycle);
+    expect(sql).toBe(
+      `CASE WHEN "user_usage"."billingCycle" = 'lifetime' THEN "user_usage"."billingCycle" ELSE $1 END`
     );
+    expect(params).toEqual(['none']);
   });
 
   it('writes nothing when the subscription has no user id', async () => {

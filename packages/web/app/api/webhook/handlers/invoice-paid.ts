@@ -2,6 +2,7 @@ import { createWebhookHandler } from '../handler-factory';
 import { db, UserUsageTable } from '@/drizzle/schema';
 import { eq, sql } from 'drizzle-orm';
 import { trackLoopsEvent } from '@/lib/services/loops';
+import { keepLifetimeBillingCycle } from '../lifetime';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -163,7 +164,7 @@ export const handleInvoicePaid = createWebhookHandler(
             )
           `,
           maxAudioTranscriptionMinutes: 300, // 300 minutes per month for paid users
-          billingCycle: billingCycle, // Always set billingCycle to avoid null constraint violation
+          billingCycle: keepLifetimeBillingCycle(billingCycle), // Always set billingCycle to avoid null constraint violation; a lifetime owner keeps 'lifetime'
           lastPayment: new Date(),
           currentProduct: metadata?.product,
           currentPlan: metadata?.plan,
