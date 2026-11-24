@@ -47,3 +47,16 @@ describe("bundled quiz template", () => {
     expect(template).toContain("- D. ");
   });
 });
+
+describe("bundled lecture_notes template", () => {
+  it("keeps the rules added after live runs", async () => {
+    const { app, files } = fakeApp();
+    await checkAndCreateTemplates(app, settings);
+    const template = files.get("Templates/lecture_notes.md")!;
+
+    expect(template).toContain("## Assignments");
+    expect(template).toContain("never put [[links]] in any heading");
+    expect(template).toContain("Put in the note only what the speaker said");
+    expect(template).toContain("only with the rows and values the speaker actually stated");
+  });
+});
