@@ -7,7 +7,7 @@ jest.mock("../inbox/services/youtube-service", () => ({
 }));
 jest.mock("../services/logger", () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() } }));
 
-import { createStudyNote } from "./create-study-note";
+import { createStudyNote, findExistingStudyNote } from "./create-study-note";
 
 const NOTES = `# Vaccines\n\n${"Vaccines train the adaptive immune system. ".repeat(20)}`;
 const LECTURE = `![[lecture.m4a]]\n\n${NOTES}\n\n---\n[[Backup | Link to original file]]\n#vaccines\n#immunology`;
@@ -27,10 +27,19 @@ function setup(opts: { content?: string; existing?: string[]; instructions?: str
           files.set(path, data);
           return { path, basename: path.split("/").pop()!.replace(/\.md$/, "") };
         },
+        modify: async (f: { path: string }, data: string) => {
+          files.set(f.path, data);
+        },
         process: async (f: { path: string }, fn: (d: string) => string) => {
           files.set(f.path, fn(files.get(f.path)!));
         },
         adapter: { exists: async (p: string) => files.has(p) },
+      },
+      metadataCache: {
+        getFirstLinkpathDest: (target: string) => {
+          const path = [...files.keys()].find(k => k.replace(/^.*\//, "").replace(/\.md$/, "") === target);
+          return path ? { path, basename: target } : null;
+        },
       },
     },
     getTemplateInstructions: jest.fn(async () => opts.instructions ?? "make cards"),
@@ -104,5 +113,80 @@ describe("createStudyNote", () => {
     const { plugin, source } = setup();
     (plugin as { settings: { maxFormattingTokens: number } }).settings.maxFormattingTokens = 10;
     await expect(createStudyNote(plugin, source, "flash_cards")).rejects.toThrow(/too large/);
+  });
+  it("regenerates in place: same file, no new note, lecture link unchanged", async () => {
+    const { plugin, files, source } = setup();
+    const first = await createStudyNote(plugin, source, "flash_cards");
+    const lectureAfterFirst = files.get("Lectures/Immunity.md");
+
+    const fresh = '---\ntotal: 1\n---\n\n<details class="flashcard"><summary>New</summary>B</details>';
+    (plugin as unknown as { formatStream: jest.Mock }).formatStream.mockResolvedValueOnce(fresh);
+    const again = await createStudyNote(plugin, source, "flash_cards", { replace: first! });
+
+    expect(again?.path).toBe(first!.path);
+    expect([...files.keys()].filter(k => k.includes("Flashcards"))).toHaveLength(1);
+    expect(files.get(first!.path)).toContain("New");
+    expect(files.get(first!.path)).toContain('source: "[[Immunity]]"');
+    expect(files.get("Lectures/Immunity.md")).toBe(lectureAfterFirst);
+  });
+});
+
+describe("createStudyNote link line", () => {
+  it("replaces a stale link line instead of adding a second one", async () => {
+    const stale = LECTURE.replace(NOTES, `${NOTES}\n\n**Flashcards:** [[Old name]]`);
+    const { plugin, source, files } = setup({ content: stale });
+    await createStudyNote(plugin, source, "flash_cards");
+
+    const lecture = files.get("Lectures/Immunity.md")!;
+    expect(lecture.match(/\*\*Flashcards:\*\*/g)).toHaveLength(1);
+    expect(lecture).toContain("**Flashcards:** [[Immunity - Flashcards]]");
+    expect(lecture).not.toContain("Old name");
+  });
+});
+
+describe("createStudyNote failures leave notes untouched", () => {
+  it("creates no file when generation rejects", async () => {
+    const { plugin, source, files, formatStream } = setup();
+    formatStream.mockRejectedValueOnce(new Error("server down"));
+    await expect(createStudyNote(plugin, source, "flash_cards")).rejects.toThrow("server down");
+    expect(files.size).toBe(1);
+  });
+
+  it("keeps the old study note when a regenerate fails", async () => {
+    const { plugin, source, files, formatStream } = setup();
+    const first = await createStudyNote(plugin, source, "flash_cards");
+    const before = files.get(first!.path);
+    formatStream.mockRejectedValueOnce(new Error("server down"));
+    await expect(createStudyNote(plugin, source, "flash_cards", { replace: first! })).rejects.toThrow("server down");
+    expect(files.get(first!.path)).toBe(before);
+  });
+});
+
+describe("findExistingStudyNote", () => {
+  it("finds the study note the lecture links to", async () => {
+    const { plugin, source } = setup();
+    const created = await createStudyNote(plugin, source, "flash_cards");
+    expect((await findExistingStudyNote(plugin, source, "flash_cards"))?.path).toBe(created!.path);
+  });
+
+  it("is null when the linked file was not generated from this note", async () => {
+    const { plugin, source, files } = setup();
+    await createStudyNote(plugin, source, "flash_cards");
+    files.set("Lectures/Immunity - Flashcards.md", "Hand-written, no source property");
+    expect(await findExistingStudyNote(plugin, source, "flash_cards")).toBeNull();
+
+    files.set("Lectures/Immunity - Flashcards.md", '---\nsource: "[[Another lecture]]"\n---\n\nx');
+    expect(await findExistingStudyNote(plugin, source, "flash_cards")).toBeNull();
+  });
+
+  it("is null for a lecture with no link, another format, or a link to a deleted file", async () => {
+    const { plugin, source, files } = setup();
+    expect(await findExistingStudyNote(plugin, source, "flash_cards")).toBeNull();
+
+    await createStudyNote(plugin, source, "flash_cards");
+    expect(await findExistingStudyNote(plugin, source, "quiz")).toBeNull();
+
+    files.delete("Lectures/Immunity - Flashcards.md");
+    expect(await findExistingStudyNote(plugin, source, "flash_cards")).toBeNull();
   });
 });

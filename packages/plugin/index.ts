@@ -1884,6 +1884,29 @@ export default class FileOrganizer extends Plugin {
     });
 
     this.addCommand({
+      id: "create-study-note",
+      name: "Create study note from this note",
+      checkCallback: (checking: boolean) => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file || file.extension !== "md") return false;
+        if (!checking) void this.startStudyNote(file);
+        return true;
+      },
+    });
+
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file) => {
+        if (!(file instanceof TFile) || file.extension !== "md") return;
+        menu.addItem(item =>
+          item
+            .setTitle("Create study note")
+            .setIcon("graduation-cap")
+            .onClick(() => void this.startStudyNote(file))
+        );
+      })
+    );
+
+    this.addCommand({
       id: "restore-default-templates",
       name: "Restore default templates",
       callback: async () => {
@@ -2285,6 +2308,14 @@ export default class FileOrganizer extends Plugin {
     }
     return await this.app.vault.read(templateFile);
   }
+  async startStudyNote(file: TFile) {
+    const [{ runStudyNoteCommand }, { createStudyNoteUi }] = await Promise.all([
+      import("./lib/study-note-command"),
+      import("./lib/study-note-ui"),
+    ]);
+    await runStudyNoteCommand(this, file, createStudyNoteUi(this.app));
+  }
+
   // create a getTemplatesV2 that returns a list of template names only
   // and doesn't reuse getTemplates()
   async getTemplateNames(): Promise<string[]> {
