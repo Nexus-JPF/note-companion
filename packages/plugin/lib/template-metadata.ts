@@ -15,6 +15,8 @@ const TEMPLATE_HINTS: Record<string, string> = {
     "Structured academic summary with methodology, findings, and citations.",
   flash_cards:
     "Interactive flashcards using Obsidian details/summary blocks.",
+  quiz:
+    "Multiple-choice quiz with four options per question; the answer is revealed on click.",
   lecture_notes:
     "Study notes from a lecture or class recording: summary, key concepts, details, review questions, assignments.",
   enhance:

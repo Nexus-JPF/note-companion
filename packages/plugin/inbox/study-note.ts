@@ -18,7 +18,7 @@ export const MIN_STUDY_SOURCE_CHARS = 200;
 /** A formatted note shorter than this is probably just a stub, so the transcript is used instead. */
 const THIN_NOTE_CHARS = 600;
 
-const LABELS: Record<string, string> = { flash_cards: "Flashcards" };
+const LABELS: Record<string, string> = { flash_cards: "Flashcards", quiz: "Quiz" };
 
 /** Human label for a template: `flash_cards` -> "Flashcards", `practice_quiz` -> "Practice quiz". */
 export function studyNoteLabel(template: string): string {
@@ -72,17 +72,38 @@ export function maxFlashcards(source: string): number {
   return Math.min(MAX_CARDS, Math.max(MIN_CARDS, Math.round(words / WORDS_PER_CARD)));
 }
 
+/** One quiz question carries four options and an explanation, so roughly half as many as flashcards. */
+const WORDS_PER_QUESTION = 90;
+const MIN_QUESTIONS = 3;
+const MAX_QUESTIONS = 15;
+
+/** Upper bound on quiz questions for a source; see maxFlashcards for why the plugin states it. */
+export function maxQuizQuestions(source: string): number {
+  const words = source.split(/\s+/).filter(Boolean).length;
+  return Math.min(MAX_QUESTIONS, Math.max(MIN_QUESTIONS, Math.round(words / WORDS_PER_QUESTION)));
+}
+
+const templateKey = (template: string) =>
+  (template.split("/").pop() ?? "").replace(/\.md$/i, "").trim().toLowerCase();
+
 /**
- * Template instructions plus, for the flashcards template only, a hard card
+ * Template instructions plus, for the flashcards and quiz templates, a hard
  * limit computed from the source. Done here rather than in the template file
- * so vaults that still hold an older copy of flash_cards.md get it too.
+ * so vaults that still hold an older copy of the template get it too.
  */
 export function withStudyLimits(instructions: string, template: string, source: string): string {
-  const name = (template.split("/").pop() ?? "").replace(/\.md$/i, "").trim().toLowerCase();
-  if (name !== "flash_cards") return instructions;
-  return `${instructions}\n\nHARD LIMIT for this content: write at most ${maxFlashcards(
-    source
-  )} cards, and fewer if the content has fewer distinct facts. Before you finish, drop any card that repeats a fact another card already tests, then set total to the number of cards you wrote.`;
+  const name = templateKey(template);
+  if (name === "flash_cards") {
+    return `${instructions}\n\nHARD LIMIT for this content: write at most ${maxFlashcards(
+      source
+    )} cards, and fewer if the content has fewer distinct facts. Before you finish, drop any card that repeats a fact another card already tests, then set total to the number of cards you wrote.`;
+  }
+  if (name === "quiz") {
+    return `${instructions}\n\nHARD LIMIT for this content: write at most ${maxQuizQuestions(
+      source
+    )} questions, and fewer if the content has fewer distinct facts. Before you finish, drop any question that tests a fact another question already tests, then set total to the number of questions you wrote.`;
+  }
+  return instructions;
 }
 
 const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---(\n|$)/;
@@ -111,6 +132,7 @@ export function studyNoteSource(noteContent: string): string | null {
 /** Formats the on-demand command offers. The label comes from the template name. */
 export const STUDY_FORMATS: ReadonlyArray<{ template: string; label: string }> = [
   { template: "flash_cards", label: studyNoteLabel("flash_cards") },
+  { template: "quiz", label: studyNoteLabel("quiz") },
 ];
 
 const escapeForRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -164,5 +186,5 @@ export function linksToStudyNote(noteContent: string, studyBasename: string): bo
  * creates one, the source audio and transcript must not be copied into it.
  */
 export function keepsAudioSourceInNewFile(templateName: string): boolean {
-  return templateName.replace(/\.md$/i, "").toLowerCase() !== "flash_cards";
+  return !["flash_cards", "quiz"].includes(templateKey(templateName));
 }
