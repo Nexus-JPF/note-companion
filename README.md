@@ -120,7 +120,7 @@ Use this path to run AI through **your own** OpenAI, Claude, Gemini, Groq, or co
 | **Local Ollama** | Your machine (Ollama) | Self-hosted `OPENAI_API_BASE` and/or **Experiment → Local LLM** |
 
 Your data handling depends on the mode you choose.
-View our full privacy policy at [notecompanion.ai/privacy](https://notecompanion.ai/privacy)
+View our full privacy policy at [notecompanion.ai/privacy](https://www.notecompanion.ai/privacy)
 
 **Cloud Service:**
 
