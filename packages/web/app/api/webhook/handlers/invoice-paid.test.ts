@@ -7,6 +7,7 @@ const mockUpdateSet = jest.fn();
 jest.mock('@/drizzle/schema', () => ({
   UserUsageTable: {
     userId: 'userId',
+    billingCycle: 'billingCycle',
     maxTokenUsage: 'maxTokenUsage',
     tokenUsage: 'tokenUsage',
   },
@@ -81,6 +82,16 @@ describe('handleInvoicePaid', () => {
     expect(mockConflictSet).toHaveBeenCalledWith(
       expect.objectContaining({ paymentStatus: 'paid', hasCatalystAccess: true })
     );
+  });
+
+  it('does not overwrite a lifetime billing cycle on renewal', async () => {
+    await handleInvoicePaid(invoiceEvent({ userId: 'user_1', type: 'monthly' }));
+    // Inserted rows get the plain value; the conflict update goes through the CASE guard.
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ billingCycle: 'monthly' })
+    );
+    const set = mockConflictSet.mock.calls[0][0];
+    expect(typeof set.billingCycle).toBe('object'); // SQL CASE, not the raw string
   });
 
   it('skips invoices without a user id and writes nothing', async () => {

@@ -1,5 +1,6 @@
 import { db, UserUsageTable } from "@/drizzle/schema";
 import { CustomerData } from "./types";
+import { keepLifetimeBillingCycle } from "./lifetime";
 
 
 export async function updateUserSubscriptionData(
@@ -17,7 +18,7 @@ export async function updateUserSubscriptionData(
 
   // Only set billingCycle if provided (to avoid null constraint violations)
   if (data.billingCycle !== undefined) {
-    updateData.billingCycle = data.billingCycle;
+    updateData.billingCycle = keepLifetimeBillingCycle(data.billingCycle);
   }
 
   await db

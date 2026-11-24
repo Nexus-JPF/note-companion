@@ -5,6 +5,7 @@ import { updateLoopsContactBillingCycle } from "@/lib/services/loops";
 import { db, UserUsageTable } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { updateUserSubscriptionData } from "../utils";
+import { keepLifetimeBillingCycle, clearCatalystUnlessLifetime } from "../lifetime";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -22,12 +23,16 @@ function getSubscriptionPrice(subscription: any): string | null {
 }
 
 async function deleteUserSubscriptionData(userId: string) {
+  // Catalyst means "currently paying", so cancelling a subscription clears it.
+  // Lifetime owners keep access and their 'lifetime' billing cycle. One atomic
+  // UPDATE: every CASE reads the row as it was before this statement.
   await db
     .update(UserUsageTable)
     .set({
       subscriptionStatus: "canceled",
       paymentStatus: "canceled",
-      billingCycle: "none", // Set to 'none' when subscription is canceled to satisfy NOT NULL constraint
+      billingCycle: keepLifetimeBillingCycle("none"), // 'none' satisfies the NOT NULL constraint
+      hasCatalystAccess: clearCatalystUnlessLifetime(),
     })
     .where(eq(UserUsageTable.userId, userId));
 }

@@ -56,6 +56,10 @@ jobs:
         working-directory: packages/web
         run: pnpm exec jest lib/audio/tracing-config.test.ts
 
+      - name: Test Catalyst access and billing webhooks (web)
+        working-directory: packages/web
+        run: pnpm exec jest app/api/webhook app/api/check-premium
+
       - name: Build landing
         working-directory: packages/landing
         env:
