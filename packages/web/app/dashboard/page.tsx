@@ -25,6 +25,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { MarketingConsentPrompt } from '@/components/marketing-consent';
 
 export default function DashboardPage() {
   const [apiUsage, setApiUsage] = React.useState({
@@ -195,6 +196,8 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
+
+      <MarketingConsentPrompt />
 
       {/* API Usage Card */}
       <Card className="w-full">

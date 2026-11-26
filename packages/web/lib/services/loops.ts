@@ -122,3 +122,106 @@ export async function updateLoopsContactBillingCycle(
     console.error('Error updating Loops contact billingCycle:', error);
   }
 }
+// Marketing consent
+//
+// Signing up lets us send onboarding emails about the product. Campaigns
+// (newsletters, launches, promos) need explicit consent, which we record as
+// membership of one Loops mailing list. Campaigns must target only that list.
+// The list is created in the Loops dashboard (the API cannot create lists) and
+// its id is set in LOOPS_MARKETING_LIST_ID.
+
+export type MarketingConsentChoice = 'granted' | 'declined';
+
+export interface MarketingConsentState {
+  // false until the user has answered the opt-in prompt once
+  decided: boolean;
+  // true only while the contact is on the list and has not unsubscribed
+  optedIn: boolean;
+}
+
+const LOOPS_API = 'https://app.loops.so/api/v1';
+
+export function getMarketingListId(): string | undefined {
+  return process.env.LOOPS_MARKETING_LIST_ID || undefined;
+}
+
+function loopsHeaders(): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${process.env.LOOPS_API_KEY}`,
+  };
+}
+
+async function findLoopsContactByEmail(
+  email: string
+): Promise<Record<string, unknown> | null> {
+  const response = await fetch(
+    `${LOOPS_API}/contacts/find?email=${encodeURIComponent(email)}`,
+    { method: 'GET', headers: loopsHeaders() }
+  );
+  if (!response.ok) {
+    throw new Error(`Loops contact lookup failed: ${await response.text()}`);
+  }
+  const contacts = (await response.json()) as Record<string, unknown>[];
+  return contacts[0] ?? null;
+}
+
+export async function getLoopsMarketingConsent(
+  email: string
+): Promise<MarketingConsentState> {
+  const listId = getMarketingListId();
+  if (!process.env.LOOPS_API_KEY || !listId) {
+    throw new Error('LOOPS_API_KEY or LOOPS_MARKETING_LIST_ID is not set');
+  }
+
+  const contact = await findLoopsContactByEmail(email);
+  if (!contact) return { decided: false, optedIn: false };
+
+  const choice = contact.marketingConsent;
+  const lists = (contact.mailingLists ?? {}) as Record<string, boolean>;
+  return {
+    decided: choice === 'granted' || choice === 'declined',
+    // An unsubscribe link in any email clears `subscribed` or the list, and
+    // that wins over the stored choice.
+    optedIn: lists[listId] === true && contact.subscribed !== false,
+  };
+}
+
+export async function setLoopsMarketingConsent(
+  email: string,
+  optIn: boolean
+): Promise<void> {
+  const listId = getMarketingListId();
+  if (!process.env.LOOPS_API_KEY || !listId) {
+    throw new Error('LOOPS_API_KEY or LOOPS_MARKETING_LIST_ID is not set');
+  }
+
+  if (!optIn) {
+    // contacts/update creates a missing contact, and a new contact gets
+    // emails by default. Someone who said no and is not in Loops stays out.
+    const contact = await findLoopsContactByEmail(email);
+    if (!contact) return;
+  }
+
+  const choice: MarketingConsentChoice = optIn ? 'granted' : 'declined';
+  const body: Record<string, unknown> = {
+    email,
+    marketingConsent: choice,
+    // When the choice was made: the record we keep as proof of consent
+    marketingConsentAt: new Date().toISOString(),
+    mailingLists: { [listId]: optIn },
+  };
+  // Opting in is an explicit request for email, so it also lifts an earlier
+  // unsubscribe. Opting out leaves `subscribed` alone so onboarding emails
+  // keep coming; the user can stop those with the link in any email.
+  if (optIn) body.subscribed = true;
+
+  const response = await fetch(`${LOOPS_API}/contacts/update`, {
+    method: 'PUT',
+    headers: loopsHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(`Loops consent update failed: ${await response.text()}`);
+  }
+}
