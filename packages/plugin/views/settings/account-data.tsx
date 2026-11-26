@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { TopUpCredits } from "./top-up-credits";
 import { TopUpMinutes } from "./top-up-minutes";
+import { MarketingConsentToggle } from "../../components/marketing-consent-toggle";
 import { logger } from "../../services/logger";
 import FileOrganizer from "../../index";
 import { Notice } from "obsidian";
@@ -421,6 +422,7 @@ export const AccountData: React.FC<AccountDataProps> = ({
 
   return (
     <div className="space-y-6">
+      <MarketingConsentToggle plugin={plugin} />
       <div className="pt-6">
         <h3 className="text-lg font-medium mb-4 mt-0">Need more credits?</h3>
         <div className="space-y-3">

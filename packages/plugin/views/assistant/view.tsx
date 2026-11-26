@@ -13,6 +13,7 @@ import { StyledContainer } from "../../components/ui/utils";
 import { tw } from "../../lib/utils";
 import { Sparkles, Inbox, MessageSquare, Cloud, Mic } from "lucide-react";
 import { UpgradeButton } from "../../components/upgrade-button";
+import { MarketingConsentPrompt } from "../../components/marketing-consent-prompt";
 import { UsageData } from "../..";
 import { Inbox as InboxService } from "../../inbox";
 import { FREE_TIER_TOKEN_LIMIT } from "../../constants";
@@ -308,6 +309,8 @@ function AssistantContent({
           </div>
         )}
       </div>
+
+      <MarketingConsentPrompt plugin={plugin} />
 
       {/* Content area - no padding */}
       <div className={tw("flex-1 min-h-0 w-full overflow-hidden")}>

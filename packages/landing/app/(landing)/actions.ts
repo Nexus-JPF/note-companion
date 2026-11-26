@@ -1,5 +1,19 @@
 'use server';
 
+// "Product updates" list: the only list marketing campaigns go to. Only people
+// who ticked the opt-in box (here, in the web dashboard or in the plugin) join it.
+const PRODUCT_UPDATES_LIST_ID = 'cm2a922wi00t20lk17m35026r';
+
+// Contact fields that record an explicit opt-in, as the web app writes them
+function productUpdatesConsent(optIn: boolean) {
+  return optIn
+    ? {
+        marketingConsent: 'granted',
+        marketingConsentAt: new Date().toISOString(),
+      }
+    : {};
+}
+
 interface SubmitBetaRequestResult {
   success: boolean;
   message?: string;
@@ -7,7 +21,9 @@ interface SubmitBetaRequestResult {
 
 export async function submitBetaRequest(
   email: string,
-  source: string = 'mobile_beta_signup'
+  source: string = 'mobile_beta_signup',
+  // Unticked by default; true only when the visitor ticked the box
+  productUpdates: boolean = false
 ): Promise<SubmitBetaRequestResult> {
   if (!email || !email.includes('@')) {
     return {
@@ -40,7 +56,11 @@ export async function submitBetaRequest(
         // Android signups stay off the Mobile App list so they do not get iPhone emails
         userGroup: isAndroid ? 'AndroidWaitlist' : 'MobileUsers',
         source,
-        ...(isAndroid ? {} : { mailingLists: { "cm8qkg9g9015e0it80bmo4baz": true } }),
+        ...productUpdatesConsent(productUpdates === true),
+        mailingLists: {
+          ...(isAndroid ? {} : { "cm8qkg9g9015e0it80bmo4baz": true }),
+          ...(productUpdates === true ? { [PRODUCT_UPDATES_LIST_ID]: true } : {}),
+        },
       }),
     });
     
@@ -71,7 +91,9 @@ export async function submitProWaitlist(
   billing: 'monthly' | 'yearly',
   featureRequest?: string,
   // The visitor's PostHog id (not an account id): lets Loops link the signup to analytics
-  analyticsId?: string
+  analyticsId?: string,
+  // Unticked by default; true only when the visitor ticked the box
+  productUpdates: boolean = false
 ): Promise<SubmitBetaRequestResult> {
   if (!email || !email.includes('@')) {
     return {
@@ -104,8 +126,10 @@ export async function submitProWaitlist(
         proWaitlistBilling: billing,
         ...(featureRequest ? { proWaitlistFeatureRequest: featureRequest } : {}),
         ...(analyticsId ? { proWaitlistUserId: analyticsId } : {}),
+        ...productUpdatesConsent(productUpdates === true),
         mailingLists: {
-          "cmuddxgi61q9l0j0wdf7d65mn": true
+          "cmuddxgi61q9l0j0wdf7d65mn": true,
+          ...(productUpdates === true ? { [PRODUCT_UPDATES_LIST_ID]: true } : {}),
         }
       }),
     });
