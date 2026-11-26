@@ -45,5 +45,8 @@ describe("bundled quiz template", () => {
     expect(template).toContain("<summary>Show answer</summary>");
     expect(template).toContain("- A. ");
     expect(template).toContain("- D. ");
+    expect(template).toContain("Never refer to another option by its letter");
+    // The label follows the content's language; the example output keeps English.
+    expect(template).toContain('in the language of the content}}</summary>');
   });
 });

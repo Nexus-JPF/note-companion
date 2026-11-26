@@ -106,6 +106,78 @@ export function withStudyLimits(instructions: string, template: string, source: 
   return instructions;
 }
 
+const LETTERS = ["A", "B", "C", "D"] as const;
+
+/**
+ * One quiz question as the quiz template writes it: heading, four options
+ * A to D, then the answer block whose first line starts with the correct
+ * letter. Anything that does not match this shape exactly is left alone.
+ */
+const QUIZ_QUESTION =
+  /(^\*\*\d+\.[^\n]*\*\*\n\n)((?:- [A-D]\. [^\n]*\n){3}- [A-D]\. [^\n]*)(\n\n<details[^\n]*>\n<summary>[^\n]*<\/summary>\n\n)\*\*([A-D])\./gm;
+
+const shuffled = <T>(items: T[], random: () => number): T[] => {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+
+/**
+ * Reorders the options of every quiz question so the correct answer is spread
+ * evenly over A to D. The model puts the right answer on B or C almost every
+ * time and ignores being told not to, so the plugin does it: it relabels the
+ * options and the letter that opens the explanation. Questions that do not
+ * match the template's shape are untouched, so the worst case is the model's
+ * own order.
+ */
+export function shuffleQuizOptions(content: string, random: () => number = Math.random): string {
+  const count = [...content.matchAll(QUIZ_QUESTION)].length;
+  if (count === 0) return content;
+
+  // One target slot per question: whole rounds of A-D in a random order each, so the
+  // spread is even and no letter is favoured when the count is not a multiple of four.
+  const targets: number[] = [];
+  while (targets.length < count) targets.push(...shuffled([0, 1, 2, 3], random));
+  targets.length = count;
+  let question = 0;
+
+  return content.replace(QUIZ_QUESTION, (_whole, heading: string, options: string, details: string, correct: string) => {
+    const texts = options.split("\n").map(line => line.replace(/^- [A-D]\. /, ""));
+    const letters = options.split("\n").map(line => line[2]);
+    if (letters.join("") !== "ABCD") return _whole;
+
+    const correctText = texts[LETTERS.indexOf(correct as (typeof LETTERS)[number])];
+    const wrong = shuffled(texts.filter((_, i) => LETTERS[i] !== correct), random);
+    const slot = targets[question++];
+    const reordered = [...wrong.slice(0, slot), correctText, ...wrong.slice(slot)];
+
+    const rebuilt = reordered.map((text, i) => `- ${LETTERS[i]}. ${text}`).join("\n");
+    return `${heading}${rebuilt}${details}**${LETTERS[slot]}.`;
+  });
+}
+
+/**
+ * Quiz questions the shuffle could not read (their shape differs from the
+ * template's), which therefore keep the model's own option order. Zero for
+ * content that is not a quiz. Logged so a change in the model's output shows up.
+ */
+export function countSkippedQuizQuestions(content: string): number {
+  const blocks = (content.match(/<details class="quiz-answer"/g) ?? []).length;
+  return Math.max(0, blocks - [...content.matchAll(QUIZ_QUESTION)].length);
+}
+
+/** Template-specific tidy-up of generated study content. Only the quiz needs one today. */
+export function finishStudyContent(
+  content: string,
+  template: string,
+  random: () => number = Math.random
+): string {
+  return templateKey(template) === "quiz" ? shuffleQuizOptions(content, random) : content;
+}
+
 const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---(\n|$)/;
 
 /** Adds `source: "[[lecture]]"` to the frontmatter (creating it if needed); keeps an existing `source`. */

@@ -144,6 +144,45 @@ describe("createStudyNote link line", () => {
   });
 });
 
+describe("createStudyNote quiz", () => {
+  const QUIZ = `---
+total: 1
+---
+
+**1. Quelle branche les vaccins entraînent-ils ?**
+
+- A. L’immunité innée
+- B. L’immunité adaptative
+- C. L’immunité générale
+- D. L’immunité sans mémoire
+
+<details class="quiz-answer">
+<summary>Show answer</summary>
+
+**B.** L’immunité adaptative.
+
+</details>
+`;
+
+  it("reorders the options but keeps the right answer, and links it as a quiz", async () => {
+    const { plugin, source, files } = setup({ generated: QUIZ });
+    const created = await createStudyNote(plugin, source, "quiz");
+
+    expect(created?.path).toBe("Lectures/Immunity - Quiz.md");
+    const note = files.get(created!.path)!;
+    const letter = note.match(/\*\*([A-D])\.\*\* L’immunité adaptative\./)![1];
+    expect(note).toContain(`- ${letter}. L’immunité adaptative\n`);
+    expect(note.match(/^- [A-D]\. /gm)).toHaveLength(4);
+    expect(files.get("Lectures/Immunity.md")).toContain("**Quiz:** [[Immunity - Quiz]]");
+  });
+
+  it("leaves flashcards output exactly as generated", async () => {
+    const { plugin, source, files } = setup();
+    const created = await createStudyNote(plugin, source, "flash_cards");
+    expect(files.get(created!.path)).toContain('<details class="flashcard"><summary>Q</summary>A</details>');
+  });
+});
+
 describe("createStudyNote failures leave notes untouched", () => {
   it("creates no file when generation rejects", async () => {
     const { plugin, source, files, formatStream } = setup();
