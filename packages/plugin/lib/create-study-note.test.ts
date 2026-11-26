@@ -57,6 +57,8 @@ describe("createStudyNote", () => {
     const sentInstructions = (flash.formatStream.mock.calls[0] as unknown[])[1] as string;
     expect(sentInstructions).toMatch(/^make cards/);
     expect(sentInstructions).toMatch(/at most \d+ cards/);
+    // Study notes ask the server for the reasoning model.
+    expect((flash.formatStream.mock.calls[0] as unknown[])[5]).toEqual({ purpose: "study-note" });
 
     const quiz = setup();
     await createStudyNote(quiz.plugin, quiz.source, "practice_quiz");

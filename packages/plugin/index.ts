@@ -848,11 +848,14 @@ export default class FileOrganizer extends Plugin {
     formattingInstruction: string,
     serverUrl: string,
     apiKey: string,
-    updateCallback: (partialContent: string) => void
+    updateCallback: (partialContent: string) => void,
+    options: { purpose?: "study-note" } = {}
   ): Promise<string> {
+    // `purpose` is optional on the server: an older server ignores it.
     const requestBody: unknown = {
       content,
       formattingInstruction,
+      ...(options.purpose ? { purpose: options.purpose } : {}),
     };
 
     const response = await obsidianFetch(`${serverUrl}/api/format-stream`, {
