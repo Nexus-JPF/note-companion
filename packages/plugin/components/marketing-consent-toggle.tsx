@@ -58,8 +58,15 @@ export function MarketingConsentToggle({ plugin }: { plugin: FileOrganizer }) {
         aria-checked={optedIn}
         aria-label="Product update emails"
         aria-disabled={saving}
+        tabIndex={0}
         onClick={() => {
           if (!saving) void toggle();
+        }}
+        onKeyDown={e => {
+          if ((e.key === " " || e.key === "Enter") && !saving) {
+            e.preventDefault();
+            void toggle();
+          }
         }}
       />
     </div>

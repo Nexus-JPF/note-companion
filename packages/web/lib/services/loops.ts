@@ -203,19 +203,44 @@ export async function setLoopsMarketingConsent(
     !optIn && !(await findLoopsContactByEmail(email));
 
   const choice: MarketingConsentChoice = optIn ? 'granted' : 'declined';
-  const body: Record<string, unknown> = {
-    email,
+  const consent = {
     marketingConsent: choice,
-    // When the choice was made: the record we keep as proof of consent
+    // When the current choice was made: while opted in, the proof of consent
     marketingConsentAt: new Date().toISOString(),
-    mailingLists: { [listId]: optIn },
   };
-  // Opting in is an explicit request for email, so it also lifts an earlier
-  // unsubscribe. Opting out leaves `subscribed` alone so onboarding emails
-  // keep coming; the user can stop those with the link in any email.
-  if (optIn) body.subscribed = true;
-  if (createUnsubscribed) body.subscribed = false;
 
+  if (!optIn) {
+    // Opting out leaves `subscribed` alone so onboarding emails keep coming;
+    // the user can stop those with the link in any email.
+    await updateLoopsContact({
+      email,
+      ...consent,
+      mailingLists: { [listId]: false },
+      ...(createUnsubscribed ? { subscribed: false } : {}),
+    });
+    return;
+  }
+
+  // Opting in is an explicit request for email, so it also lifts an earlier
+  // unsubscribe.
+  await updateLoopsContact({
+    email,
+    subscribed: true,
+    mailingLists: { [listId]: true },
+  });
+
+  // Loops ignores a list add for someone who left that list from its
+  // preference page. Report that as a failure, and only record "granted" once
+  // the contact is really on the list, so a failed yes is asked again.
+  const contact = await findLoopsContactByEmail(email);
+  const lists = (contact?.mailingLists ?? {}) as Record<string, boolean>;
+  if (lists[listId] !== true || contact?.subscribed === false) {
+    throw new Error('Loops did not add the contact to the marketing list');
+  }
+  await updateLoopsContact({ email, ...consent });
+}
+
+async function updateLoopsContact(body: Record<string, unknown>): Promise<void> {
   const response = await fetch(`${LOOPS_API}/contacts/update`, {
     method: 'PUT',
     headers: loopsHeaders(),
@@ -223,15 +248,5 @@ export async function setLoopsMarketingConsent(
   });
   if (!response.ok) {
     throw new Error(`Loops consent update failed: ${await response.text()}`);
-  }
-
-  if (optIn) {
-    // Loops ignores a list add for someone who left that list from its
-    // preference page. Report that as a failure rather than a false "saved".
-    const contact = await findLoopsContactByEmail(email);
-    const lists = (contact?.mailingLists ?? {}) as Record<string, boolean>;
-    if (lists[listId] !== true || contact?.subscribed === false) {
-      throw new Error('Loops did not add the contact to the marketing list');
-    }
   }
 }

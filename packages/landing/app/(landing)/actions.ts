@@ -4,14 +4,35 @@
 // who ticked the opt-in box (here, in the web dashboard or in the plugin) join it.
 const PRODUCT_UPDATES_LIST_ID = 'cm2a922wi00t20lk17m35026r';
 
-// Contact fields that record an explicit opt-in, as the web app writes them
-function productUpdatesConsent(optIn: boolean) {
-  return optIn
-    ? {
-        marketingConsent: 'granted',
-        marketingConsentAt: new Date().toISOString(),
-      }
-    : {};
+// Fields that add a ticked box to the product updates list, as the web app
+// writes them. These forms need no sign-in, so anyone can type any email: a
+// "declined" saved by its owner is never overwritten from here, and the box
+// is ignored when we cannot check (that person can opt in from the app).
+async function productUpdatesFields(
+  email: string,
+  apiKey: string,
+  optIn: boolean
+): Promise<{ consent: Record<string, string>; lists: Record<string, true> }> {
+  const none = { consent: {}, lists: {} };
+  if (!optIn) return none;
+  try {
+    const response = await fetch(
+      `https://app.loops.so/api/v1/contacts/find?email=${encodeURIComponent(email)}`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
+    );
+    if (!response.ok) return none;
+    const contacts = (await response.json()) as { marketingConsent?: unknown }[];
+    if (contacts[0]?.marketingConsent === 'declined') return none;
+  } catch {
+    return none;
+  }
+  return {
+    consent: {
+      marketingConsent: 'granted',
+      marketingConsentAt: new Date().toISOString(),
+    },
+    lists: { [PRODUCT_UPDATES_LIST_ID]: true },
+  };
 }
 
 interface SubmitBetaRequestResult {
@@ -44,6 +65,14 @@ export async function submitBetaRequest(
       };
     }
 
+    const productUpdatesOptIn = await productUpdatesFields(
+      email,
+      apiKey,
+      productUpdates === true
+    );
+
+    // No `subscribed` here: new contacts are subscribed by default, and a
+    // form anyone can fill in must not undo someone's unsubscribe.
     const response = await fetch('https://app.loops.so/api/v1/contacts/update', {
       method: 'PUT',
       headers: {
@@ -52,14 +81,13 @@ export async function submitBetaRequest(
       },
       body: JSON.stringify({
         email,
-        subscribed: true,
         // Android signups stay off the Mobile App list so they do not get iPhone emails
         userGroup: isAndroid ? 'AndroidWaitlist' : 'MobileUsers',
         source,
-        ...productUpdatesConsent(productUpdates === true),
+        ...productUpdatesOptIn.consent,
         mailingLists: {
           ...(isAndroid ? {} : { "cm8qkg9g9015e0it80bmo4baz": true }),
-          ...(productUpdates === true ? { [PRODUCT_UPDATES_LIST_ID]: true } : {}),
+          ...productUpdatesOptIn.lists,
         },
       }),
     });
@@ -112,6 +140,13 @@ export async function submitProWaitlist(
       };
     }
 
+    const productUpdatesOptIn = await productUpdatesFields(
+      email,
+      apiKey,
+      productUpdates === true
+    );
+
+    // No `subscribed` here: see submitBetaRequest
     const response = await fetch('https://app.loops.so/api/v1/contacts/update', {
       method: 'PUT',
       headers: {
@@ -120,16 +155,15 @@ export async function submitProWaitlist(
       },
       body: JSON.stringify({
         email,
-        subscribed: true,
         userGroup: 'ProWaitlist',
         source: 'pro_waitlist_pricing',
         proWaitlistBilling: billing,
         ...(featureRequest ? { proWaitlistFeatureRequest: featureRequest } : {}),
         ...(analyticsId ? { proWaitlistUserId: analyticsId } : {}),
-        ...productUpdatesConsent(productUpdates === true),
+        ...productUpdatesOptIn.consent,
         mailingLists: {
           "cmuddxgi61q9l0j0wdf7d65mn": true,
-          ...(productUpdates === true ? { [PRODUCT_UPDATES_LIST_ID]: true } : {}),
+          ...productUpdatesOptIn.lists,
         }
       }),
     });

@@ -27,7 +27,6 @@ export function MarketingConsentPrompt({ plugin }: { plugin: FileOrganizer }) {
   useEffect(() => {
     if (
       plugin.settings.marketingConsentAsked ||
-      !plugin.settings.hasRunOnboarding ||
       !canAskMarketingConsent(plugin)
     ) {
       return;

@@ -23,6 +23,9 @@ function useMarketingConsent() {
       .then((s) => {
         if (!cancelled) setState(s);
       })
+      .catch(() => {
+        // Leave state null: the prompt hides and Settings says unavailable
+      })
       .finally(() => {
         if (!cancelled) setLoaded(true);
       });
@@ -34,10 +37,15 @@ function useMarketingConsent() {
   const save = async (optIn: boolean) => {
     setSaving(true);
     setError(false);
-    const { success } = await setMarketingConsent(optIn);
-    setSaving(false);
-    if (success) setState({ decided: true, optedIn: optIn });
-    else setError(true);
+    try {
+      const { success } = await setMarketingConsent(optIn);
+      if (success) setState({ decided: true, optedIn: optIn });
+      else setError(true);
+    } catch {
+      setError(true);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return { state, loaded, saving, error, save };

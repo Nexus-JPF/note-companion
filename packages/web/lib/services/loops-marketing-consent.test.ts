@@ -106,23 +106,28 @@ describe('marketing consent', () => {
       { subscribed: true, mailingLists: { [LIST]: true } },
     ]);
 
-    it('opting in adds the list, records the choice and resubscribes', async () => {
+    it('opting in adds the list and resubscribes, then records the choice', async () => {
       mockFetch
         .mockResolvedValueOnce(jsonResponse({ success: true }))
-        .mockResolvedValueOnce(onList);
+        .mockResolvedValueOnce(onList)
+        .mockResolvedValueOnce(jsonResponse({ success: true }));
       await setLoopsMarketingConsent('a@b.co', true);
 
       const [url, init] = mockFetch.mock.calls[0];
       expect(url).toBe('https://app.loops.so/api/v1/contacts/update');
       expect(init.method).toBe('PUT');
-      const body = JSON.parse(init.body);
-      expect(body).toMatchObject({
+      expect(JSON.parse(init.body)).toEqual({
+        email: 'a@b.co',
+        subscribed: true,
+        mailingLists: { [LIST]: true },
+      });
+
+      const consent = JSON.parse(mockFetch.mock.calls[2][1].body);
+      expect(consent).toMatchObject({
         email: 'a@b.co',
         marketingConsent: 'granted',
-        mailingLists: { [LIST]: true },
-        subscribed: true,
       });
-      expect(Number.isNaN(Date.parse(body.marketingConsentAt))).toBe(false);
+      expect(Number.isNaN(Date.parse(consent.marketingConsentAt))).toBe(false);
     });
 
     it('opting out removes the list but keeps onboarding emails', async () => {
@@ -163,6 +168,8 @@ describe('marketing consent', () => {
       await expect(setLoopsMarketingConsent('a@b.co', true)).rejects.toThrow(
         'did not add'
       );
+      // "granted" is not recorded, so the user is asked again
+      expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it('throws when Loops rejects the update', async () => {
