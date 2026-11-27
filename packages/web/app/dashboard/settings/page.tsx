@@ -19,6 +19,7 @@ import {
   Key,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MarketingConsentToggle } from "@/components/marketing-consent";
 
 export default function SettingsPage() {
   return (
@@ -106,24 +107,16 @@ export default function SettingsPage() {
                   <Bell className={tw("h-5 w-5 text-violet-600")} />
                 </div>
                 <CardTitle className={tw("text-xl font-semibold")}>
-                  Notifications
+                  Email preferences
                 </CardTitle>
               </div>
               <CardDescription className={tw("pt-1")}>
-                Configure your notification preferences
+                Choose which emails you get from us
               </CardDescription>
             </CardHeader>
 
             <CardContent className={tw("pt-4")}>
-              <Button
-                className={tw(
-                  "bg-violet-50 text-violet-700 hover:bg-violet-100 border-none"
-                )}
-                variant="outline"
-                disabled
-              >
-                Coming Soon
-              </Button>
+              <MarketingConsentToggle />
             </CardContent>
           </Card>
 

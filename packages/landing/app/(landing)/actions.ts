@@ -1,5 +1,47 @@
 'use server';
 
+// "Product updates" list: the only list marketing campaigns go to. Only people
+// who ticked the opt-in box (here, in the web dashboard or in the plugin) join it.
+const PRODUCT_UPDATES_LIST_ID = 'cm2a922wi00t20lk17m35026r';
+
+// Fields that add a ticked box to the product updates list, as the web app
+// writes them. These forms need no sign-in, so anyone can type any email: a
+// "declined" saved by its owner is never overwritten from here, and the box
+// is ignored when we cannot check. It is also ignored for an unsubscribed
+// contact: Loops may skip the list add, and this form must not resubscribe
+// anyone. Those people can opt in from the app, which checks the result.
+async function productUpdatesFields(
+  email: string,
+  apiKey: string,
+  optIn: boolean
+): Promise<{ consent: Record<string, string>; lists: Record<string, true> }> {
+  const none = { consent: {}, lists: {} };
+  if (!optIn) return none;
+  try {
+    const response = await fetch(
+      `https://app.loops.so/api/v1/contacts/find?email=${encodeURIComponent(email)}`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
+    );
+    if (!response.ok) return none;
+    const contacts = (await response.json()) as {
+      marketingConsent?: unknown;
+      subscribed?: unknown;
+    }[];
+    const contact = contacts[0];
+    if (contact?.marketingConsent === 'declined') return none;
+    if (contact?.subscribed === false) return none;
+  } catch {
+    return none;
+  }
+  return {
+    consent: {
+      marketingConsent: 'granted',
+      marketingConsentAt: new Date().toISOString(),
+    },
+    lists: { [PRODUCT_UPDATES_LIST_ID]: true },
+  };
+}
+
 interface SubmitBetaRequestResult {
   success: boolean;
   message?: string;
@@ -7,7 +49,9 @@ interface SubmitBetaRequestResult {
 
 export async function submitBetaRequest(
   email: string,
-  source: string = 'mobile_beta_signup'
+  source: string = 'mobile_beta_signup',
+  // Unticked by default; true only when the visitor ticked the box
+  productUpdates: boolean = false
 ): Promise<SubmitBetaRequestResult> {
   if (!email || !email.includes('@')) {
     return {
@@ -28,6 +72,14 @@ export async function submitBetaRequest(
       };
     }
 
+    const productUpdatesOptIn = await productUpdatesFields(
+      email,
+      apiKey,
+      productUpdates === true
+    );
+
+    // No `subscribed` here: new contacts are subscribed by default, and a
+    // form anyone can fill in must not undo someone's unsubscribe.
     const response = await fetch('https://app.loops.so/api/v1/contacts/update', {
       method: 'PUT',
       headers: {
@@ -36,11 +88,14 @@ export async function submitBetaRequest(
       },
       body: JSON.stringify({
         email,
-        subscribed: true,
         // Android signups stay off the Mobile App list so they do not get iPhone emails
         userGroup: isAndroid ? 'AndroidWaitlist' : 'MobileUsers',
         source,
-        ...(isAndroid ? {} : { mailingLists: { "cm8qkg9g9015e0it80bmo4baz": true } }),
+        ...productUpdatesOptIn.consent,
+        mailingLists: {
+          ...(isAndroid ? {} : { "cm8qkg9g9015e0it80bmo4baz": true }),
+          ...productUpdatesOptIn.lists,
+        },
       }),
     });
     
@@ -71,7 +126,9 @@ export async function submitProWaitlist(
   billing: 'monthly' | 'yearly',
   featureRequest?: string,
   // The visitor's PostHog id (not an account id): lets Loops link the signup to analytics
-  analyticsId?: string
+  analyticsId?: string,
+  // Unticked by default; true only when the visitor ticked the box
+  productUpdates: boolean = false
 ): Promise<SubmitBetaRequestResult> {
   if (!email || !email.includes('@')) {
     return {
@@ -90,6 +147,13 @@ export async function submitProWaitlist(
       };
     }
 
+    const productUpdatesOptIn = await productUpdatesFields(
+      email,
+      apiKey,
+      productUpdates === true
+    );
+
+    // No `subscribed` here: see submitBetaRequest
     const response = await fetch('https://app.loops.so/api/v1/contacts/update', {
       method: 'PUT',
       headers: {
@@ -98,14 +162,15 @@ export async function submitProWaitlist(
       },
       body: JSON.stringify({
         email,
-        subscribed: true,
         userGroup: 'ProWaitlist',
         source: 'pro_waitlist_pricing',
         proWaitlistBilling: billing,
         ...(featureRequest ? { proWaitlistFeatureRequest: featureRequest } : {}),
         ...(analyticsId ? { proWaitlistUserId: analyticsId } : {}),
+        ...productUpdatesOptIn.consent,
         mailingLists: {
-          "cmuddxgi61q9l0j0wdf7d65mn": true
+          "cmuddxgi61q9l0j0wdf7d65mn": true,
+          ...productUpdatesOptIn.lists,
         }
       }),
     });

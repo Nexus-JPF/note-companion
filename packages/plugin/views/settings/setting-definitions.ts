@@ -2,6 +2,7 @@ import type { Setting } from 'obsidian';
 import type FileOrganizer from '../../index';
 import { renderChatStepsRow } from './chat-steps-row';
 import { renderTopUpRow, renderUsageRow } from './usage-row';
+import { renderMarketingConsentRow } from './marketing-consent-row';
 import { AUDIO_TEMPLATE_OFF, listAudioTemplateNames } from '../../inbox/audio-template';
 import { STUDY_NOTE_OFF } from '../../inbox/study-note';
 
@@ -84,6 +85,12 @@ export function getNoteCompanionSettingDefinitions(
               render: setting => renderTopUpRow(plugin, setting),
             },
           ],
+        },
+        {
+          name: 'Product update emails',
+          aliases: ['newsletter', 'marketing emails', 'email preferences'],
+          render: setting => renderMarketingConsentRow(plugin, setting),
+          covers: ['marketingConsentAsked'],
         },
       ],
     },

@@ -27,6 +27,7 @@ export function PricingCards() {
   >('idle');
   const [proMessage, setProMessage] = useState('');
   const [proFeatureRequest, setProFeatureRequest] = useState('');
+  const [proProductUpdates, setProProductUpdates] = useState(false);
   const billing = isYearly ? 'yearly' : 'monthly';
   // Locked in when the waitlist form opens so a mid-form toggle can't make
   // the click and join events (or the stored billing) disagree.
@@ -64,7 +65,8 @@ export function PricingCards() {
       proEmail,
       proBilling,
       proFeatureRequest.trim() || undefined,
-      proUserId ?? undefined
+      proUserId ?? undefined,
+      proProductUpdates
     );
     setProStatus(result.success ? 'success' : 'error');
     setProMessage(result.message ?? '');
@@ -72,6 +74,7 @@ export function PricingCards() {
       capture('pro_waitlist_joined', { billing: proBilling });
       setProEmail('');
       setProFeatureRequest('');
+      setProProductUpdates(false);
     }
   };
 
@@ -283,6 +286,14 @@ export function PricingCards() {
                   rows={2}
                   className="resize-none text-sm"
                 />
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={proProductUpdates}
+                    onChange={(e) => setProProductUpdates(e.target.checked)}
+                  />
+                  Also send me Note Companion product updates (unsubscribe anytime)
+                </label>
                 {proStatus === 'error' && (
                   <p className="text-sm text-destructive">{proMessage}</p>
                 )}

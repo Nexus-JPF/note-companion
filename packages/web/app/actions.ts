@@ -8,6 +8,11 @@ import {
   type CreateLicenseKeyResponse,
   type GetLicenseKeyResponse,
 } from '@/lib/account-server';
+import {
+  getMarketingConsentForUser,
+  setMarketingConsentForUser,
+} from '@/lib/marketing-consent-server';
+import type { MarketingConsentState } from '@/lib/services/loops';
 
 // Server Actions: every export here is callable from the browser, so each one
 // acts only for the signed-in Clerk user and never takes a user id argument.
@@ -43,4 +48,20 @@ export async function getLicenseKey(): Promise<GetLicenseKeyResponse> {
 export async function getUserBillingCycle() {
   const { userId } = await auth();
   return getUserBillingCycleForUser(userId ?? '');
+}
+
+// null when it cannot be read: the UI then shows nothing rather than a
+// prompt it cannot save.
+export async function getMarketingConsent(): Promise<MarketingConsentState | null> {
+  const { userId } = await auth();
+  if (!userId) return null;
+  return getMarketingConsentForUser(userId);
+}
+
+export async function setMarketingConsent(
+  optIn: boolean
+): Promise<{ success: boolean }> {
+  const { userId } = await auth();
+  if (!userId || typeof optIn !== 'boolean') return { success: false };
+  return { success: await setMarketingConsentForUser(userId, optIn) };
 }

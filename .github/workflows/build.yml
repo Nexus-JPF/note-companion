@@ -60,6 +60,18 @@ jobs:
         working-directory: packages/web
         run: pnpm exec jest app/api/webhook app/api/check-premium
 
+      - name: Test marketing email consent (web)
+        working-directory: packages/web
+        run: pnpm exec jest lib/services/loops app/api/marketing-consent
+
+      - name: Test marketing email consent (plugin)
+        working-directory: packages/plugin
+        run: pnpm exec jest views/settings/marketing-consent-row
+
+      - name: Test marketing email consent (landing)
+        working-directory: packages/landing
+        run: pnpm exec jest "app/\\(landing\\)/actions"
+
       - name: Build landing
         working-directory: packages/landing
         env:

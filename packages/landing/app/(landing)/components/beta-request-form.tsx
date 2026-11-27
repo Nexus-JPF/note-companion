@@ -28,6 +28,7 @@ export function BetaRequestForm({
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [productUpdates, setProductUpdates] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -41,7 +42,7 @@ export function BetaRequestForm({
     
     startTransition(async () => {
       try {
-        const result = await submitBetaRequest(email, source);
+        const result = await submitBetaRequest(email, source, productUpdates);
         
         if (result.success) {
           setIsSuccess(true);
@@ -91,6 +92,15 @@ export function BetaRequestForm({
           <p className="text-xs text-muted-foreground mt-2 text-center">
             {helperText}
           </p>
+          <label className="flex items-center justify-center gap-2 text-xs text-muted-foreground mt-2">
+            <input
+              type="checkbox"
+              checked={productUpdates}
+              onChange={(e) => setProductUpdates(e.target.checked)}
+              disabled={isPending}
+            />
+            Also send me Note Companion product updates (unsubscribe anytime)
+          </label>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-4">

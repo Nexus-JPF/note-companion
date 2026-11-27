@@ -79,6 +79,8 @@ export class FileOrganizerSettings {
   hasRunOnboarding = false;
   /** Set once the onboarding wizard has been auto-opened, so it is never forced on the user twice. */
   hasShownOnboarding = false;
+  /** Set once the user has answered the product-updates email prompt (the answer itself lives on the server). */
+  marketingConsentAsked = false;
   pdfPageLimit = 10; // default to 10 pages
   /** @deprecated Use inboxNotificationLevel. Kept for settings migration only. */
   enableProcessingNotifications = true;
