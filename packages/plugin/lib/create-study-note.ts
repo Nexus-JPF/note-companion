@@ -52,7 +52,8 @@ export async function createStudyNote(
     withStudyLimits(instructions, template, source),
     plugin.getServerUrl(),
     settings.API_KEY,
-    () => {}
+    () => {},
+    { purpose: "study-note" }
   );
   const cleaned = plugin.cleanupTagsInContent(generated).trim();
   const skipped = countSkippedQuizQuestions(cleaned);

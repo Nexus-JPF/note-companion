@@ -3,15 +3,16 @@ import { openai } from '@ai-sdk/openai';
 import { NextResponse, NextRequest } from 'next/server';
 import { incrementAndLogTokenUsage } from '@/lib/incrementAndLogTokenUsage';
 import { handleAuthorizationV2 } from '@/lib/handleAuthorization';
-import { getModel } from '@/lib/models';
+import { getModel, getStudyModel } from '@/lib/models';
 
 export const maxDuration = 800;
 
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await handleAuthorizationV2(request);
-    const { content, formattingInstruction } = await request.json();
-    const model = getModel();
+    const { content, formattingInstruction, purpose } = await request.json();
+    // `purpose` is optional: plugins that do not send it get the default model.
+    const model = purpose === 'study-note' ? getStudyModel() : getModel();
 
     // Check if content contains YouTube transcript
     const hasYouTubeTranscript =

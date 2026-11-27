@@ -45,3 +45,29 @@ export function getOpenAiOrganizerChatSettings(
     structuredOutputs: false,
   };
 }
+
+/**
+ * Effort for study notes (flashcards, quizzes): they must count, dedupe and plan
+ * answers, which the organizer default of 'none' does not do. These calls use
+ * streamText with no tools, so the tools-with-reasoning limit behind 'none'
+ * does not apply. STUDY_REASONING_EFFORT overrides; the default is 'medium'.
+ */
+export function getStudyReasoningEffort(): OpenAiOrganizerReasoningEffort {
+  const raw = process.env.STUDY_REASONING_EFFORT?.toLowerCase();
+  if (raw === 'none' || raw === 'low' || raw === 'medium' || raw === 'high') {
+    return raw;
+  }
+  return 'medium';
+}
+
+export function getOpenAiStudyChatSettings(
+  modelId: string
+): OpenAiOrganizerChatSettings | undefined {
+  if (!isOpenAiReasoningModel(modelId)) {
+    return undefined;
+  }
+  return {
+    reasoningEffort: getStudyReasoningEffort(),
+    structuredOutputs: false,
+  };
+}

@@ -5,7 +5,10 @@ import { groq } from '@ai-sdk/groq';
 import { mistral } from '@ai-sdk/mistral';
 import { deepseek } from '@ai-sdk/deepseek';
 import { LanguageModel } from 'ai';
-import { getOpenAiOrganizerChatSettings } from './openai-reasoning';
+import {
+  getOpenAiOrganizerChatSettings,
+  getOpenAiStudyChatSettings,
+} from './openai-reasoning';
 
 type OpenAIChatSettings = Parameters<typeof openai>[1];
 
@@ -20,7 +23,11 @@ const RESPONSES_MODEL_NAME = process.env.RESPONSES_MODEL_NAME || MODEL_NAME;
 /**
  * Get the model instance based on environment configuration
  */
-function createModel(provider: string, modelName: string): LanguageModel {
+function createModel(
+  provider: string,
+  modelName: string,
+  openAiSettingsFor: typeof getOpenAiOrganizerChatSettings = getOpenAiOrganizerChatSettings
+): LanguageModel {
   switch (provider) {
     case 'google':
       return google(modelName);
@@ -41,7 +48,7 @@ function createModel(provider: string, modelName: string): LanguageModel {
     default: {
       // The SDK's v1 chat settings type omits reasoningEffort 'none', but 1.3.x
       // forwards the value to OpenAI unchanged, so cast to the SDK type.
-      const openAiSettings = getOpenAiOrganizerChatSettings(modelName) as
+      const openAiSettings = openAiSettingsFor(modelName) as
         | OpenAIChatSettings
         | undefined;
       // Support custom baseURL for local LLMs (e.g., Ollama)
@@ -63,6 +70,8 @@ function createModel(provider: string, modelName: string): LanguageModel {
 // Create model instances based on environment variables
 const DEFAULT_MODEL = createModel(MODEL_PROVIDER, MODEL_NAME);
 const DEFAULT_VISION_MODEL = createModel(MODEL_PROVIDER, VISION_MODEL_NAME);
+// Same model, but with reasoning for study notes (other providers are unchanged).
+const STUDY_MODEL = createModel(MODEL_PROVIDER, MODEL_NAME, getOpenAiStudyChatSettings);
 
 // Responses API is OpenAI-specific, so only use it for OpenAI
 // For other providers, fall back to regular model
@@ -79,6 +88,11 @@ const DEFAULT_RESPONSES_MODEL =
  */
 export const getModel = (_name?: string): LanguageModel => {
   return DEFAULT_MODEL;
+};
+
+/** Model for study notes (flashcards, quizzes): the default model with reasoning enabled. */
+export const getStudyModel = (): LanguageModel => {
+  return STUDY_MODEL;
 };
 
 /** Vision / OCR model (defaults to gpt-5.6-luna; override with VISION_MODEL). */
