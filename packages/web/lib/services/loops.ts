@@ -196,12 +196,11 @@ export async function setLoopsMarketingConsent(
     throw new Error('LOOPS_API_KEY or LOOPS_MARKETING_LIST_ID is not set');
   }
 
-  if (!optIn) {
-    // contacts/update creates a missing contact, and a new contact gets
-    // emails by default. Someone who said no and is not in Loops stays out.
-    const contact = await findLoopsContactByEmail(email);
-    if (!contact) return;
-  }
+  // contacts/update creates a missing contact, and a new contact gets emails
+  // by default. A "no" from someone not yet in Loops is still recorded (so the
+  // prompt does not come back), on a contact that gets no emails at all.
+  const createUnsubscribed =
+    !optIn && !(await findLoopsContactByEmail(email));
 
   const choice: MarketingConsentChoice = optIn ? 'granted' : 'declined';
   const body: Record<string, unknown> = {
@@ -215,6 +214,7 @@ export async function setLoopsMarketingConsent(
   // unsubscribe. Opting out leaves `subscribed` alone so onboarding emails
   // keep coming; the user can stop those with the link in any email.
   if (optIn) body.subscribed = true;
+  if (createUnsubscribed) body.subscribed = false;
 
   const response = await fetch(`${LOOPS_API}/contacts/update`, {
     method: 'PUT',
@@ -223,5 +223,15 @@ export async function setLoopsMarketingConsent(
   });
   if (!response.ok) {
     throw new Error(`Loops consent update failed: ${await response.text()}`);
+  }
+
+  if (optIn) {
+    // Loops ignores a list add for someone who left that list from its
+    // preference page. Report that as a failure rather than a false "saved".
+    const contact = await findLoopsContactByEmail(email);
+    const lists = (contact?.mailingLists ?? {}) as Record<string, boolean>;
+    if (lists[listId] !== true || contact?.subscribed === false) {
+      throw new Error('Loops did not add the contact to the marketing list');
+    }
   }
 }

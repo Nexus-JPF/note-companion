@@ -78,6 +78,22 @@ describe('marketing consent', () => {
       });
     });
 
+    it('is not opted in when granted but no longer on the list', async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse([
+          {
+            subscribed: true,
+            marketingConsent: 'granted',
+            mailingLists: { [LIST]: false },
+          },
+        ])
+      );
+      await expect(getLoopsMarketingConsent('a@b.co')).resolves.toEqual({
+        decided: true,
+        optedIn: false,
+      });
+    });
+
     it('throws when the list id is not configured', async () => {
       delete process.env.LOOPS_MARKETING_LIST_ID;
       await expect(getLoopsMarketingConsent('a@b.co')).rejects.toThrow();
@@ -86,8 +102,14 @@ describe('marketing consent', () => {
   });
 
   describe('setLoopsMarketingConsent', () => {
+    const onList = jsonResponse([
+      { subscribed: true, mailingLists: { [LIST]: true } },
+    ]);
+
     it('opting in adds the list, records the choice and resubscribes', async () => {
-      mockFetch.mockResolvedValueOnce(jsonResponse({ success: true }));
+      mockFetch
+        .mockResolvedValueOnce(jsonResponse({ success: true }))
+        .mockResolvedValueOnce(onList);
       await setLoopsMarketingConsent('a@b.co', true);
 
       const [url, init] = mockFetch.mock.calls[0];
@@ -117,10 +139,30 @@ describe('marketing consent', () => {
       expect(body).not.toHaveProperty('subscribed');
     });
 
-    it('opting out does not create a contact that is not in Loops', async () => {
-      mockFetch.mockResolvedValueOnce(jsonResponse([]));
+    it('opting out records the no for someone not in Loops, with no emails', async () => {
+      mockFetch
+        .mockResolvedValueOnce(jsonResponse([]))
+        .mockResolvedValueOnce(jsonResponse({ success: true }));
       await setLoopsMarketingConsent('a@b.co', false);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      const body = JSON.parse(mockFetch.mock.calls[1][1].body);
+      expect(body).toMatchObject({
+        email: 'a@b.co',
+        marketingConsent: 'declined',
+        mailingLists: { [LIST]: false },
+        subscribed: false,
+      });
+    });
+
+    it('opting in fails when Loops did not put the contact on the list', async () => {
+      mockFetch
+        .mockResolvedValueOnce(jsonResponse({ success: true }))
+        .mockResolvedValueOnce(
+          jsonResponse([{ subscribed: true, mailingLists: {} }])
+        );
+      await expect(setLoopsMarketingConsent('a@b.co', true)).rejects.toThrow(
+        'did not add'
+      );
     });
 
     it('throws when Loops rejects the update', async () => {

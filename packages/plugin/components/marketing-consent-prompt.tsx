@@ -41,7 +41,6 @@ export function MarketingConsentPrompt({ plugin }: { plugin: FileOrganizer }) {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plugin]);
 
   if (!visible) return null;
@@ -56,7 +55,7 @@ export function MarketingConsentPrompt({ plugin }: { plugin: FileOrganizer }) {
     }
     await markAsked();
     setVisible(false);
-    if (optIn) new Notice("You'll get Note Companion product updates by email.");
+    if (optIn) new Notice("You'll get product updates by email.");
   };
 
   return (
