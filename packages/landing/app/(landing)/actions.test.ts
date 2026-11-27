@@ -73,6 +73,14 @@ describe('landing signup forms: product updates opt-in', () => {
     expect(body).not.toHaveProperty('marketingConsent');
   });
 
+  it('ignores the box for an unsubscribed contact', async () => {
+    loopsWith([{ email: 'a@b.co', subscribed: false }]);
+    await submitBetaRequest('a@b.co', 'mobile_beta_signup', true);
+    const body = sentBody();
+    expect(body.mailingLists).toEqual({ cm8qkg9g9015e0it80bmo4baz: true });
+    expect(body).not.toHaveProperty('marketingConsent');
+  });
+
   it('ignores the box when the lookup fails', async () => {
     mockFetch.mockImplementation(async (url: string) =>
       url.includes('/contacts/find')

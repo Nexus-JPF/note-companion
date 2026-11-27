@@ -7,7 +7,9 @@ const PRODUCT_UPDATES_LIST_ID = 'cm2a922wi00t20lk17m35026r';
 // Fields that add a ticked box to the product updates list, as the web app
 // writes them. These forms need no sign-in, so anyone can type any email: a
 // "declined" saved by its owner is never overwritten from here, and the box
-// is ignored when we cannot check (that person can opt in from the app).
+// is ignored when we cannot check. It is also ignored for an unsubscribed
+// contact: Loops may skip the list add, and this form must not resubscribe
+// anyone. Those people can opt in from the app, which checks the result.
 async function productUpdatesFields(
   email: string,
   apiKey: string,
@@ -21,8 +23,13 @@ async function productUpdatesFields(
       { headers: { Authorization: `Bearer ${apiKey}` } }
     );
     if (!response.ok) return none;
-    const contacts = (await response.json()) as { marketingConsent?: unknown }[];
-    if (contacts[0]?.marketingConsent === 'declined') return none;
+    const contacts = (await response.json()) as {
+      marketingConsent?: unknown;
+      subscribed?: unknown;
+    }[];
+    const contact = contacts[0];
+    if (contact?.marketingConsent === 'declined') return none;
+    if (contact?.subscribed === false) return none;
   } catch {
     return none;
   }
