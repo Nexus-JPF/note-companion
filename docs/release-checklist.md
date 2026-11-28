@@ -29,6 +29,7 @@ Use a demo vault. Obsidian 1.13+ builds settings from `getSettingDefinitions()` 
 
 **Recording to note**
 - [ ] Settings > Inbox: "Send recordings to inbox" on, "Audio default template" set to `lecture_notes`. Process a lecture: the note is formatted, the audio player is there, the transcript callout is kept at the end, tags and the backup link are present.
+- [ ] If a default template changed: its fingerprint was appended (`node packages/plugin/scripts/generate-template-fingerprints.mjs`; a test fails until it is). In a vault that still has the old, unedited file, Obsidian shows "Updated N default templates" on load and the file has the new text; a file you edited is left alone.
 - [ ] "Study note from recordings" set to `flash_cards`: a `... - Flashcards` note appears beside the lecture, the cards expand on click, and the `Flashcards:` link in the lecture sits above the `---` / "Link to original file" line with the tags last.
 - [ ] A non-English recording (French): the note, its headings and the cards come out in French.
 - [ ] A failure reads as a message, not a bare status code (for example, an invalid license key).

@@ -44,6 +44,7 @@ import {
   checkAndCreateTemplates,
   restoreDefaultTemplates,
   DEFAULT_TEMPLATE_NAMES,
+  reconcileDefaultTemplates,
 } from "./fileUtils";
 
 import { checkLicenseKey } from "./apiUtils";
@@ -1927,7 +1928,7 @@ export default class FileOrganizer extends Plugin {
                 list.createEl("li", { text: templateName });
               }
               contentEl.createEl("p", {
-                text: "Your custom templates will not be affected.",
+                text: "Your custom templates will not be affected. If you edited one of these, your version is saved to the _previous folder inside your templates folder first.",
                 attr: { style: "margin-top: 1em; font-weight: bold;" },
               });
               const buttonContainer = contentEl.createDiv({
@@ -2158,7 +2159,33 @@ export default class FileOrganizer extends Plugin {
     await this.loadSettings();
     await this.checkAndCreateFolders();
     await this.checkAndCreateTemplates();
+    await this.updateDefaultTemplates();
     this.addSettingTab(new FileOrganizerSettingTab(this.app, this));
+  }
+
+  /**
+   * Replaces default templates that are unedited copies of an older release's
+   * default, with one notice. Edited templates are never touched. Must never
+   * stop the plugin from loading.
+   */
+  async updateDefaultTemplates() {
+    try {
+      const { updated, edited } = await reconcileDefaultTemplates(this.app, this.settings);
+      if (edited.length > 0) {
+        logger.info("Default templates edited by the user, left as they are:", edited);
+      }
+      if (updated.length > 0) {
+        logger.info("Updated default templates:", updated);
+        new Notice(
+          `Updated ${updated.length} default template${updated.length === 1 ? "" : "s"}: ${updated
+            .map(name => name.replace(/\.md$/i, ""))
+            .join(", ")}`,
+          8000
+        );
+      }
+    } catch (error) {
+      logger.warn("Could not update default templates:", error);
+    }
   }
 
   /**

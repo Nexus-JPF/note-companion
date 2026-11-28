@@ -466,7 +466,7 @@ export const FileConfigTab: React.FC<FileConfigTabProps> = ({ plugin }) => {
           <div className="setting-item-info">
             <div className="setting-item-name">Restore Default Templates</div>
             <div className="setting-item-description">
-              Restore the default plugin templates ({DEFAULT_TEMPLATE_NAMES.join(", ")}) to their original versions. Your custom templates will not be affected.
+              Restore the default plugin templates ({DEFAULT_TEMPLATE_NAMES.join(", ")}) to their original versions. Your custom templates will not be affected, and a default you edited is saved to the _previous folder first.
             </div>
           </div>
           <div className="setting-item-control">
@@ -486,7 +486,7 @@ export const FileConfigTab: React.FC<FileConfigTabProps> = ({ plugin }) => {
                         list.createEl("li", { text: templateName });
                       }
                       contentEl.createEl("p", {
-                        text: "Your custom templates will not be affected.",
+                        text: "Your custom templates will not be affected. If you edited one of these, your version is saved to the _previous folder inside your templates folder first.",
                         attr: { style: "margin-top: 1em; font-weight: bold;" },
                       });
                       const buttonContainer = contentEl.createDiv({

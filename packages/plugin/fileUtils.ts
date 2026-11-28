@@ -1,20 +1,34 @@
 import { App, TFolder, TFile, normalizePath, parseYaml } from "obsidian";
 import { FileOrganizerSettings } from "./settings";
 import { logger } from "./services/logger";
+import { classifyDefaultTemplate } from "./lib/template-fingerprints";
+
+/**
+ * The default templates the plugin ships: the single list the create, update
+ * and restore code and the settings text all read. Adding a default template is
+ * one entry here (plus its fingerprint, see lib/default-template-fingerprints.ts).
+ */
+export const DEFAULT_TEMPLATES: ReadonlyArray<{
+  readonly name: string;
+  readonly content: () => string;
+}> = [
+  { name: "meeting_note.md", content: getMeetingNoteTemplateContent },
+  { name: "youtube_video.md", content: getYoutubeVideoTemplateContent },
+  { name: "youtube_summary.md", content: getYoutubeSummaryTemplateContent },
+  { name: "youtube_key_concepts.md", content: getYoutubeKeyConceptsTemplateContent },
+  { name: "youtube_qa.md", content: getYoutubeQaTemplateContent },
+  { name: "youtube_timestamped_outline.md", content: getYoutubeTimestampedOutlineTemplateContent },
+  { name: "enhance.md", content: getEnhanceTemplateContent },
+  { name: "research_paper.md", content: getResearchPaperTemplateContent },
+  { name: "flash_cards.md", content: getFlashCardsTemplateContent },
+  { name: "quiz.md", content: getQuizTemplateContent },
+  { name: "lecture_notes.md", content: getLectureNotesTemplateContent },
+];
 
 // Default template names that come with the plugin
-export const DEFAULT_TEMPLATE_NAMES = [
-  "meeting_note.md",
-  "youtube_video.md",
-  "youtube_summary.md",
-  "youtube_key_concepts.md",
-  "youtube_qa.md",
-  "youtube_timestamped_outline.md",
-  "enhance.md",
-  "research_paper.md",
-  "flash_cards.md",
-  "quiz.md",
-] as const;
+export const DEFAULT_TEMPLATE_NAMES: readonly string[] = DEFAULT_TEMPLATES.map(
+  template => template.name
+);
 
 // Helper functions to get default template content
 function getMeetingNoteTemplateContent(): string {
@@ -648,88 +662,60 @@ export async function checkAndCreateTemplates(
   app: App,
   settings: FileOrganizerSettings
 ) {
-  const meetingNoteTemplatePath = `${settings.templatePaths}/meeting_note.md`;
-  const youtubeVideoTemplatePath = `${settings.templatePaths}/youtube_video.md`;
-  const youtubeSummaryTemplatePath = `${settings.templatePaths}/youtube_summary.md`;
-  const youtubeKeyConceptsTemplatePath = `${settings.templatePaths}/youtube_key_concepts.md`;
-  const youtubeQaTemplatePath = `${settings.templatePaths}/youtube_qa.md`;
-  const youtubeTimestampedOutlineTemplatePath = `${settings.templatePaths}/youtube_timestamped_outline.md`;
-  const enhanceTemplatePath = `${settings.templatePaths}/enhance.md`;
-  const researchPaperTemplatePath = `${settings.templatePaths}/research_paper.md`;
-  const flashCardsTemplatePath = `${settings.templatePaths}/flash_cards.md`;
-  const quizTemplatePath = `${settings.templatePaths}/quiz.md`;
-  const lectureNotesTemplatePath = `${settings.templatePaths}/lecture_notes.md`;
-
-  if (!(await app.vault.adapter.exists(meetingNoteTemplatePath))) {
-    await app.vault.create(
-      meetingNoteTemplatePath,
-      getMeetingNoteTemplateContent()
-    );
+  for (const { name, content } of DEFAULT_TEMPLATES) {
+    const path = `${settings.templatePaths}/${name}`;
+    if (!(await app.vault.adapter.exists(path))) {
+      await app.vault.create(path, content());
+    }
   }
+}
 
-  if (!(await app.vault.adapter.exists(researchPaperTemplatePath))) {
-    await app.vault.create(
-      researchPaperTemplatePath,
-      getResearchPaperTemplateContent()
-    );
-  }
+/** Where an edited template is saved before it is replaced: `<templates>/_previous/<name> (<date>).md`. */
+export async function backupTemplate(
+  app: App,
+  settings: FileOrganizerSettings,
+  name: string,
+  text: string,
+  now: Date = new Date()
+): Promise<string> {
+  const folder = `${settings.templatePaths}/_previous`;
+  await ensureFolderExists(app, folder);
+  const base = name.replace(/\.md$/i, "");
+  const date = now.toISOString().slice(0, 10);
+  const path = await getAvailablePath(app, `${folder}/${base} (${date}).md`);
+  await app.vault.create(path, text);
+  return path;
+}
 
-  if (!(await app.vault.adapter.exists(youtubeVideoTemplatePath))) {
-    await app.vault.create(
-      youtubeVideoTemplatePath,
-      getYoutubeVideoTemplateContent()
-    );
+/**
+ * Brings unedited default templates up to date: a template that is an unedited
+ * copy of an older default is replaced with the current one. An edited
+ * template is never touched, and a missing one is left to checkAndCreateTemplates.
+ * Returns the names that were updated and the ones found edited.
+ */
+export async function reconcileDefaultTemplates(
+  app: App,
+  settings: FileOrganizerSettings
+): Promise<{ updated: string[]; edited: string[] }> {
+  const updated: string[] = [];
+  const edited: string[] = [];
+  for (const { name, content } of DEFAULT_TEMPLATES) {
+    const file = app.vault.getAbstractFileByPath(`${settings.templatePaths}/${name}`);
+    if (!(file instanceof TFile)) continue;
+    try {
+      const current = content();
+      const state = classifyDefaultTemplate(name, await app.vault.read(file), current);
+      if (state === "outdated") {
+        await app.vault.modify(file, current);
+        updated.push(name);
+      } else if (state === "edited") {
+        edited.push(name);
+      }
+    } catch (error) {
+      logger.warn(`Could not check default template ${name}:`, error);
+    }
   }
-
-  if (!(await app.vault.adapter.exists(youtubeSummaryTemplatePath))) {
-    await app.vault.create(
-      youtubeSummaryTemplatePath,
-      getYoutubeSummaryTemplateContent()
-    );
-  }
-
-  if (!(await app.vault.adapter.exists(youtubeKeyConceptsTemplatePath))) {
-    await app.vault.create(
-      youtubeKeyConceptsTemplatePath,
-      getYoutubeKeyConceptsTemplateContent()
-    );
-  }
-
-  if (!(await app.vault.adapter.exists(youtubeQaTemplatePath))) {
-    await app.vault.create(
-      youtubeQaTemplatePath,
-      getYoutubeQaTemplateContent()
-    );
-  }
-
-  if (!(await app.vault.adapter.exists(youtubeTimestampedOutlineTemplatePath))) {
-    await app.vault.create(
-      youtubeTimestampedOutlineTemplatePath,
-      getYoutubeTimestampedOutlineTemplateContent()
-    );
-  }
-
-  if (!(await app.vault.adapter.exists(enhanceTemplatePath))) {
-    await app.vault.create(enhanceTemplatePath, getEnhanceTemplateContent());
-  }
-
-  if (!(await app.vault.adapter.exists(flashCardsTemplatePath))) {
-    await app.vault.create(
-      flashCardsTemplatePath,
-      getFlashCardsTemplateContent()
-    );
-  }
-
-  if (!(await app.vault.adapter.exists(quizTemplatePath))) {
-    await app.vault.create(quizTemplatePath, getQuizTemplateContent());
-  }
-
-  if (!(await app.vault.adapter.exists(lectureNotesTemplatePath))) {
-    await app.vault.create(
-      lectureNotesTemplatePath,
-      getLectureNotesTemplateContent()
-    );
-  }
+  return { updated, edited };
 }
 
 // Restore default templates to their original plugin versions
@@ -738,50 +724,24 @@ export async function restoreDefaultTemplates(
   app: App,
   settings: FileOrganizerSettings
 ) {
-  const templatePaths = {
-    meetingNote: `${settings.templatePaths}/meeting_note.md`,
-    youtubeVideo: `${settings.templatePaths}/youtube_video.md`,
-    youtubeSummary: `${settings.templatePaths}/youtube_summary.md`,
-    youtubeKeyConcepts: `${settings.templatePaths}/youtube_key_concepts.md`,
-    youtubeQa: `${settings.templatePaths}/youtube_qa.md`,
-    youtubeTimestampedOutline: `${settings.templatePaths}/youtube_timestamped_outline.md`,
-    enhance: `${settings.templatePaths}/enhance.md`,
-    researchPaper: `${settings.templatePaths}/research_paper.md`,
-    flashCards: `${settings.templatePaths}/flash_cards.md`,
-    quiz: `${settings.templatePaths}/quiz.md`,
-    lectureNotes: `${settings.templatePaths}/lecture_notes.md`,
-  };
-
-  const templateContents = {
-    meetingNote: getMeetingNoteTemplateContent(),
-    youtubeVideo: getYoutubeVideoTemplateContent(),
-    youtubeSummary: getYoutubeSummaryTemplateContent(),
-    youtubeKeyConcepts: getYoutubeKeyConceptsTemplateContent(),
-    youtubeQa: getYoutubeQaTemplateContent(),
-    youtubeTimestampedOutline: getYoutubeTimestampedOutlineTemplateContent(),
-    enhance: getEnhanceTemplateContent(),
-    researchPaper: getResearchPaperTemplateContent(),
-    flashCards: getFlashCardsTemplateContent(),
-    quiz: getQuizTemplateContent(),
-    lectureNotes: getLectureNotesTemplateContent(),
-  };
-
   // Ensure template folder exists
   await ensureFolderExists(app, settings.templatePaths);
 
-  // Restore each default template
-  for (const [key, path] of Object.entries(templatePaths)) {
+  for (const { name, content } of DEFAULT_TEMPLATES) {
+    const path = `${settings.templatePaths}/${name}`;
+    const original = content();
     try {
       const existing = app.vault.getAbstractFileByPath(path);
       if (existing && existing instanceof TFile) {
-        // Delete existing file to overwrite
+        // Keep the user's changes: an edited template is saved to _previous before it is replaced.
+        const text = await app.vault.read(existing);
+        if (classifyDefaultTemplate(name, text, original) === "edited") {
+          const backup = await backupTemplate(app, settings, name, text);
+          logger.info(`Saved edited template ${path} to ${backup}`);
+        }
         await app.fileManager.trashFile(existing);
       }
-      // Create with original content
-      await app.vault.create(
-        path,
-        templateContents[key as keyof typeof templateContents]
-      );
+      await app.vault.create(path, original);
       logger.info(`Restored default template: ${path}`);
     } catch (error) {
       logger.error(`Failed to restore template ${path}:`, error);
@@ -790,9 +750,6 @@ export async function restoreDefaultTemplates(
   }
 }
 
-/**
- * @deprecated use safeMove instead
- */
 export async function moveFile(
   app: App,
   sourceFile: TFile,
