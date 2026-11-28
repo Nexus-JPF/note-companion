@@ -492,7 +492,7 @@ Important Notes:
 - Leave a blank line after the summary tag and before the closing details tag, and a blank line between questions.
 - If content is very long, focus on the most important concepts.
 - Maintain the original meaning and accuracy of the source material.
-- This format works natively in Obsidian without requiring any plugins: the answer is revealed by clicking "Show answer".`;
+- This format works natively in Obsidian without requiring any plugins: the answer is revealed by clicking the answer label.`;
 }
 
 function getFlashCardsTemplateContent(): string {
