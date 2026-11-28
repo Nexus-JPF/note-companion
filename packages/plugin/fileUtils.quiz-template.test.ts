@@ -46,6 +46,11 @@ describe("bundled quiz template", () => {
     expect(template).toContain("- A. ");
     expect(template).toContain("- D. ");
     expect(template).toContain("Never refer to another option by its letter");
+    // The quiz follows the language of the content, so the template must not lean on any one language:
+    // a French example once turned the quiz of an English lecture into French.
+    expect(template).not.toMatch(/[àâäçéèêëîïôöûùüÿœ]/i);
+    expect(template).not.toMatch(/Afficher|Réponse|français|French/i);
+    expect(template).toContain("Never switch language between the content and the quiz");
     // The label follows the content's language; the example output keeps English.
     expect(template).toContain('in the language of the content}}</summary>');
   });
