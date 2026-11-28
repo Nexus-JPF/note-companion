@@ -443,12 +443,12 @@ created: "{{current date in YYYY-MM-DD format}}"
 - The explanation says why the correct option is right in one or two sentences. It does not repeat all four options.
 - Number the questions from 1, in order. Mix topics and difficulty rather than following the order of the content.
 - Extract 3-7 main topics or themes from the content for the topics array in frontmatter.
-- Write the frontmatter values, questions, options and explanations in the language of the content. Do not translate them into English.
+- Write the whole quiz in the same language as the content: the topics, the questions, the four options, the explanations and the answer label. If the content is in English, write everything in English; if it is in another language, use that language everywhere. Never switch language between the content and the quiz.
 - Do not add [[internal links]], "see also" or "related" lines.
 - Do not use code blocks or markdown code formatting in the output.
 - Total is a number without quotes and equals the number of questions you wrote. Created is a string in quotes in the format "YYYY-MM-DD". Topics is an array: topics: ["Topic 1", "Topic 2", "Topic 3"].
 
-**Example Output Format:**
+**Example Output Format** (the example content is in English, so the example is in English; yours follows the language of your content):
 
 ---
 total: 2
@@ -486,13 +486,13 @@ created: "2025-01-09"
 
 Important Notes:
 - ALWAYS include the frontmatter with total, topics and created date.
-- Translate "Show answer" into the language of the content (for example "Afficher la réponse" in French), and use the same label for every question.
+- The answer label in the summary tag is "Show answer" translated into the language of the content, and it is the same for every question.
 - Output only the frontmatter and the questions: no list of facts, no headings, no commentary before, between or after the questions.
 - Output the actual HTML tags directly (NOT inside markdown code blocks) and make sure every tag is closed.
 - Leave a blank line after the summary tag and before the closing details tag, and a blank line between questions.
 - If content is very long, focus on the most important concepts.
 - Maintain the original meaning and accuracy of the source material.
-- This format works natively in Obsidian without requiring any plugins: the answer is revealed by clicking "Show answer".`;
+- This format works natively in Obsidian without requiring any plugins: the answer is revealed by clicking the answer label.`;
 }
 
 function getFlashCardsTemplateContent(): string {
